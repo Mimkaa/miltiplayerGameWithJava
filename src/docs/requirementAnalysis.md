@@ -1,42 +1,38 @@
 ---
 layout: default
-title : Week 6
+title : Week 6 - Requirements Analysis & Game Concept
 ---
 
-# Requirements Specification
+# Requirements Specification and Game Concept: Escape Pursuit
+
 ##### (Based on Lichter & Ludwig, Software Engineering: Fundamentals, People, Processes, Techniques)
+
+This document merges the detailed game concept of **Escape Pursuit** with its requirements analysis. Escape Pursuit is a cooperative multiplayer escape room platformer set in a single, intricately designed room. The level is larger than the visible screen area, requiring dynamic camera systems. Two characters share the spotlight on screen: the Hunter and the Escaper. Uniquely, the Escaper is controlled by three players working together, with each handling one specific ability.
 
 ## 1. Introduction
 
 ### 1.1 Purpose
 
-This document outlines the requirements specification for our multiplayer Escape Room game—a 2D pixel art platformer with asymmetrical, cooperative gameplay. It serves to define the functional and non-functional requirements, scope, and constraints of the project. This specification is intended for developers, project managers, and other stakeholders involved in the cs108 programming project.
+This document serves to outline both the game concept and the detailed requirements for Escape Pursuit. It provides a comprehensive analysis of the software’s scope, functions, and constraints while presenting a clear, engaging game concept for all stakeholders, including developers and project managers in the cs108 programming project.
 
 ### 1.2 Scope and Objectives
 
-The software will be deployed as a multiplayer game featuring exactly two on-screen characters with distinct roles and control schemes:
-- **Hunter:** Controlled by one player, the Hunter has the abilities to run, jump, and hold. The Hunter's objective is to catch the Escaper.
-- **Escaper:** A single character that is cooperatively controlled by three players. One player is responsible for walking, another for jumping, and the third for executing the grabbing action. The Escaper’s goal is to reach the exit while overcoming a variety of obstacles in a platformer-style level.
+**Escape Pursuit** is a 2D pixel art multiplayer game set in one complex room that the Escaper must escape. The room is larger than the display, so both characters benefit from dynamic, following camera systems:
+- **Hunter:** Controlled by one player, the Hunter has a camera that follows their movement, though with a restricted field of view to increase the challenge.
+- **Escaper:** A single character controlled collaboratively by three players, with one player responsible for walking, another for jumping, and a third for grabbing. The Escaper’s camera smoothly follows the character, ensuring visibility of key obstacles and the exit.
 
-**Game Concept Details:**
-- **Theme & Visual Style:** A retro 2D pixel art design with an emphasis on clear, playful graphics.
-- **Gameplay Mechanics:**
-    - The level is designed as a dynamic platformer filled with obstacles (moving platforms, traps, puzzles) that challenge the coordinated actions of the Escaper team.
-    - The Hunter starts with a time delay and moves slower than the Escaper, balancing the inherent difficulty of cooperative control.
-    - Game rules specify that if the Hunter touches the Escaper, the game is lost; if the Escaper reaches the exit, the team wins.
-- **Networking and Architecture:**
-    - The game uses a client/server architecture with a custom, text-based network protocol.
-    - The server handles game state management (collision detection, score tracking, session management) while clients capture player inputs and display the synchronized game state.
-
-This clear and well-thought-out game concept (outlined in less than two pages) satisfies the milestone achievements for “About a Game” and “About a Game (advanced).”
+The core objectives are:
+- **Hunter Objective:** Catch the Escaper.
+- **Escaper Objective:** Navigate through the room’s obstacles to reach the exit.
+- **Technical Objectives:** Utilize a client/server architecture with a custom text-based network protocol for real-time gameplay synchronization.
 
 ### 1.3 Definitions
 
-- **Hunter:** The character, controlled by a single player, whose objective is to catch the Escaper.
-- **Escaper:** The single character that must escape; controlled collaboratively by three players responsible for walking, jumping, and grabbing respectively.
-- **Client/Server Architecture:** A design in which the server maintains the central game state and logic while clients provide the user interface and send player commands.
-- **Network Protocol:** A custom, text-based set of rules for communication between the server and clients.
-- **GUI (Graphical User Interface):** The visual layer that allows players to interact with the game and view the current state.
+- **Hunter:** The character pursued by the Escaper, controlled by one player. Equipped with running, jumping, and holding abilities. The Hunter’s camera has a restricted view to simulate limited visibility.
+- **Escaper:** The character that must escape; controlled cooperatively by three players. Each player manages one of the following abilities: walking, jumping, or grabbing. The Escaper’s camera follows the character to reveal new areas as they move.
+- **Client/Server Architecture:** A system design where the server manages the central game state and logic while the clients handle user interactions and display.
+- **Network Protocol:** A custom, text-based protocol for communication between the server and clients.
+- **GUI (Graphical User Interface):** The visual interface through which players interact with the game.
 
 ### 1.4 Referenced Documents
 
@@ -46,135 +42,145 @@ This clear and well-thought-out game concept (outlined in less than two pages) s
 
 ### 1.5 Overview
 
-This specification document is organized as follows:
-- **Section 2: General Description** – Describes how the system integrates into its environment, outlines major functions, user profiles, constraints, and assumptions.
-- **Section 3: Detailed Requirements** – Enumerates each functional requirement with traceable identifiers.
-- **Section 4: Acceptance Criteria** – Specifies how to verify that the requirements have been met.
-- **Annex A: Use Cases** – Provides detailed interaction scenarios and workflows.
+This document is organized as follows:
+- **Section 2: General Description** – Outlines system integration, key functions, user profiles, constraints, and assumptions.
+- **Section 3: Detailed Requirements** – Lists all functional requirements with traceable identifiers.
+- **Section 4: Acceptance Criteria** – Defines criteria for verifying that the system meets the requirements.
+- **Annex A: Use Cases** – Provides detailed use cases illustrating key interactions within the system.
 
-Additionally, the game concept includes:
-- A self-made mockup for presentation.
-- A clear networking design outlining client and server responsibilities.
-- A project plan detailing timeline and responsibilities (Who? What? When?) along with a project diary (Dear Diary) to document progress.
+Additionally, the concept supports several project milestones:
+- A clear game concept (About a Game, Advanced Concept).
+- Networking and requirement analysis.
+- Self-made mockups and an initial project diary.
+- A detailed project timeline and early runnable code.
 
 ## 2. General Description
 
 ### 2.1 System Integration
 
-The game will operate on a distributed client/server architecture:
-- **Server:** Manages the global game state (player positions, collisions, game rules, score tracking), handles multiple game sessions, and processes commands using a custom text-based protocol.
-- **Clients:** Connect to the server to send player commands (e.g., MOVE, JUMP, HOLD) and receive real-time updates. The client application includes a GUI for both gameplay and chat functionality.
+Escape Pursuit operates on a distributed client/server architecture:
+- **Server:** Manages the global game state—including player positions, collision detection, obstacle interactions, and win/lose conditions—and processes commands using a custom text-based protocol.
+- **Clients:** Provide a GUI for capturing player inputs and displaying the game state. They also manage the dynamic camera system, ensuring that the part of the room that is not immediately visible is gradually revealed as the characters move.
 
 ### 2.2 Functions
 
-The primary functions of the system are:
-- **Real-Time Multiplayer Gameplay:** Synchronizing the game state among the Hunter and the cooperatively controlled Escaper.
-- **Network Communication:** Facilitating robust data exchange between clients and the server using a custom protocol.
-- **Graphical User Interface:** Displaying the game environment, player statuses, and chat features.
-- **Lobby and Chat Functionality:** Allowing players to communicate, form teams, and select game sessions.
+Key functions of the system include:
+- **Real-Time Multiplayer Gameplay:** Synchronizes the game state among the Hunter and the three controllers of the Escaper.
+- **Network Communication:** Facilitates robust data exchange between clients and the server via a custom protocol.
+- **Graphical User Interface:** Displays the game environment and supports chat functions.
+- **Dynamic Camera Systems:**
+  - The **Escaper’s camera** continuously follows the Escaper, smoothly scrolling to reveal new parts of the room.
+  - The **Hunter’s camera** also follows the Hunter but with a restricted field of view to add an element of challenge.
+- **Lobby and Chat:** Enables players to communicate, form teams, and select game sessions.
 - **Role-Specific Actions:**
-    - The **Hunter** executes running, jumping, and holding actions (single player control).
-    - The **Escaper** character is controlled by three players, each handling walking, jumping, or grabbing actions.
-- **Obstacle and Level Management:** The server oversees the platformer environment, including dynamic obstacles and exit detection.
+  - **Hunter:** Executes running, jumping, and holding actions (controlled by one player).
+  - **Escaper:** A single character controlled by three players, with designated roles for walking, jumping, and grabbing.
+- **Obstacle and Level Management:** The single room is designed as a platformer with dynamic obstacles, traps, and puzzles.
 
 ### 2.3 User Profiles
 
-- **Hunter Player:** A user skilled in strategic gameplay and timing, responsible for controlling the Hunter.
-- **Escaper Players:** A team of three users who must coordinate to control the single Escaper character. Effective communication and teamwork are essential.
-- **General Gamers:** Players with basic computer proficiency and familiarity with multiplayer games, with an interest in cooperative gameplay.
+- **Hunter Player:** A user who controls the Hunter, requiring precision and strategic timing. Must manage the challenges of a restricted camera view.
+- **Escaper Players:** A team of three users who must work in unison to control the single Escaper character. Their success depends on tight coordination and effective communication.
+- **General Gamers:** Players with basic computer proficiency and familiarity with multiplayer cooperative games.
 
 ### 2.4 Constraints
 
-- **Platform:** The game must be developed in Java (version 21) and run on standard desktop systems.
-- **Network Protocol:** Must use a custom, text-based protocol to ensure clarity and ease of debugging.
-- **Hardware:** Designed to operate on typical student hardware without specialized equipment.
-- **Content:** Must adhere to non-violence guidelines and be appropriate for all audiences.
-- **Approved Libraries:** Only libraries on the official "Allow List" may be used.
+- **Platform:** Developed in Java (version 21) for standard desktop systems.
+- **Network Protocol:** A custom text-based protocol for clear, debuggable communication.
+- **Hardware:** Designed for typical student hardware without specialized requirements.
+- **Content:** Must adhere to non-violence guidelines and be appropriate for all ages.
+- **Approved Libraries:** Only libraries on the official "Allow List" are permitted.
 
 ### 2.5 Assumptions and Dependencies
 
-- Players will have stable internet connectivity.
-- The development environment supports Java 21 and required external libraries.
-- The game will be deployed and tested within a controlled university network environment.
-- External dependencies include approved libraries for GUI development and network communication.
+- All players will have stable network connections.
+- The development environment supports Java 21 and necessary external libraries.
+- The game will be deployed and tested within a controlled university network.
+- Dependencies include approved libraries for GUI development, dynamic camera handling, and network communication.
 
 ## 3. Detailed Requirements
 
-Each functional requirement is assigned a unique identifier for traceability:
+Each functional requirement is uniquely identified for traceability:
 
 * /F10/ **Client-Server Connection:**  
   The system shall allow multiple clients to connect to the central server using a custom text-based protocol.
 
 * /F11/ **User Authentication and Lobby Management:**  
-  The system shall support user authentication and provide a lobby where players can chat and select game sessions.
+  The system shall support user authentication and provide a lobby for players to chat and select game sessions.
 
 * /F20/ **Real-Time Gameplay Synchronization:**  
-  The system shall maintain a synchronized game state across all connected clients, including player positions and actions.
+  The system shall maintain a synchronized game state across all clients, ensuring that all player actions and positions are updated in real time.
 
 * /F21/ **Role-Specific Actions:**  
-  The system shall differentiate between the two roles:
-    - **Hunter:** Executes running, jumping, and holding actions (controlled by one player).
-    - **Escaper:** A single character controlled collaboratively by three players, where one handles walking, one manages jumping, and one controls grabbing.
+  The system shall differentiate between:
+  - **Hunter:** Executes running, jumping, and holding actions, controlled by one player.
+  - **Escaper:** A single character controlled by three players, with designated roles for walking, jumping, and grabbing.
+
+* /F22/ **Dynamic Camera Systems:**  
+  The system shall implement camera functionality such that:
+  - The **Escaper’s camera** continuously follows the Escaper character, smoothly revealing areas of the room as they move.
+  - The **Hunter’s camera** follows the Hunter but with a restricted field of view to simulate limited visibility.
+  - The level (single room) is larger than the display area, requiring scrolling and camera movement.
 
 * /F30/ **Game State Management:**  
-  The server shall manage all aspects of the game state, including collision detection, obstacle interactions, score tracking, and win/lose conditions based on:
-    - **Hunter Objective:** Catch the Escaper.
-    - **Escaper Objective:** Reach the exit while avoiding capture.
+  The server shall manage the overall game state, including collision detection, obstacle interactions, and evaluation of win/lose conditions:
+  - **Hunter Objective:** Catch the Escaper.
+  - **Escaper Objective:** Reach the exit of the room.
 
 * /F40/ **Chat and Communication:**  
   The system shall provide chat functionality in both the lobby and in-game sessions to facilitate communication among players.
 
 ## 4. Acceptance Criteria
 
-The following criteria must be met to verify the successful implementation of the requirements:
+The following criteria must be met to verify that the system satisfies its requirements:
 
 * /A10/ **Client-Server Communication Test:**  
-  The system must successfully establish and maintain a connection between at least four clients (one Hunter and three Escaper controllers) and the server, with proper command exchange via the custom protocol.
+  The system must successfully establish and maintain connections between at least four clients (one Hunter and three Escaper controllers) and the server, with proper command exchanges using the custom protocol.
 
 * /A20/ **Gameplay Functionality Verification:**  
-  The system must demonstrate complete and synchronized gameplay across all clients, including role-specific actions for the Hunter and the cooperatively controlled Escaper. The game must correctly evaluate win/lose conditions based on whether the Hunter catches the Escaper or the Escaper reaches the exit.
+  The system must demonstrate complete and synchronized gameplay, including role-specific actions and dynamic camera behavior. The game must correctly evaluate win/lose conditions based on whether the Hunter catches the Escaper or the Escaper reaches the exit.
 
-# Annex
+## Annex
 
-## Annex A. Use Cases
+### Annex A. Use Cases
 
-### Use Case 1: Establishing Connection and Joining a Game
+#### Use Case 1: Establishing Connection and Joining a Game
 * **Name:** Connect and Join Game Session
 * **Actors:** Client, Server
 * **Preconditions:**
-    - The client application is running.
-    - A stable network connection is available.
+  - The client application is running.
+  - A stable network connection is available.
 * **Standard Flow:**
-    1. The client initiates a connection to the server.
-    2. The server authenticates the client.
-    3. The client enters the lobby and selects a game session.
+  1. The client initiates a connection to the server.
+  2. The server authenticates the client.
+  3. The client enters the lobby and selects a game session.
 * **Postconditions (Success):**
-    - The client is connected to the selected game session.
+  - The client is connected to the selected game session.
 * **Postconditions (Failure):**
-    - The connection fails and an error message is displayed.
+  - The connection fails and an error message is displayed.
 
-#### Exception Flow 1a: Invalid Credentials
+##### Exception Flow 1a: Invalid Credentials
 * **Flow:**
-    1. The client submits incorrect login details.
-    2. The server rejects the login.
-    3. The client is prompted to re-enter valid credentials.
+  1. The client submits incorrect login details.
+  2. The server rejects the login.
+  3. The client is prompted to re-enter valid credentials.
 
-### Use Case 2: Role-Based Gameplay Action
+#### Use Case 2: Role-Based Gameplay Action
 * **Name:** Execute Role-Specific Action
 * **Actors:** Hunter Player, Escaper Players, Server
 * **Preconditions:**
-    - The client is connected and the game session has started.
+  - The client is connected and the game session has started.
 * **Standard Flow:**
-    1. A player sends an action command (e.g., MOVE, JUMP, HOLD) to the server.
-    2. The server validates and processes the command.
-    3. The server updates the game state and broadcasts the change to all clients.
+  1. A player sends an action command (e.g., MOVE, JUMP, HOLD) to the server.
+  2. The server validates and processes the command.
+  3. The server updates the game state and broadcasts the update to all clients.
 * **Postconditions (Success):**
-    - The game state accurately reflects the executed action.
+  - The game state accurately reflects the executed action.
 * **Postconditions (Failure):**
-    - If the command is invalid, the server sends an error message to the client.
+  - If the command is invalid, the server sends an error message to the client.
 
-#### Exception Flow 2a: Command Timeout
+##### Exception Flow 2a: Command Timeout
 * **Flow:**
-    1. A client command is not acknowledged within the expected time frame.
-    2. The client re-sends the command.
-    3. The server processes the command if it is valid.
+  1. A client command is not acknowledged within the expected time frame.
+  2. The client re-sends the command.
+  3. The server processes the command if it is valid.
