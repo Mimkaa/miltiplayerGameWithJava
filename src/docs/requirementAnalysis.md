@@ -184,3 +184,5 @@ The following criteria must be met to verify that the system satisfies its requi
   1. A client command is not acknowledged within the expected time frame.
   2. The client re-sends the command.
   3. The server processes the command if it is valid.
+
+
