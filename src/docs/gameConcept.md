@@ -4,7 +4,7 @@
 
 Escape Pursuit is a 2D pixel art multiplayer platformer that combines classic escape room puzzles with a high-intensity chase. In this game, only one level exists—a single room that the Escaper must escape from. Two characters share the spotlight on screen: one Hunter and one Escaper. Uniquely, the Escaper is controlled cooperatively by three players, each responsible for one of the core abilities. This design creates an engaging asymmetrical gameplay experience where coordination is the key to success.
 
-## Game Story and Theme
+## Game Theme
 
 Set within a confined, puzzle-laden room, players are thrust into a race against time:
 - **The Hunter:** Tasked with catching the Escaper before they escape.
@@ -15,15 +15,6 @@ The narrative is minimal, focusing on fast-paced action and strategic teamwork r
 ## Gameplay Mechanics
 
 ### Characters and Roles
-
-**Hunter:**
-- **Control:** Managed by a single player.
-- **Abilities:**
-    - **Running:** Move swiftly across the room.
-    - **Jumping:** Overcome obstacles and gaps.
-    - **Holding:** Temporarily immobilize or capture the Escaper.
-- **Objective:** Catch the Escaper before they can escape the room.
-- **Balancing Factor:** The Hunter starts with a brief time delay and moves at a slower pace to balance the gameplay.
 
 **Escaper:**
 - **Control:** A single character that is controlled collaboratively by three players.
