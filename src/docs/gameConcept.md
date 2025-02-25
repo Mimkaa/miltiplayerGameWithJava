@@ -2,26 +2,24 @@
 
 ## Introduction
 
-Escape Pursuit is a 2D pixel art multiplayer platformer that combines classic escape room puzzles with a high-intensity chase. In this game, only one level exists—a single room that the Escaper must escape from. Two characters share the spotlight on screen: one Hunter and one Escaper. Uniquely, the Escaper is controlled cooperatively by three players, each responsible for one of the core abilities. This design creates an engaging asymmetrical gameplay experience where coordination is the key to success.
+Escape Pursuit is a 2D pixel art multiplayer platformer that combines classic escape room puzzles. In this game two characters share the spotlight on screen, while two player control a single character. This design creates an engaging asymmetrical gameplay experience wh ere coordination is the key to success.
 
 ## Game Theme
 
-Set within a confined, puzzle-laden room, players are thrust into a race against time:
-- **The Hunter:** Tasked with catching the Escaper before they escape.
+Set within a confined, puzzle-laden room:
 - **The Escaper:** Must navigate the single room filled with obstacles and puzzles to reach the exit.
-
-The narrative is minimal, focusing on fast-paced action and strategic teamwork rather than deep storytelling. The environment is designed to evoke the retro charm of classic platformers, paired with modern multiplayer collaboration.
 
 ## Gameplay Mechanics
 
 ### Characters and Roles
 
 **Escaper:**
-- **Control:** A single character that is controlled collaboratively by three players.
+- **Control:** A single character that is controlled collaboratively by two players.
 - **Player Responsibilities:**
     - **Walking:** One player is dedicated to steering the Escaper.
     - **Jumping:** A second player handles the jump commands.
-    - **Grabbing:** A third player manages the grabbing or interaction actions.
+    - **Grabbing:** 
+    - **Throwing:** 
 - **Objective:** Work together to navigate through the obstacles in the room and reach the exit.
 - **Cooperation:** The three players must coordinate their inputs precisely to successfully guide the Escaper to safety.
 
@@ -31,6 +29,7 @@ The narrative is minimal, focusing on fast-paced action and strategic teamwork r
 - **Dynamic Obstacles:** The room is designed like a platformer stage with moving platforms, traps, and puzzles that challenge the coordinated actions of the Escaper team.
 - **Exit Goal:** The Escaper must reach the designated exit point to win, while the Hunter aims to intercept and catch the Escaper.
 - **Challenge and Balance:** The room’s layout is carefully balanced to reward teamwork and precision while maintaining constant tension between pursuit and evasion.
+- **Items:** 
 
 ## Networking and Architecture
 
