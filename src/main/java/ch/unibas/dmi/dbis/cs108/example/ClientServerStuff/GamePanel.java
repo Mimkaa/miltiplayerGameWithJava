@@ -19,7 +19,7 @@ public class GamePanel extends JPanel {
         for (Player p : players) {
             int x = (int) p.getX();
             int y = (int) p.getY();
-            int r = (int) p.getRadius();
+            int r = 20;
             g2.setColor(Color.BLUE);
             // Draw circle centered at (x,y)
             g2.drawOval(x - r, y - r, 2 * r, 2 * r);

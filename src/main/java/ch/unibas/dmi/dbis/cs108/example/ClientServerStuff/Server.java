@@ -18,13 +18,12 @@ public class Server {
     private static final CopyOnWriteArrayList<InetSocketAddress> clients = new CopyOnWriteArrayList<>();
 
     public static void main(String[] args) {
-        // Create an array of three players (server-side state).
+        // Initialize server-side player state (used only for logging purposes).
         Player[] players = new Player[3];
         players[0] = new Player("Alice", 100.0f, 200.0f, 10.0f);
         players[1] = new Player("Bob", 150.0f, 250.0f, 12.0f);
         players[2] = new Player("Carol", 200.0f, 300.0f, 15.0f);
-        
-        // Print the players to verify initialization.
+
         System.out.println("Initial players:");
         for (Player p : players) {
             System.out.println(p);
@@ -38,82 +37,62 @@ public class Server {
                 DatagramPacket packet = new DatagramPacket(receiveData, receiveData.length);
                 serverSocket.receive(packet);
 
-                // Copy received data for safe processing.
+                // Safely copy the received data.
                 byte[] data = new byte[packet.getLength()];
                 System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
                 InetAddress clientAddress = packet.getAddress();
                 int clientPort = packet.getPort();
                 InetSocketAddress senderSocket = new InetSocketAddress(clientAddress, clientPort);
+                
 
-                // Add sender to clients list if not already present.
+                // Add sender to the client list if not already present.
                 if (!clients.contains(senderSocket)) {
                     clients.add(senderSocket);
                 }
+                System.out.println("New client connected: " + senderSocket + ". Total clients: " + clients.size());
 
-                // Submit task to the thread pool.
+                // Process the packet asynchronously.
                 executor.submit(() -> {
                     String clientMessage = new String(data);
                     System.out.println("Received from " + clientAddress + ":" + clientPort + " - " + clientMessage);
-                    
-                    // Check if it's a movement message.
-                    if (clientMessage.startsWith(MovementCodec.MOVE_TYPE)) {
-                        try {
-                            // Decode the movement message.
-                            MovementData movement = MovementCodec.decodeMovement(clientMessage);
-                            System.out.println("Decoded movement: " + movement);
-                            
-                            // Update the corresponding player's position in the server's state.
-                            Player updatedPlayer = null;
-                            for (Player p : players) {
-                                if (p.getName().equals(movement.getPlayerName())) {
-                                    // Here, the movement message contains relative offsets.
-                                    p.setX(p.getX() + movement.getXoffset());
-                                    p.setY(p.getY() + movement.getYoffset());
-                                    updatedPlayer = p;
-                                    System.out.println("Updated " + p.getName() + " to new absolute position: x=" + p.getX() + ", y=" + p.getY());
-                                    break;
-                                }
-                            }
-                            
-                            if (updatedPlayer != null) {
-                                // Build a broadcast message that contains the updated absolute state.
-                                String broadcastMessage = MovementCodec.encodeMovement(
-                                        updatedPlayer.getName(), updatedPlayer.getX(), updatedPlayer.getY());
-                                
-                                // Broadcast to all clients except the sender.
-                                for (InetSocketAddress client : clients) {
-                                    if (!client.equals(senderSocket)) {
-                                        byte[] sendData = broadcastMessage.getBytes();
-                                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
-                                                client.getAddress(), client.getPort());
-                                        try {
-                                            serverSocket.send(sendPacket);
-                                        } catch (IOException e) {
-                                            System.err.println("Error sending broadcast: " + e.getMessage());
-                                        }
+                    try {
+                        // Decode the message using the new message system.
+                        Message msg = MessageCodec.decode(clientMessage);
+                        // Check if it's a movement message.
+                        if ("MOVE".equals(msg.getMessageType())) {
+                            // Simply forward the message to all clients except the sender.
+                            String broadcastMessage = MessageCodec.encode(msg);
+                            for (InetSocketAddress client : clients) {
+                                if (!client.equals(senderSocket)) {
+                                    byte[] sendData = broadcastMessage.getBytes();
+                                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
+                                            client.getAddress(), client.getPort());
+                                    try {
+                                        serverSocket.send(sendPacket);
+                                        System.out.println("Forwarded message to " + client);
+                                    } catch (IOException e) {
+                                        System.err.println("Error sending broadcast: " + e.getMessage());
                                     }
                                 }
                             }
-                        } catch (IllegalArgumentException e) {
-                            String errorResponse = "Error: " + e.getMessage();
-                            byte[] sendData = errorResponse.getBytes();
+                        } else {
+                            // For non-movement messages, echo back to the sender.
+                            String response = "Echo: " + clientMessage;
+                            byte[] sendData = response.getBytes();
                             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
-                            try {
-                                serverSocket.send(sendPacket);
-                            } catch (IOException ex) {
-                                System.err.println("Error sending error response: " + ex.getMessage());
-                            }
+                            serverSocket.send(sendPacket);
                         }
-                    } else {
-                        // For non-movement messages, simply echo back to sender.
-                        String response = "Echo: " + clientMessage;
-                        byte[] sendData = response.getBytes();
+                    } catch (IllegalArgumentException e) {
+                        String errorResponse = "Error: " + e.getMessage();
+                        byte[] sendData = errorResponse.getBytes();
                         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
                         try {
                             serverSocket.send(sendPacket);
-                        } catch (IOException e) {
-                            System.err.println("Error sending echo: " + e.getMessage());
+                        } catch (IOException ex) {
+                            System.err.println("Error sending error response: " + ex.getMessage());
                         }
+                    } catch (IOException e) {
+                        System.err.println("I/O error: " + e.getMessage());
                     }
                 });
             }

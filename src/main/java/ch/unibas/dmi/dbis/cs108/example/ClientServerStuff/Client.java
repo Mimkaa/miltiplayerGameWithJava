@@ -1,22 +1,22 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import javax.swing.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.io.IOException;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Client {
     public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
     
-    // Shared variables for movement input.
-    private static volatile float inputX = 0;
-    private static volatile float inputY = 0;
-    
+    // Global queue for outgoing messages.
+    private static final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
+    // Global queue for incoming messages.
+    private static final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
+
     public static void main(String[] args) {
         // Create an array of three players on the client side.
         Player[] players = new Player[3];
@@ -41,42 +41,15 @@ public class Client {
             frame.add(gamePanel);
             frame.setSize(800, 600);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            // Connect the controls for the player that matches the client name.
+            for (Player p : players) {
+                if (p.getName().equals(clientName)) {
+                    frame.addKeyListener(p.getKeyListener());
+                    System.out.println("Connected controls for " + p.getName());
+                    break;
+                }
+            }
             frame.setVisible(true);
-            
-            // Add key listener to capture AWSD controls.
-            frame.addKeyListener(new KeyAdapter() {
-                @Override
-                public void keyPressed(KeyEvent e) {
-                    switch (e.getKeyCode()) {
-                        case KeyEvent.VK_W:
-                            inputY = -1;
-                            break;
-                        case KeyEvent.VK_S:
-                            inputY = 1;
-                            break;
-                        case KeyEvent.VK_A:
-                            inputX = -1;
-                            break;
-                        case KeyEvent.VK_D:
-                            inputX = 1;
-                            break;
-                    }
-                }
-                
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    switch (e.getKeyCode()) {
-                        case KeyEvent.VK_W:
-                        case KeyEvent.VK_S:
-                            inputY = 0;
-                            break;
-                        case KeyEvent.VK_A:
-                        case KeyEvent.VK_D:
-                            inputX = 0;
-                            break;
-                    }
-                }
-            });
             
             // Repaint the game panel periodically.
             Timer timer = new Timer(100, ev -> gamePanel.repaint());
@@ -86,7 +59,9 @@ public class Client {
         try (DatagramSocket clientSocket = new DatagramSocket()) {
             InetAddress serverIP = InetAddress.getByName(SERVER_ADDRESS);
             
-            // Start a dedicated receiver thread to handle server responses.
+            // Receiver Thread:
+            // Listen for UDP packets, decode them into Message objects,
+            // and place them into the global incoming queue.
             Thread receiverThread = new Thread(() -> {
                 while (true) {
                     try {
@@ -94,63 +69,95 @@ public class Client {
                         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                         clientSocket.receive(receivePacket);
                         String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                        System.out.println("Received from server: " + response);
+                        System.out.println("Received: " + response);
                         
-                        // Process the response if it's a movement message.
-                        try {
-                            MovementData movement = MovementCodec.decodeMovement(response);
-                            if (movement.getType().equals("MOVE")) {
-                                String movingPlayer = movement.getPlayerName();
-                                float newX = movement.getXoffset(); // Now treated as absolute x
-                                float newY = movement.getYoffset(); // Now treated as absolute y
-                                
-                                // Update the corresponding player's position by setting absolute coordinates.
-                                for (Player p : players) {
-                                    if (p.getName().equals(movingPlayer)) {
-                                        p.setX(newX);
-                                        p.setY(newY);
-                                        System.out.println("Updated " + p.getName() + " to absolute position: x=" + p.getX() + ", y=" + p.getY());
-                                    }
-                                }
-                            }
-                        } catch (IllegalArgumentException e) {
-                            System.out.println("Received non-movement message: " + response);
-                        }
+                        // Decode the response into a Message object.
+                        Message receivedMessage = MessageCodec.decode(response);
+                        incomingQueue.offer(receivedMessage);
                     } catch (IOException e) {
                         e.printStackTrace();
-                        break; // Exit loop on error.
+                        break;
                     }
                 }
             });
             receiverThread.start();
             
-            // Main loop: send movement messages to the server periodically.
-            while (true) {
-                // Use AWSD input to calculate relative offsets.
-                float speed = 5.0f;
-                float xoffset = inputX * speed;
-                float yoffset = inputY * speed;
-                
-                // Update the local player's position immediately (local prediction).
-                for (Player p : players) {
-                    if (p.getName().equals(clientName)) {
-                        p.setX(p.getX() + xoffset);
-                        p.setY(p.getY() + yoffset);
-                        System.out.println("Local player " + p.getName() + " updated to new position: x=" + p.getX() + ", y=" + p.getY());
-                        break;
+            // Consumer Thread:
+            // Continuously poll the global incoming queue and route messages to
+            // the appropriate player's internal queue based on the sender's name.
+            Thread consumerThread = new Thread(() -> {
+                while (true) {
+                    Message msg = incomingQueue.poll();
+                    if (msg != null) {
+                        // Extract sender's name from the concealed parameters.
+                        String[] concealed = msg.getConcealedParameters();
+                        if (concealed != null && concealed.length > 0) {
+                            String senderName = concealed[0];
+                            // Route the message to the matching player.
+                            for (Player p : players) {
+                                if (p.getName().equals(senderName)) {
+                                    p.addIncomingMessage(msg);
+                                    System.out.println("Consumer routed message to " + p.getName());
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
                     }
                 }
+            });
+            consumerThread.start();
+            
+            // Sender Thread:
+            // Continuously poll the global outgoing queue and send any messages over UDP.
+            Thread senderThread = new Thread(() -> {
+                while (true) {
+                    Message msg = outgoingQueue.poll();
+                    if (msg != null) {
+                        String msgStr = MessageCodec.encode(msg);
+                        byte[] sendData = msgStr.getBytes();
+                        try {
+                            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, SERVER_PORT);
+                            clientSocket.send(sendPacket);
+                            System.out.println("Sent: " + msgStr);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        try {
+                            Thread.sleep(10);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    }
+                }
+            });
+            senderThread.start();
+            
+            // Main Loop:
+            // Update every player's movement and enqueue movement messages into the outgoing queue.
+            while (true) {
+                // Update all players.
+                for (Player p : players) {
+                    p.update(outgoingQueue);
+                    //System.out.println("Player " + p.getName() + " position: x=" + p.getX() + ", y=" + p.getY());
+                }
                 
-                // Encode the movement message including the client's name.
-                // Here, we send relative movement offsets.
-                String message = MovementCodec.encodeMovement(clientName, xoffset, yoffset);
-                byte[] sendData = message.getBytes();
-                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, SERVER_PORT);
-                clientSocket.send(sendPacket);
-                System.out.println("Sent: " + message);
+                // Process incoming messages for all players.
+                for (Player p : players) {
+                    p.updateMessages();
+                }
                 
-                Thread.sleep(10); // Smaller sleep for more responsiveness.
+                Thread.sleep(1); // Sleep briefly for responsiveness.
             }
+            
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
