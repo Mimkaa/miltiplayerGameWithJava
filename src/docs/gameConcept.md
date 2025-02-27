@@ -1,8 +1,8 @@
-# Escape Pursuit: A Cooperative Multiplayer Escape Room Platformer
+# Think Outside the Room: A Cooperative Multiplayer Escape Room Platformer
 
 ## Introduction
 
-Escape Pursuit is a 2D pixel art multiplayer platformer that combines classic escape room puzzles. In this game two characters share the spotlight on screen, while two player control a single character. This design creates an engaging asymmetrical gameplay experience wh ere coordination is the key to success.
+"Think Outside the Room" is a 2D pixel art multiplayer platformer that combines classic escape room puzzles. In this game two characters share the spotlight on screen, while two player control a single character. This design creates an engaging asymmetrical gameplay experience wh ere coordination is the key to success.
 
 ## Game Theme
 
@@ -39,7 +39,7 @@ Set within a confined, puzzle-laden room:
 
 ## Networking and Architecture
 
-Escape Pursuit utilizes a client/server architecture with a custom text-based network protocol:
+Think Outside the Room utilizes a client/server architecture with a custom text-based network protocol:
 
 - **Server Responsibilities:**
     - Manage the global game state, including player positions, collisions, and interactions within the single room.

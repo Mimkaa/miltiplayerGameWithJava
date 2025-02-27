@@ -3,12 +3,12 @@ layout: default
 title : Week 6 - Requirements Analysis & Game Concept
 ---
 
-# Requirements Specification and Game Concept: Escape Pursuit
+# Requirements Specification and Game Concept: Think Outside the Room
 
 ##### (Based on Lichter & Ludwig, Software Engineering: Fundamentals, People, Processes, Techniques)
 
-This document merges the detailed game concept of **Escape Pursuit** with its requirements analysis. 
-Escape Pursuit is a cooperative multiplayer escape room platformer set in a single, intricately designed room. 
+This document merges the detailed game concept of **Think Outside the Room** with its requirements analysis.
+Think Outside the Room is a cooperative multiplayer escape room platformer set in a single, intricately designed room. 
 The level is filled with dynamic obstacles and puzzles, requiring precise coordination between players. 
 Two characters share the spotlight on screen: two Escapers. Each Escaper is controlled collaboratively by two players, with each managing distinct actions.
 
@@ -16,13 +16,13 @@ Two characters share the spotlight on screen: two Escapers. Each Escaper is cont
 
 ### 1.1 Purpose
 
-This document outlines both the game concept and the detailed requirements for Escape Pursuit. 
+This document outlines both the game concept and the detailed requirements for Think Outside the Room 
 It provides a comprehensive analysis of the software’s scope, functions, and constraints while presenting a clear, 
 engaging game concept for all stakeholders, including developers and project managers in the cs108 programming project.
 
 ### 1.2 Scope and Objectives
 
-**Escape Pursuit** is a 2D pixel art multiplayer game set in one complex room that two Escapers must escape. 
+**Think Outside the Room** is a 2D pixel art multiplayer game set in one complex room that two Escapers must escape. 
 The game utilizes a dynamic camera system to follow character movements.
 
 - **Escapers:** Two characters, each controlled collaboratively by two players. 
@@ -44,7 +44,7 @@ The core objectives are:
 
 ### 2.1 System Integration
 
-Escape Pursuit operates on a distributed client/server architecture:
+Think Outside the Room operates on a distributed client/server architecture:
 - **Server:** Manages the global game state—including player positions, collision detection, obstacle interactions, 
 and win/lose conditions—and processes commands using a custom text-based protocol.
 - **Clients:** Provide a GUI for capturing player inputs and displaying the game state. 
