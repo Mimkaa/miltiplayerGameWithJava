@@ -33,7 +33,6 @@ Set within a confined, puzzle-laden room:
 - **Key:** A key must be obtained to unlock the exit.
 - **Rope:** A rope can be used to dangle another character off a platform. 
   One character holds the rope while standing on a platform, and the other character holds onto the rope while hanging off the platform to retrieve the key or interact with specific elements in the level.
-- **Flashlight:** A flashlight can be used to illuminate dark areas of the room. Some puzzles require flashlight to active some specific mechanism.
 
 ## Networking and Architecture
 
