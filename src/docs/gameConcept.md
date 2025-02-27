@@ -8,7 +8,6 @@ Escape Pursuit is a 2D pixel art multiplayer platformer that combines classic es
 
 Set within a confined, puzzle-laden room:
 - **The Escaper:** Must navigate the single room filled with obstacles and puzzles to reach the exit.
-- **The
 
 ## Gameplay Mechanics
 
@@ -22,18 +21,19 @@ Set within a confined, puzzle-laden room:
     - **Grabbing:** Player one is responsible for grabbing items.
     - **Throwing:** Player two is responsible for throwing items.
 - **Objective:** Work together to navigate through the obstacles in the room and reach the exit.
-- **Cooperation:** The three players must coordinate their inputs precisely to successfully guide the Escaper to safety.
+- **Cooperation:** The four players must coordinate their inputs precisely to successfully guide the Escaper to safety.
 
 ### Level Design and Objectives
 
 - **Single Level:** The game consists of one level—a single room that the Escapers must escape.
-- **Dynamic Obstacles:** The room is designed like a platformer stage with moving platforms, traps, and puzzles that challenge the coordinated actions of the Escaper team.
-- **Exit Goal:** The Escaper must reach the designated exit point to win, while the Hunter aims to intercept and catch the Escaper.
-- **Challenge and Balance:** The room’s layout is carefully balanced to reward teamwork and precision while maintaining constant tension between pursuit and evasion.
-- **Items:**
-  - Key: A key must be obtained to unlock the exit.
-  - Rope: A rope can be used to danlge another character off a plattform. 
+- **Dynamic Obstacles:** The room is designed like a platform-stage with moving platforms, traps, and puzzles that challenge the coordinated actions of the Escaper team.
+- **Exit Goal:** The Escaper must reach the designated exit point to successfully complete the level.
+- **Challenge and Balance:** The room’s layout is carefully balanced to reward teamwork and precision.
+- **Items:** 
+- **Key:** A key must be obtained to unlock the exit.
+- **Rope:** A rope can be used to dangle another character off a platform. 
   One character holds the rope while standing on a platform, and the other character holds onto the rope while hanging off the platform to retrieve the key or interact with specific elements in the level.
+- **Flashlight:** A flashlight can be used to illuminate dark areas of the room. Some puzzles require flashlight to active some specific mechanism.
 
 ## Networking and Architecture
 

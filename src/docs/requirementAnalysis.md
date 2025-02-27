@@ -91,7 +91,7 @@ Their success depends on tight coordination and effective communication.
 players to chat and select game sessions.
 * /F20/ **Real-Time Gameplay Synchronization:** The system shall maintain a synchronized game state across all clients.
 * /F21/ **Role-Specific Actions:** The system shall differentiate between:
-  - **Escapers:** Two characters controlled by two players each, with designated roles for walking/grabbing and jumping/throwing.
+**Escapers:** Two characters controlled by two players each, with designated roles for walking/grabbing and jumping/throwing.
 * /F22/ **Dynamic Camera Systems:** The system shall implement camera functionality for both Escapers.
 * /F30/ **Game State Management:** The server shall manage the overall game state, including collision detection and win/lose conditions.
 * /F40/ **Chat and Communication:** The system shall provide chat functionality in both the lobby and in-game sessions.
