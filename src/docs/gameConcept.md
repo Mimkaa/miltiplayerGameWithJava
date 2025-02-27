@@ -33,6 +33,7 @@ Set within a confined, puzzle-laden room:
 - **Key:** A key must be obtained to unlock the exit.
 - **Rope:** A rope can be used to dangle another character off a platform. 
   One character holds the rope while standing on a platform, and the other character holds onto the rope while hanging off the platform to retrieve the key or interact with specific elements in the level.
+- **Flashlight:** A flashlight can be used to illuminate dark areas of the room. Some puzzles require flashlight to active some specific mechanism.
 
 ![pixelGameMockup.png](pixelGameMockup.png)
 
@@ -56,6 +57,7 @@ Escape Pursuit utilizes a client/server architecture with a custom text-based ne
 ## Unique Selling Points
 
 - **Asymmetrical Control:** Two players must work together, utilizing unique cooperative mechanics like standing on each other and lifting.
-- **High-Stakes Escape:** The single-level design creates an intense, puzzle-filled challenge that requires precise coordination.
+- **High-Stakes Chase:** The single-level design creates an intense, puzzle-filled challenge that requires precise coordination.
 - **Dynamic Platforming in a Single Room:** Despite being confined to one room, the level is packed with diverse obstacles and puzzles that demand precise coordination.
 - **Retro Aesthetics:** Charming 2D pixel art visuals deliver nostalgic appeal combined with modern multiplayer features.
+- **Robust Networking:** The custom client/server architecture ensures smooth, synchronized gameplay and effective communication.
