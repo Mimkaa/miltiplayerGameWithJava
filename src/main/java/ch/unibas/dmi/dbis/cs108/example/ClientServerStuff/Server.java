@@ -29,72 +29,78 @@ public class Server {
             System.out.println(p);
         }
 
-        try (DatagramSocket serverSocket = new DatagramSocket(SERVER_PORT)) {
-            System.out.println("Server is running on port " + SERVER_PORT);
+        try {
+            // Bind the server to a specific IP address.
+            // Replace "192.168.1.100" with your desired local IP address.
+            InetAddress ipAddress = InetAddress.getByName("localhost");
+            InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
+            
+            try (DatagramSocket serverSocket = new DatagramSocket(socketAddress)) {
+                System.out.println("Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
 
-            while (true) {
-                byte[] receiveData = new byte[1024];
-                DatagramPacket packet = new DatagramPacket(receiveData, receiveData.length);
-                serverSocket.receive(packet);
+                while (true) {
+                    byte[] receiveData = new byte[1024];
+                    DatagramPacket packet = new DatagramPacket(receiveData, receiveData.length);
+                    serverSocket.receive(packet);
 
-                // Safely copy the received data.
-                byte[] data = new byte[packet.getLength()];
-                System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
-                InetAddress clientAddress = packet.getAddress();
-                int clientPort = packet.getPort();
-                InetSocketAddress senderSocket = new InetSocketAddress(clientAddress, clientPort);
-                
+                    // Safely copy the received data.
+                    byte[] data = new byte[packet.getLength()];
+                    System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
+                    InetAddress clientAddress = packet.getAddress();
+                    int clientPort = packet.getPort();
+                    InetSocketAddress senderSocket = new InetSocketAddress(clientAddress, clientPort);
 
-                // Add sender to the client list if not already present.
-                if (!clients.contains(senderSocket)) {
-                    clients.add(senderSocket);
-                }
-                System.out.println("New client connected: " + senderSocket + ". Total clients: " + clients.size());
+                    // Add sender to the client list if not already present.
+                    if (!clients.contains(senderSocket)) {
+                        clients.add(senderSocket);
+                    }
+                    System.out.println("New client connected: " + senderSocket + ". Total clients: " + clients.size());
 
-                // Process the packet asynchronously.
-                executor.submit(() -> {
-                    String clientMessage = new String(data);
-                    System.out.println("Received from " + clientAddress + ":" + clientPort + " - " + clientMessage);
-                    try {
-                        // Decode the message using the new message system.
-                        Message msg = MessageCodec.decode(clientMessage);
-                        // Check if it's a movement message.
-                        if ("MOVE".equals(msg.getMessageType())) {
-                            // Simply forward the message to all clients except the sender.
-                            String broadcastMessage = MessageCodec.encode(msg);
-                            for (InetSocketAddress client : clients) {
-                                if (!client.equals(senderSocket)) {
-                                    byte[] sendData = broadcastMessage.getBytes();
-                                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
-                                            client.getAddress(), client.getPort());
-                                    try {
-                                        serverSocket.send(sendPacket);
-                                        System.out.println("Forwarded message to " + client);
-                                    } catch (IOException e) {
-                                        System.err.println("Error sending broadcast: " + e.getMessage());
+                    // Process the packet asynchronously.
+                    executor.submit(() -> {
+                        String clientMessage = new String(data);
+                        System.out.println("Received from " + clientAddress + ":" + clientPort + " - " + clientMessage);
+                        try {
+                            // Decode the message using the new message system.
+                            Message msg = MessageCodec.decode(clientMessage);
+                            // Check if it's a movement message.
+                            if ("MOVE".equals(msg.getMessageType())) {
+                                // Simply forward the message to all clients except the sender.
+                                String broadcastMessage = MessageCodec.encode(msg);
+                                for (InetSocketAddress client : clients) {
+                                    if (!client.equals(senderSocket)) {
+                                        byte[] sendData = broadcastMessage.getBytes();
+                                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
+                                                client.getAddress(), client.getPort());
+                                        try {
+                                            serverSocket.send(sendPacket);
+                                            System.out.println("Forwarded message to " + client);
+                                        } catch (IOException e) {
+                                            System.err.println("Error sending broadcast: " + e.getMessage());
+                                        }
                                     }
                                 }
+                            } else {
+                                // For non-movement messages, echo back to the sender.
+                                String response = "Echo: " + clientMessage;
+                                byte[] sendData = response.getBytes();
+                                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
+                                serverSocket.send(sendPacket);
                             }
-                        } else {
-                            // For non-movement messages, echo back to the sender.
-                            String response = "Echo: " + clientMessage;
-                            byte[] sendData = response.getBytes();
+                        } catch (IllegalArgumentException e) {
+                            String errorResponse = "Error: " + e.getMessage();
+                            byte[] sendData = errorResponse.getBytes();
                             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
-                            serverSocket.send(sendPacket);
+                            try {
+                                serverSocket.send(sendPacket);
+                            } catch (IOException ex) {
+                                System.err.println("Error sending error response: " + ex.getMessage());
+                            }
+                        } catch (IOException e) {
+                            System.err.println("I/O error: " + e.getMessage());
                         }
-                    } catch (IllegalArgumentException e) {
-                        String errorResponse = "Error: " + e.getMessage();
-                        byte[] sendData = errorResponse.getBytes();
-                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, clientAddress, clientPort);
-                        try {
-                            serverSocket.send(sendPacket);
-                        } catch (IOException ex) {
-                            System.err.println("Error sending error response: " + ex.getMessage());
-                        }
-                    } catch (IOException e) {
-                        System.err.println("I/O error: " + e.getMessage());
-                    }
-                });
+                    });
+                }
             }
         } catch (SocketException e) {
             System.err.println("Socket error: " + e.getMessage());

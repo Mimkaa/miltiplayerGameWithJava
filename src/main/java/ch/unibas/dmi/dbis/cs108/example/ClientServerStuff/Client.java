@@ -33,6 +33,9 @@ public class Client {
         Scanner scanner = new Scanner(System.in);
         System.out.print("Enter your name: ");
         String clientName = scanner.nextLine();
+
+        Message mockMessage = new Message("MOCK", new Object[] {"Hello from " + clientName}, null, new String[] {clientName});
+        outgoingQueue.offer(mockMessage);
         
         // Create and show the GUI on the Event Dispatch Thread.
         SwingUtilities.invokeLater(() -> {
