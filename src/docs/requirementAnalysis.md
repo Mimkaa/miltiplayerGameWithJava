@@ -67,7 +67,6 @@ Key functions of the system include:
 
 - **Escaper Players:** A team of four users who must work in unison to control two Escaper characters. 
 Their success depends on tight coordination and effective communication.
-- **General Gamers:** Players with basic computer proficiency and familiarity with multiplayer cooperative games.
 
 ### 2.4 Constraints
 
@@ -86,15 +85,28 @@ Their success depends on tight coordination and effective communication.
 
 ## 3. Detailed Requirements
 
+### 3.1. Functional Requirements
+
 * /F10/ **Client-Server Connection:** The system shall allow multiple clients to connect to the central server using a custom text-based protocol.
 * /F11/ **User Authentication and Lobby Management:** The system shall support user authentication and provide a lobby for 
 players to chat and select game sessions.
 * /F20/ **Real-Time Gameplay Synchronization:** The system shall maintain a synchronized game state across all clients.
-* /F21/ **Role-Specific Actions:** The system shall differentiate between:
-**Escapers:** Two characters controlled by two players each, with designated roles for walking/grabbing and jumping/throwing.
+  **Escapers:** The game consists of two Escapers, each controlled by two players. Every Escaper has four abilities: walking, throwing, grabbing, and jumping.
+
+  **Player 1** is responsible for walking and throwing.
+
+  **Player 2** is responsible for jumping and grabbing.
+This cooperative control system requires precise coordination between both players per Escaper to successfully navigate the environment and overcome obstacles
 * /F22/ **Dynamic Camera Systems:** The system shall implement camera functionality for both Escapers.
 * /F30/ **Game State Management:** The server shall manage the overall game state, including collision detection and win/lose conditions.
 * /F40/ **Chat and Communication:** The system shall provide chat functionality in both the lobby and in-game sessions.
+
+### 3.2. Non-Functional Requirements
+* /NF10/ **Performance:** The game shall run at a minimum of 30 FPS on standard student hardware【18†source】.
+
+* /NF20/ **Scalability:** The server shall handle at least 10 concurrent game sessions【18†source】.
+
+* /NF30/ **Security:** The system shall ensure encrypted communication for user authentication and game sessions【16†source】.
 
 ## 4. Acceptance Criteria
 
