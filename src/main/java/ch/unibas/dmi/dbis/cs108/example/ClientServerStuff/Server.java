@@ -21,7 +21,7 @@ public class Server {
 
         try {
             // Bind the server to a specific IP address.
-            InetAddress ipAddress = InetAddress.getByName("localhost");
+            InetAddress ipAddress = InetAddress.getByName("25.12.99.19");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             
             try (DatagramSocket serverSocket = new DatagramSocket(socketAddress)) {
