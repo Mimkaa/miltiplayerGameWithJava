@@ -1,14 +1,17 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import java.util.UUID; // Added import for UUID
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.awt.Graphics;
-
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 public abstract class GameObject {
+
+    // Unique identifier for this game object.
+    private final String id = UUID.randomUUID().toString();
 
     // The "game name" or session ID this player belongs to.
     private final String myGameName;
@@ -25,7 +28,7 @@ public abstract class GameObject {
     // Initially null; will be set from updateAsync() if not provided yet.
     protected ConcurrentLinkedQueue<Message> messageQueue = null;
 
-    // A shared static executor for all tasks, with a fixed pool of 10 threads.
+    // A shared static executor for all tasks, with a fixed pool of 20 threads.
     protected static final ExecutorService executor = Executors.newFixedThreadPool(20);
 
     public GameObject(String name, String myGameName) {
@@ -33,12 +36,16 @@ public abstract class GameObject {
         this.myGameName = myGameName;
     }
 
+    // Getter for the unique ID
+    public String getId() {
+        return id;
+    }
+
     public String getName() {
         return name;
     }
 
-    public String getGameName()
-    {
+    public String getGameName() {
         return myGameName;
     }
 
@@ -79,6 +86,16 @@ public abstract class GameObject {
      */
     protected void sendMessage(Message msg) {
         if (messageQueue != null) {
+            // Retrieve the current concealed parameters.
+            String[] concealed = msg.getConcealedParameters();
+            // Ensure there is enough space for two parameters.
+            if (concealed == null || concealed.length < 2) {
+                concealed = new String[2];
+            }
+            // Set the unique ID and game name.
+            concealed[0] = getName();       // Unique identifier from the GameObject.
+            concealed[1] = getGameName(); // Game name or session ID.
+            msg.setConcealedParameters(concealed);
             messageQueue.offer(msg);
         }
     }
@@ -148,7 +165,7 @@ public abstract class GameObject {
     
     // --- Command Pattern Definitions ---
 
-    public  KeyAdapter getKeyListener() {
+    public KeyAdapter getKeyListener() {
         return new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {

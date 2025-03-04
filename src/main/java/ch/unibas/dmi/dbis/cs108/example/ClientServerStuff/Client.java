@@ -7,19 +7,61 @@ import java.io.IOException;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class Client {
-    public static final String SERVER_ADDRESS = "25.12.99.19";
+    public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
 
-    // Global queue for outgoing messages (e.g., for server-bound messages).
-    private static final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
+    // Global queue for outgoing messages.
+    private final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
     // Global queue for incoming messages.
-    private static final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
 
-    public static void main(String[] args) {
+    // Make the Game an attribute of the Client.
+    private final Game game;
+
+    // Thread pool for executing tasks asynchronously.
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(10);
+
+    // Constructor creates the Game object.
+    public Client(String gameSessionName) {
+        this.game = new Game(gameSessionName);
+    }
+
+    /**
+     * Submits a task that runs continuously in a loop on a thread from the pool.
+     * The task is wrapped in a while(true) loop.
+     */
+    public void addLoopTask(Runnable task) {
+        threadPool.submit(() -> {
+            while (true) {
+                try {
+                    task.run();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                // Optionally pause briefly to avoid busy spinning.
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+    }
+
+    /**
+     * Submits a one-time asynchronous task to the thread pool.
+     */
+    public void addAsyncTask(Runnable task) {
+        threadPool.submit(task);
+    }
+
+    public void run() {
         // Prompt the user to enter their name.
         String clientName;
         try (Scanner scanner = new Scanner(System.in)) {
@@ -27,13 +69,7 @@ public class Client {
             clientName = scanner.nextLine();
         }
 
-        // Create the game object with a session name.
-        Game game = new Game("GameSession1");  
-        
-        // (Optional) Add the local player if not already created in Game's constructor.
-        // game.addPlayer(clientName);
-
-        // Initialize the UI (this sets up the JFrame and ties input to the local player).
+        // Initialize the UI and tie it to the local player.
         game.initUI(clientName);
 
         // Show current players.
@@ -54,85 +90,64 @@ public class Client {
         try (DatagramSocket clientSocket = new DatagramSocket()) {
             InetAddress serverIP = InetAddress.getByName(SERVER_ADDRESS);
 
-            // Receiver Thread: Listen for UDP packets, decode them into Message objects,
+            // Receiver Task: Listen for UDP packets, decode them into Message objects,
             // and place them into the 'incomingQueue'.
-            Thread receiverThread = new Thread(() -> {
-                while (true) {
-                    try {
-                        byte[] receiveData = new byte[1024];
-                        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                        clientSocket.receive(receivePacket);
-                        String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                        System.out.println("Received: " + response);
+            addLoopTask(() -> {
+                try {
+                    byte[] receiveData = new byte[1024];
+                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                    clientSocket.receive(receivePacket);
+                    String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
+                    System.out.println("Received: " + response);
+                    Message receivedMessage = MessageCodec.decode(response);
+                    incomingQueue.offer(receivedMessage);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
 
-                        // Decode into a Message, then enqueue it for local processing.
-                        Message receivedMessage = MessageCodec.decode(response);
-                        incomingQueue.offer(receivedMessage);
+            // Consumer Task: Continuously poll 'incomingQueue' and push messages to the Game.
+            addLoopTask(() -> {
+                Message msg = incomingQueue.poll();
+                if (msg != null) {
+                    game.addIncomingMessage(msg);
+                }
+            });
+
+            // Sender Task: Continuously poll 'outgoingQueue' and send messages over UDP to the server.
+            addLoopTask(() -> {
+                Message msg = outgoingQueue.poll();
+                if (msg != null) {
+                    String msgStr = MessageCodec.encode(msg);
+                    byte[] sendData = msgStr.getBytes();
+                    try {
+                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, SERVER_PORT);
+                        clientSocket.send(sendPacket);
+                        System.out.println("Sent: " + msgStr);
                     } catch (IOException e) {
                         e.printStackTrace();
-                        break;
                     }
                 }
             });
-            receiverThread.start();
 
-            // Consumer Thread: Continuously poll 'incomingQueue' and push messages to the Game.
-            Thread consumerThread = new Thread(() -> {
-                while (true) {
-                    Message msg = incomingQueue.poll();
-                    if (msg != null) {
-                        // Route message to the appropriate player inside Game.
-                        game.addIncomingMessage(msg);
-                    } else {
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
-                }
-            });
-            consumerThread.start();
+            
 
-            // Sender Thread: Continuously poll 'outgoingQueue' and send messages over UDP to the server.
-            Thread senderThread = new Thread(() -> {
-                while (true) {
-                    Message msg = outgoingQueue.poll();
-                    if (msg != null) {
-                        String msgStr = MessageCodec.encode(msg);
-                        byte[] sendData = msgStr.getBytes();
-                        try {
-                            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, SERVER_PORT);
-                            clientSocket.send(sendPacket);
-                            System.out.println("Sent: " + msgStr);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        }
-                    }
-                }
-            });
-            senderThread.start();
-
-            // Instead of a tight busy loop, use a ScheduledExecutorService to update at ~60 FPS.
+            // Scheduled Game Updater at ~60 FPS.
             ScheduledExecutorService updateScheduler = Executors.newSingleThreadScheduledExecutor();
             updateScheduler.scheduleAtFixedRate(() -> {
                 game.updateActiveObject(clientName, outgoingQueue);
             }, 0, 16, TimeUnit.MILLISECONDS);
 
-            // The main thread can now wait, or perform other tasks.
-            // For example, join on the updateScheduler if needed (or simply keep running).
-            // Here we'll simply block the main thread indefinitely.
+            // Block the main thread indefinitely.
             Thread.currentThread().join();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    // Main method creates an instance of Client and runs it.
+    public static void main(String[] args) {
+        Client client = new Client("GameSession1");
+        client.run();
     }
 }

@@ -67,8 +67,7 @@ public class Player extends GameObject {
             Message moveMsg = new Message(
                 "MOVE",
                 new Object[]{ x, y },
-                null,
-                new String[]{ getName(), getGameName() }  // concealed: [playerName, gameName]
+                null
             );
             sendMessage(moveMsg);
         }

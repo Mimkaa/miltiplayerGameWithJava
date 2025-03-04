@@ -28,6 +28,19 @@ public class Message {
     }
 
     /**
+     * Constructs a new Message without concealed parameters.
+     * The concealed parameters are set to null.
+     *
+     * @param messageType the type of the message
+     * @param parameters  the array of parameters for the message
+     * @param option      an optional field associated with the message
+     */
+    public Message(String messageType, Object[] parameters, String option) {
+        this(messageType, parameters, option, null);
+    }
+
+
+    /**
      * Returns the message type.
      *
      * @return the message type
