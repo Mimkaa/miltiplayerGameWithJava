@@ -49,6 +49,11 @@ public class Player extends GameObject {
         return y;
     }
 
+    public void setName(String newName) {
+        System.out.println(getName() + " is now " + newName);
+        super.name = newName; // GameObject icindeki name degisikliklerini guncelliyoruz
+    }
+
     /**
      * Local update logic: update the player's position based on input.
      * If the position changes, a MOVE message is sent using sendMessage().

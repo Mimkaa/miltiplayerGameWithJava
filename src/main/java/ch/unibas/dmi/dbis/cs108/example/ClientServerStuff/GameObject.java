@@ -16,7 +16,7 @@ public abstract class GameObject {
     // The "game name" or session ID this player belongs to.
     private final String myGameName;
 
-    private final String name;
+    protected String name;
 
     // Holds incoming messages from external sources.
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
@@ -108,7 +108,7 @@ public abstract class GameObject {
     }
 
     /**
-     * Schedules a one‐time collector command to poll for incoming messages.
+     * Schedules a onetime collector command to poll for incoming messages.
      * (This should be called once during initialization and then re‑scheduled
      * after processing commands in the game loop.)
      */

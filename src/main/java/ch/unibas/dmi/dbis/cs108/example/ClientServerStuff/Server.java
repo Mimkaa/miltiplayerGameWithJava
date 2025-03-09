@@ -77,6 +77,53 @@ public class Server {
         try {
             // Decode the message using your MessageCodec.
             Message msg = MessageCodec.decode(clientMessage);
+
+ // If the message type is “NICKNAME_CHANGE”, take special action
+ if ("NICKNAME_CHANGE".equals(msg.getMessageType())) {
+    Object[] params = msg.getParameters();
+    String[] concealed = msg.getConcealedParameters();
+
+    if (params.length >= 1 && concealed != null && concealed.length >= 1) {
+        String oldNickname = concealed[0]; // Old name
+        String newNickname = params[0].toString(); // new name
+
+        System.out.println(oldNickname + " changed nickname to " + newNickname);
+
+        // Update the updated player name on the server
+        for (InetSocketAddress client : clients) {
+            if (client.equals(senderSocket)) {
+                continue; 
+            }
+            
+            // Notify all clients about the update
+            Message broadcastMessage = new Message(
+                "NICKNAME_UPDATE",
+                new Object[]{ oldNickname, newNickname }, 
+                null,
+                null
+            );
+
+            // Encode the message
+            String encodedMsg = MessageCodec.encode(broadcastMessage);
+            byte[] sendData = encodedMsg.getBytes();
+
+            
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
+                    client.getAddress(), client.getPort());
+            try {
+                serverSocket.send(sendPacket);
+                System.out.println("Nickname update forwarded to " + client);
+            } catch (Exception ex1) {
+                System.err.println("Error sending nickname update to " + client + ": " + ex1.getMessage());
+            }
+        }
+        return; 
+    } else {
+        System.err.println("Invalid nickname change request: Missing parameters.");
+    }
+}
+
+
             // Encode the message back for broadcast.
             String broadcastMessage = MessageCodec.encode(msg);
             byte[] sendData = broadcastMessage.getBytes();

@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 public class Client {
     public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
+    private String clientName;
+
 
     // Global queue for outgoing messages.
     private final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
@@ -67,11 +69,9 @@ public class Client {
 
     public void run() {
         // Prompt the user to enter their name.
-        String clientName;
-        try (Scanner scanner = new Scanner(System.in)) {
-            System.out.print("Enter your name: ");
-            clientName = scanner.nextLine();
-        }
+         System.out.print("Enter your name: ");
+         clientName = scanner.nextLine();
+        
 
         // Initialize the UI and tie it to the local player.
         game.initUI(clientName);
@@ -131,8 +131,34 @@ public class Client {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                }
+                } 
             });
+
+            // Constantly check incoming messages
+addLoopTask(() -> {
+    Message msg = incomingQueue.poll();
+    if (msg != null) {
+        if ("NICKNAME_UPDATE".equals(msg.getMessageType())) {
+            Object[] params = msg.getParameters();
+            if (params.length >= 2) {
+                String oldNickname = params[0].toString();
+                String newNickname = params[1].toString();
+
+                System.out.println("Player " + oldNickname + " changed name to " + newNickname);
+
+                // Update player object
+                for (GameObject obj : game.getGameObjects()) {
+                    if (obj.getName().equals(oldNickname)) {
+                        ((Player) obj).setName(newNickname);
+                        break;
+                    }
+                }
+            }
+        } else {
+            game.addIncomingMessage(msg); 
+        }
+    }
+});
 
 
             // Scheduled Game Updater at ~60 FPS.
@@ -165,17 +191,39 @@ public class Client {
                 return;
             }
 
-            System.out.println("You typed: " + command);
+            if (command.startsWith("nickname ")) {
+                String newNickname = command.substring(9).trim();
+                if (!newNickname.isEmpty()) {
+                    System.out.println("Changing nickname to: " + newNickname);
     
-            // Otherwise parse & process the command as needed
-            // outgoingQueue.offer(...)
+                    // Create the nickname change message and send it to the server
+                    Message nicknameChangeMessage = new Message(
+                        "NICKNAME_CHANGE",
+                        new Object[]{ newNickname },
+                        null,
+                        new String[]{ clientName } // Add old name as reference
+                    );
+    
+                    // Send message to server
+                    outgoingQueue.offer(nicknameChangeMessage);
+    
+                    // Update new nickname
+                    clientName = newNickname;
+                } else {
+                    System.out.println("Invalid nickname!");
+                }
+            } else {
+                System.out.println("Unknown command: " + command);
+            }
         });
+        
+
     }
 
     // Main method creates an instance of Client and runs it.
     public static void main(String[] args) {
         Client client = new Client("GameSession1");
-        //client.startConsoleReaderLoop();
+        client.startConsoleReaderLoop();
         client.run();
     }
 }
