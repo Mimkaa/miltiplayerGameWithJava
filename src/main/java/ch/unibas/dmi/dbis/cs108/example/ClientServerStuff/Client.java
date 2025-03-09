@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class Client {
-    public static final String SERVER_ADDRESS = "25.12.160.52BOB";
+    public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
 
     // Global queue for outgoing messages.
@@ -175,7 +175,7 @@ public class Client {
     // Main method creates an instance of Client and runs it.
     public static void main(String[] args) {
         Client client = new Client("GameSession1");
-        client.startConsoleReaderLoop();
-        //client.run();
+        //client.startConsoleReaderLoop();
+        client.run();
     }
 }

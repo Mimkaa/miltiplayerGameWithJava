@@ -25,7 +25,7 @@ public class Server {
     public void start() {
         try {
             // Bind the server to a specific IP address (localhost in this example).
-            InetAddress ipAddress = InetAddress.getByName("25.12.160.52");
+            InetAddress ipAddress = InetAddress.getByName("localhost");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
