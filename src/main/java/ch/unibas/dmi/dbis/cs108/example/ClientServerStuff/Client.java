@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+
 public class Client {
     public static final String SERVER_ADDRESS = "25.12.160.52BOB";
     public static final int SERVER_PORT = 9876;
@@ -25,6 +26,9 @@ public class Client {
 
     // Thread pool for executing tasks asynchronously.
     private final ExecutorService threadPool = Executors.newFixedThreadPool(10);
+
+    // scanner for the terminal
+    Scanner scanner = new Scanner(System.in);
 
     // Constructor creates the Game object.
     public Client(String gameSessionName) {
@@ -130,7 +134,6 @@ public class Client {
                 }
             });
 
-            
 
             // Scheduled Game Updater at ~60 FPS.
             ScheduledExecutorService updateScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -143,11 +146,36 @@ public class Client {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+
+        
+    }
+
+    public void startConsoleReaderLoop() {
+        addLoopTask(() -> {
+            // Because nextLine() is a blocking call, this single read will block each iteration
+            // until the user presses Enter. That's okay if you have multiple threads in the pool.
+            System.out.print("Command> ");
+            String command = scanner.nextLine();
+    
+            if ("exit".equalsIgnoreCase(command)) {
+                System.out.println("Exiting console reader...");
+                // Possibly interrupt this thread or do something else to break out
+                // But the outer while(true) belongs to addLoopTask() so you'd need a strategy:
+                Thread.currentThread().interrupt();
+                return;
+            }
+
+            System.out.println("You typed: " + command);
+    
+            // Otherwise parse & process the command as needed
+            // outgoingQueue.offer(...)
+        });
     }
 
     // Main method creates an instance of Client and runs it.
     public static void main(String[] args) {
         Client client = new Client("GameSession1");
-        client.run();
+        client.startConsoleReaderLoop();
+        //client.run();
     }
 }
