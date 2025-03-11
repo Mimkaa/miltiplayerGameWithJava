@@ -1,9 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import java.util.UUID; // Added import for UUID
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -11,7 +9,7 @@ import java.awt.event.KeyEvent;
 public abstract class GameObject {
 
     // Unique identifier for this game object.
-    private final String id = UUID.randomUUID().toString();
+    private String id = UUID.randomUUID().toString();
 
     // The "game name" or session ID this player belongs to.
     private final String myGameName;
@@ -28,17 +26,19 @@ public abstract class GameObject {
     // Initially null; will be set from updateAsync() if not provided yet.
     protected ConcurrentLinkedQueue<Message> messageQueue = null;
 
-    // A shared static executor for all tasks, with a fixed pool of 20 threads.
-    protected static final ExecutorService executor = Executors.newFixedThreadPool(20);
-
     public GameObject(String name, String myGameName) {
         this.name = name;
         this.myGameName = myGameName;
     }
 
-    // Getter for the unique ID
+    // Getter for the unique ID.
     public String getId() {
         return id;
+    }
+    
+    // Setter for the unique ID.
+    public void setId(String newId) {
+        this.id = newId;
     }
 
     public String getName() {
@@ -59,7 +59,7 @@ public abstract class GameObject {
         if (this.messageQueue == null && providedQueue != null) {
             this.messageQueue = providedQueue;
         }
-        executor.submit(() -> {
+        AsyncManager.run(() -> {
             Command updateCommand = new CodeCommand(() -> {
                 myUpdateLocal();
             });
@@ -94,8 +94,9 @@ public abstract class GameObject {
             }
             // Set the unique ID and game name.
             concealed[0] = getName();       // Unique identifier from the GameObject.
-            concealed[1] = getGameName(); // Game name or session ID.
+            concealed[1] = getGameName();   // Game name or session ID.
             msg.setConcealedParameters(concealed);
+            msg.setOption("GAME");
             messageQueue.offer(msg);
         }
     }
@@ -104,16 +105,16 @@ public abstract class GameObject {
      * Schedules the addition of a new incoming message to this object's incomingMessages queue.
      */
     public void addIncomingMessageAsync(Message message) {
-        executor.submit(() -> incomingMessages.offer(message));
+        AsyncManager.run(() -> incomingMessages.offer(message));
     }
 
     /**
-     * Schedules a onetime collector command to poll for incoming messages.
+     * Schedules a one-time collector command to poll for incoming messages.
      * (This should be called once during initialization and then re‑scheduled
      * after processing commands in the game loop.)
      */
     public void collectMessageUpdatesOnce() {
-        commandQueue.offer(createIncomingMessageCommand());
+        AsyncManager.run(() -> commandQueue.offer(createIncomingMessageCommand()));
     }
     
     /**
@@ -138,16 +139,16 @@ public abstract class GameObject {
         while ((cmd = commandQueue.poll()) != null) {
             cmd.execute();
         }
-        // After processing, re-schedule the collector command once.
+        // After processing, re-schedule the collector command asynchronously.
         collectMessageUpdatesOnce();
     }
 
     /**
-     * Shuts down the shared executor service.
+     * Shuts down the asynchronous execution.
      * Call this only once when the application ends.
      */
-    public static void shutdownExecutor() {
-        executor.shutdownNow();
+    public static void shutdownAsync() {
+        AsyncManager.shutdown();
     }
 
     /**
@@ -164,7 +165,7 @@ public abstract class GameObject {
     public abstract void draw(Graphics g);
     
     // --- Command Pattern Definitions ---
-
+    
     public KeyAdapter getKeyListener() {
         return new KeyAdapter() {
             @Override

@@ -1,10 +1,12 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -15,38 +17,29 @@ public class Game {
     // The game (or session) name.
     private final String gameName;
 
-    // A fixed-size thread pool for asynchronous tasks (e.g., routing messages).
-    private final ExecutorService executor;
-
     // Reference to our Swing panel that draws game objects.
     private GamePanel gamePanel;
 
     /**
      * Creates a Game instance with the specified gameName.
-     * This constructor creates three default players.
+     * This constructor creates several default game objects.
      */
     public Game(String gameName) {
         this.gameName = gameName;
-        // Add Player instances (which extend GameObject)
+        // Add default game objects.
         gameObjects.add(new Player("Alice", 100.0f, 200.0f, 10.0f, gameName));
         gameObjects.add(new Player("Bob",   150.0f, 250.0f, 12.0f, gameName));
         gameObjects.add(new Player("Carol", 200.0f, 300.0f, 15.0f, gameName));
         gameObjects.add(new Square("Joe", 300, 300, 10, gameName));
         gameObjects.add(new Ricardo("Ricardo", gameName, 400, 300, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/ricardo.png"));
-        gameObjects.add(new BandageGuy( "Ninja", gameName, 100.0f, 200.0f, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/bandageninja.jpg"));
-        this.executor = Executors.newFixedThreadPool(20);
-
-        // Start collecting incoming messages for each game object.
-        for (GameObject go : gameObjects) {
-            go.collectMessageUpdatesOnce();
-        }
+        gameObjects.add(new BandageGuy("Ninja", gameName, 100.0f, 200.0f, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/bandageninja.jpg"));
     }
 
     /**
      * Queues an asynchronous task to route an incoming message to the correct game object.
      */
     public void addIncomingMessage(Message msg) {
-        executor.submit(() -> routeMessageToGameObject(msg));
+        AsyncManager.run(() -> routeMessageToGameObject(msg));
     }
 
     /**
@@ -59,7 +52,7 @@ public class Game {
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(targetName)) {
                     go.addIncomingMessageAsync(msg);
-                    // Optionally ensure the collector is active.
+                    // The call here is sufficient to trigger message collection.
                     go.collectMessageUpdatesOnce();
                     System.out.println("Routed message to " + go.getName());
                     break;
@@ -73,7 +66,7 @@ public class Game {
      * The game object's updateAsync() method is called with the provided outgoingQueue.
      */
     public void updateActiveObject(String objectName, ConcurrentLinkedQueue<Message> outgoingQueue) {
-        executor.submit(() -> {
+        AsyncManager.run(() -> {
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(objectName)) {
                     go.updateAsync(outgoingQueue);
@@ -99,11 +92,8 @@ public class Game {
             // Attach key listener for the local player.
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(localPlayerName)) {
-                    // Assuming the local game object is a Player instance.
-                    
                     frame.addKeyListener(go.getKeyListener());
                     System.out.println("Connected controls for local player: " + go.getName());
-                    
                     break;
                 }
             }
@@ -125,14 +115,30 @@ public class Game {
     }
 
     /**
-     * Adds a new player with the specified name to this game session.
+     * Synchronously creates a new GameObject of the given type using the provided parameters,
+     * generates a new UUID, sets it in the object, adds it to the game,
+     * and returns the generated UUID.
+     *
+     * @param type   The type identifier (e.g., "Player", "Square", etc.).
+     * @param params A variable number of parameters to be passed to the object's constructor.
+     * @return The generated UUID for the newly created game object.
      */
-    public void addPlayer(String playerName) {
-        // Create a new Player (which is a GameObject)
-        GameObject newPlayer = new Player(playerName, 0.0f, 0.0f, 5.0f, gameName);
-        gameObjects.add(newPlayer);
-        newPlayer.collectMessageUpdatesOnce();
-        System.out.println("Added new player: " + newPlayer.getName());
+    public String addGameObject(String type, Object... params) {
+        // Create a new game object using the factory.
+        GameObject newObject = GameObjectFactory.create(type, params);
+        
+        // Generate a new UUID.
+        String uuid = UUID.randomUUID().toString();
+        
+        // Set the UUID in the game object.
+        newObject.setId(uuid);
+        
+        // Add the new game object to the list.
+        gameObjects.add(newObject);
+        
+        // No need to call collectMessageUpdatesOnce() here since the routing does that.
+        System.out.println("Added new " + type + ": " + newObject.getName() + " with UUID: " + uuid);
+        return uuid;
     }
 
     /**
@@ -150,10 +156,10 @@ public class Game {
     }
 
     /**
-     * Shuts down the game's executor.
+     * Shuts down the asynchronous execution.
      */
     public void shutdown() {
-        executor.shutdownNow();
-        System.out.println("Game [" + gameName + "] executor stopped.");
+        AsyncManager.shutdown();
+        System.out.println("Game [" + gameName + "] async manager stopped.");
     }
 }
