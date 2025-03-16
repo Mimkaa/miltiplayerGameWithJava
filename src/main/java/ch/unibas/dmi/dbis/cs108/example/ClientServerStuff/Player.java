@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
 
 
 public class Player extends GameObject {
@@ -85,9 +86,10 @@ public class Player extends GameObject {
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
+            System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = (params[0] instanceof Number) ? ((Number) params[0]).floatValue() : x;
-                float newY = (params[1] instanceof Number) ? ((Number) params[1]).floatValue() : y;
+                float newX = Float.parseFloat((String) params[0]);
+                float newY = Float.parseFloat((String) params[1]);
                 synchronized (this) {
                     this.x = newX;
                     this.y = newY;

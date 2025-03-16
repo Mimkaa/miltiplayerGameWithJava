@@ -6,6 +6,8 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+
 import javax.imageio.ImageIO;
 
 public class BandageGuy extends GameObject {
@@ -62,6 +64,8 @@ public class BandageGuy extends GameObject {
         // Globale Updates hier implementieren
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
+            System.out.println("MOVE message parameters: " + Arrays.toString(params));
+           
             if (params.length >= 2) {
                 float newX = (params[0] instanceof Number) ? ((Number) params[0]).floatValue() : posX;
                 float newY = (params[1] instanceof Number) ? ((Number) params[1]).floatValue() : posY;

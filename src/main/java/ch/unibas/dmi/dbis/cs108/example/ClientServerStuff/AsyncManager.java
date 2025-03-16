@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
 
 public class AsyncManager {
     // Encapsulated executor service.
-    private static final ExecutorService executor = Executors.newFixedThreadPool(50);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(100);
 
     // Run a task asynchronously without caring about the result.
     public static void run(Runnable task) {

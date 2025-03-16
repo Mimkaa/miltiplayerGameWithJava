@@ -30,9 +30,9 @@ public class Game {
         gameObjects.add(new Player("Alice", 100.0f, 200.0f, 10.0f, gameName));
         gameObjects.add(new Player("Bob",   150.0f, 250.0f, 12.0f, gameName));
         gameObjects.add(new Player("Carol", 200.0f, 300.0f, 15.0f, gameName));
-        gameObjects.add(new Square("Joe", 300, 300, 10, gameName));
-        gameObjects.add(new Ricardo("Ricardo", gameName, 400, 300, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/ricardo.png"));
-        gameObjects.add(new BandageGuy("Ninja", gameName, 100.0f, 200.0f, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/bandageninja.jpg"));
+        //gameObjects.add(new Square("Joe", 300, 300, 10, gameName));
+        //gameObjects.add(new Ricardo("Ricardo", gameName, 400, 300, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/ricardo.png"));
+        //gameObjects.add(new BandageGuy("Ninja", gameName, 100.0f, 200.0f, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/bandageninja.jpg"));
     }
 
     /**

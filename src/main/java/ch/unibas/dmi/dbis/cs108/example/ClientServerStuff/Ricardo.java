@@ -7,6 +7,8 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+
 import javax.imageio.ImageIO;
 import java.awt.geom.AffineTransform;
 
@@ -72,6 +74,7 @@ public class Ricardo extends GameObject {
     protected void myUpdateGlobal(Message msg) {
         if ("ROTATE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
+            System.out.println("ROTATE message parameters: " + Arrays.toString(params));
             if (params.length >= 1) {
                 float newRotation = (params[0] instanceof Number)
                                     ? ((Number) params[0]).floatValue() : rotation;

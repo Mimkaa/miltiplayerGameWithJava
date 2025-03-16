@@ -4,208 +4,143 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
 import java.io.IOException;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.net.SocketException;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
     public static final int SERVER_PORT = 9876;
-    public static final int ADMIN_TCP_PORT = 9877; // Dedicated port for admin commands
     
-    // Executor for processing UDP packets.
-    private final ExecutorService udpExecutor = Executors.newFixedThreadPool(10);
-    // Executor for processing TCP admin connections.
-    private final ExecutorService adminExecutor = Executors.newFixedThreadPool(5);
+    // Concurrent map to track clients: key = username, value = InetSocketAddress.
+    private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
     
-    // Thread-safe list to track UDP client addresses.
-    private final CopyOnWriteArrayList<InetSocketAddress> clients = new CopyOnWriteArrayList<>();
-    
+    // Server socket.
     private DatagramSocket serverSocket;
     
-    /**
-     * Starts the server by launching two listener threads:
-     * one for UDP game messages and one for TCP administrative commands.
-     */
-    public void start() {
-        // Start the UDP listener.
-        new Thread(this::startUDPListener).start();
-        // Start the TCP admin listener.
-        new Thread(this::startTCPAdminListener).start();
-    }
+    // Reliable sender and ACK processor.
+    private ReliableUDPSender reliableSender;
+    private AckProcessor ackProcessor;
     
     /**
-     * UDP listener method.
-     * Listens on SERVER_PORT for game messages, records client addresses,
-     * and forwards incoming messages to all clients (except the sender).
+     * Starts the server by creating a thread that continuously listens for incoming messages.
      */
-    private void startUDPListener() {
+    public void start() {
         try {
+            // Bind server socket to localhost:SERVER_PORT.
             InetAddress ipAddress = InetAddress.getByName("localhost");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
-
-            while (true) {
-                byte[] receiveData = new byte[1024];
-                DatagramPacket packet = new DatagramPacket(receiveData, receiveData.length);
-                serverSocket.receive(packet);
-
-                // Safely copy the received data.
-                byte[] data = new byte[packet.getLength()];
-                System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
-                InetAddress clientAddress = packet.getAddress();
-                int clientPort = packet.getPort();
-                InetSocketAddress senderSocket = new InetSocketAddress(clientAddress, clientPort);
-
-                // Add sender to the client list if not already present.
-                if (!clients.contains(senderSocket)) {
-                    clients.add(senderSocket);
-                    System.out.println("New client connected: " + senderSocket + ". Total clients: " + clients.size());
-                }
-
-                // Process the packet asynchronously.
-                udpExecutor.submit(() -> processPacket(data, senderSocket));
-            }
-        } catch (SocketException ex) {
-            System.err.println("Socket error (UDP): " + ex.getMessage());
-        } catch (IOException ex) {
-            System.err.println("IO error (UDP): " + ex.getMessage());
-        } finally {
-            if (serverSocket != null && !serverSocket.isClosed()) {
-                serverSocket.close();
-            }
-            udpExecutor.shutdown();
-        }
-    }
-    
-    /**
-     * Processes an individual UDP packet by decoding the message,
-     * then broadcasting it to all connected clients except the sender.
-     *
-     * @param data The received data.
-     * @param senderSocket The sender's socket address.
-     */
-    private void processPacket(byte[] data, InetSocketAddress senderSocket) {
-        String clientMessage = new String(data);
-        System.out.println("Received from " + senderSocket.getAddress().getHostAddress() + ":" 
-                           + senderSocket.getPort() + " - " + clientMessage);
-        try {
-            // Decode the message using your MessageCodec.
-            Message msg = MessageCodec.decode(clientMessage);
-            // Encode the message for broadcast.
-            String broadcastMessage = MessageCodec.encode(msg);
-            byte[] sendData = broadcastMessage.getBytes();
-
-            // Forward the message to all clients except the sender.
-            for (InetSocketAddress client : clients) {
-                if (!client.equals(senderSocket)) {
-                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
-                            client.getAddress(), client.getPort());
+            
+            // Initialize ReliableUDPSender and ACK processor.
+            reliableSender = new ReliableUDPSender(serverSocket, 10, 200);
+            ackProcessor = new AckProcessor(serverSocket);
+            ackProcessor.start();
+            
+            // Start a thread that continuously listens for UDP messages.
+            new Thread(() -> {
+                while (true) {
                     try {
-                        serverSocket.send(sendPacket);
-                        System.out.println("Forwarded message to " + client);
-                    } catch (Exception ex1) {
-                        System.err.println("Error sending broadcast to " + client + ": " + ex1.getMessage());
+                        byte[] buffer = new byte[1024];
+                        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                        serverSocket.receive(packet);
+                        
+                        // Safely copy the data.
+                        byte[] data = new byte[packet.getLength()];
+                        System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
+                        
+                        InetAddress clientAddress = packet.getAddress();
+                        int clientPort = packet.getPort();
+                        InetSocketAddress senderSocket = new InetSocketAddress(clientAddress, clientPort);
+                        
+                        String messageString = new String(data);
+                        System.out.println("Received: " + messageString + " from " + senderSocket);
+                        
+                        
+                        AsyncManager.run(() -> {
+                            Message msg = MessageCodec.decode(messageString);
+                            processMessage(msg, senderSocket);
+                        });
+                        
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
-            }
-        } catch (IllegalArgumentException ex) {
-            // If decoding fails, send back an error message.
-            String errorResponse = "Error: " + ex.getMessage();
-            byte[] sendData = errorResponse.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, 
-                    senderSocket.getAddress(), senderSocket.getPort());
-            try {
-                serverSocket.send(sendPacket);
-            } catch (Exception ex2) {
-                System.err.println("Error sending error response: " + ex2.getMessage());
-            }
-        } catch (Exception ex) {
-            System.err.println("Error processing packet: " + ex.getMessage());
+            }).start();
+            
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     
     /**
-     * TCP listener method for administrative commands.
-     * Listens on ADMIN_TCP_PORT, accepts connections, and delegates each to a thread from the adminExecutor.
-     */
-    private void startTCPAdminListener() {
-        try (ServerSocket adminServerSocket = new ServerSocket(ADMIN_TCP_PORT)) {
-            System.out.println("TCP Admin Server is running on port " + ADMIN_TCP_PORT);
-            while (true) {
-                Socket clientSocket = adminServerSocket.accept();
-                // Process each admin connection concurrently.
-                adminExecutor.submit(() -> handleAdminConnection(clientSocket));
-            }
-        } catch (IOException ex) {
-            System.err.println("Error in TCP Admin Listener: " + ex.getMessage());
-        }
-    }
-    
-    /**
-     * Handles an individual TCP admin connection.
-     * Reads a newline-delimited command, processes it (using if/switch logic),
-     * sends the response, and then closes the connection.
+     * Processes a received message.
+     * If the message is not an ACK, extracts the username from the second-to-last concealed parameter
+     * and registers the client in clientsMap.
      *
-     * @param clientSocket The TCP socket for the admin connection.
+     * @param msg           The decoded message.
+     * @param senderSocket  The sender's socket address.
      */
-    private void handleAdminConnection(Socket clientSocket) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()))) {
-             
-             // Read the admin command.
-             String adminMessage = reader.readLine();
-             System.out.println("Received admin message: " + adminMessage);
-             
-             // Decode the message using MessageCodec.
-             Message msg = MessageCodec.decode(adminMessage);
-             String response;
-             
-             // Process the command.
-             if ("LIST_GAMES".equalsIgnoreCase(msg.getMessageType())) {
-                 response = getListOfGames();
-             } else {
-                 response = "Unknown command";
-             }
-             
-             // Send the response.
-             writer.write(response);
-             writer.newLine();
-             writer.flush();
-        } catch (IOException ex) {
-            System.err.println("Error handling admin connection: " + ex.getMessage());
-        } finally {
-            try {
-                clientSocket.close();
-            } catch (IOException ex) {
-                System.err.println("Error closing admin connection: " + ex.getMessage());
+    private void processMessage(Message msg, InetSocketAddress senderSocket) {
+        if (!"ACK".equalsIgnoreCase(msg.getMessageType())) {
+            // Extract the concealed parameters.
+            String[] concealed = msg.getConcealedParameters();
+            if (concealed != null && concealed.length >= 2) {
+                // Username is assumed to be the last item (post-decode),
+                // so we retrieve it from concealed[concealed.length - 1].
+                String username = concealed[concealed.length - 1];
+                clientsMap.put(username, senderSocket);
+                System.out.println("Registered user: " + username + " at " + senderSocket + 
+                                   ". Total clients: " + clientsMap.size());
+    
+                // Print the entire map to see all registered clients.
+                System.out.println("Current clientsMap after registering \"" + username + "\":");
+                clientsMap.forEach((user, address) -> {
+                    System.out.println("  " + user + " -> " + address);
+                });
+    
+                // If the message has a UUID, add it to the AckProcessor.
+                if (msg.getUUID() != null) {
+                    ackProcessor.addAck(senderSocket, msg.getUUID());
+                    System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+                }
+                // Broadcast the message asynchronously.
+                AsyncManager.run(() -> broadcastMessage(msg, username));
+            } else {
+                System.out.println("Concealed parameters missing or too short.");
+            }
+        } else {
+            // Process ACK messages by calling reliableSender.acknowledge() with the message's UUID.
+            String ackUuid = msg.getParameters()[0].toString();
+            reliableSender.acknowledge(ackUuid);
+            System.out.println("Processed ACK message for UUID " + msg.getUUID());
+        }
+    }
+    
+    
+    /**
+     * Broadcasts the given message to all clients except the sender (identified by senderUsername).
+     */
+    private void broadcastMessage(Message msg, String senderUsername) {
+        
+        for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
+            String clientUsername = entry.getKey();
+            InetSocketAddress clientAddress = entry.getValue();
+            // Send to every client whose username is not the sender's.
+            if (!clientUsername.equals(senderUsername)) {
+                try {
+                    reliableSender.sendMessage(msg, clientAddress.getAddress(), clientAddress.getPort());
+                    System.out.println("Forwarded message to UDP client " + clientUsername + " at " + clientAddress);
+                } catch (Exception e) {
+                    System.err.println("Error sending message to " + clientUsername + " at " + clientAddress + ": " + e.getMessage());
+                }
             }
         }
     }
     
-    /**
-     * Example helper method to simulate retrieving a list of games.
-     *
-     * @return A comma-separated string of game names.
-     */
-    private String getListOfGames() {
-        // In a real scenario, this method would collect game session data.
-        return "Game1, Game2, Game3";
-    }
     
-    /**
-     * Main method to start the server.
-     */
+    
     public static void main(String[] args) {
-        Server server = new Server();
-        server.start();
+        new Server().start();
     }
 }
