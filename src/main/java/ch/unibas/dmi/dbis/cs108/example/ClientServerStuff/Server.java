@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.UUID;
 
 public class Server {
@@ -21,6 +22,9 @@ public class Server {
     // Reliable sender and ACK processor.
     private ReliableUDPSender reliableSender;
     private AckProcessor ackProcessor;
+
+    // The Game instance.
+    private  Game MyGameInstance;
     
     /**
      * Starts the server by creating a thread that continuously listens for incoming messages.
@@ -38,6 +42,7 @@ public class Server {
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
             
+            MyGameInstance = new Game("GameSession1");
             // Start a thread that continuously listens for UDP messages.
             new Thread(() -> {
                 while (true) {
@@ -171,7 +176,7 @@ public class Server {
 
     private void handleRequest(Message msg, String senderUsername) {
         if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
-            // Example incoming message: CRTE{REQUEST}[Player, Alice, 100, 150, 10, GameSession1]||
+            // Example incoming message: CREATE{REQUEST}[Player, Alice, 100, 150, 10, GameSession1]||
             // where "Player" is the type and "Alice" is the desired object name.
             
             // 1) Extract the original parameters from the request.
@@ -188,7 +193,7 @@ public class Server {
             System.arraycopy(originalParams, 0, newParams, 1, originalParams.length);
             
             // 4) Create a new message with:
-            //    - messageType = "CRTE"
+            //    - messageType = "CREATE"
             //    - option      = "RESPONSE"
             //    - parameters  = newParams
             Message responseMsg = new Message("CREATE", newParams, "RESPONSE");
@@ -196,10 +201,32 @@ public class Server {
             // 5) Set responseMsg UUID to an empty string so the encoder won't append "null".
             responseMsg.setUUID("");
             
-            // 6) Broadcast the new RESPONSE message to all clients.
+            // 6) Update the game on the server by adding the new game object.
+            // The factory expects the following signature:
+            //   addGameObjectAsync(String type, String uuid, Object... params)
+            // where:
+            //   type is originalParams[0] (e.g. "Player"),
+            //   uuid is the serverGeneratedUuid,
+            //   and the remaining parameters (starting from index 1) are passed as varargs.
+            Future<GameObject> futureObj = MyGameInstance.addGameObjectAsync(
+                originalParams[0].toString(), 
+                serverGeneratedUuid, 
+                (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
+            );
+            
+            try {
+                GameObject newObj = futureObj.get();
+                System.out.println("Created new game object with UUID: " + serverGeneratedUuid 
+                        + " and name: " + newObj.getName());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            
+            // 7) Broadcast the new RESPONSE message to all clients.
             broadcastMessageToAll(responseMsg);
         }
     }
+
     
 
     

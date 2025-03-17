@@ -192,19 +192,15 @@ public class Client {
         
         if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
             // Expecting parameters:
-            // [serverGeneratedUuid, username, objectType, posX, posY, size, gameSession]
+            // [serverGeneratedUuid, objectType, objectName, posX, posY, size, gameSession]
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 7) {
                 String serverUuid = params[0].toString();
                 String objectType = params[1].toString();
                 
-                // Unfold the remaining parameters from the array and pass them as varargs.
-                Future<GameObject> futureObj = game.addGameObjectAsync(
-                    objectType, 
-                    serverUuid,  
-                    params[2],
-                    params[3], params[4], params[5], params[6]
-                );
+                // Pass the remaining parameters (from index 2 to the end) as varargs.
+                Object[] remainingParams = java.util.Arrays.copyOfRange(params, 2, params.length);
+                Future<GameObject> futureObj = game.addGameObjectAsync(objectType, serverUuid, remainingParams);
                 
                 try {
                     GameObject newObj = futureObj.get();
@@ -214,7 +210,7 @@ public class Client {
                     e.printStackTrace();
                 }
             } else {
-                System.out.println("CRTE RESPONSE message does not contain enough parameters.");
+                System.out.println("CREATE RESPONSE message does not contain enough parameters.");
             }
         } else {
             System.out.println("Unhandled RESPONSE message type: " + msg.getMessageType());
