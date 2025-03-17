@@ -4,15 +4,24 @@ import javax.swing.*;
 import java.awt.*;
 
 public class GamePanel extends JPanel {
-    private final GameObject[] gameObjects;
+    private GameObject[] gameObjects;
 
     public GamePanel(GameObject[] gameObjects) {
         this.gameObjects = gameObjects;
         setBackground(Color.WHITE);
     }
+    
+    /**
+     * Synchronized update of the game objects array.
+     * @param newGameObjects the new array of game objects to be displayed.
+     */
+    public synchronized void updateGameObjects(GameObject[] newGameObjects) {
+        this.gameObjects = newGameObjects;
+        repaint();
+    }
 
     @Override
-    protected void paintComponent(Graphics g) {
+    protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
         // Draw each game object.
         for (GameObject obj : gameObjects) {

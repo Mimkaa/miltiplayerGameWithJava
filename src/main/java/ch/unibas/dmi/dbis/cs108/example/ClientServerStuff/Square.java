@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
 
 public class Square extends GameObject {
     private float x;
@@ -74,6 +75,8 @@ public class Square extends GameObject {
     protected void myUpdateGlobal(Message msg) {
         if ("INFT".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
+           
+            System.out.println("INFT message parameters: " + Arrays.toString(params));
             if (params != null && params.length > 0) {
                 float newRadius = (params[0] instanceof Number)
                                   ? ((Number) params[0]).floatValue()

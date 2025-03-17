@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
 
 
 public class Player extends GameObject {
@@ -85,19 +86,25 @@ public class Player extends GameObject {
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
+            System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = (params[0] instanceof Number) ? ((Number) params[0]).floatValue() : x;
-                float newY = (params[1] instanceof Number) ? ((Number) params[1]).floatValue() : y;
+                // Use ternary operators to check if the parameter is already a Number
+                float newX = (params[0] instanceof Number)
+                            ? ((Number) params[0]).floatValue()
+                            : Float.parseFloat(params[0].toString());
+                float newY = (params[1] instanceof Number)
+                            ? ((Number) params[1]).floatValue()
+                            : Float.parseFloat(params[1].toString());
                 synchronized (this) {
                     this.x = newX;
                     this.y = newY;
                 }
                 System.out.println("Processed MOVE for " + getName() +
-                                   " in game " + extractGameName(msg) +
-                                   ": new position x=" + newX + ", y=" + newY);
+                        " in game " + extractGameName(msg) +
+                        ": new position x=" + newX + ", y=" + newY);
             }
         }
-        // Additional message types can be processed here.
+        // Process additional message types as needed.
     }
 
     /**

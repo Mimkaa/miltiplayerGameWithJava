@@ -3,34 +3,45 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.io.IOException;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 
+import javax.swing.SwingUtilities;
+import java.util.UUID;
 
 public class Client {
     public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
-    private String clientName;
-
 
     // Global queue for outgoing messages.
     private final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
     // Global queue for incoming messages.
     private final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
 
-    // Make the Game an attribute of the Client.
+    // The Game instance.
     private final Game game;
 
-    // Thread pool for executing tasks asynchronously.
-    private final ExecutorService threadPool = Executors.newFixedThreadPool(10);
+    // Scanner for the terminal.
+    private final Scanner scanner = new Scanner(System.in);
 
-    // scanner for the terminal
-    Scanner scanner = new Scanner(System.in);
+    // The client's username.
+    private String username = UUID.randomUUID().toString();
+
+    // Fields to store additional client state.
+    private String idGameObject;
+    private String idGame;
+
+    // Reliable UDP Sender.
+    private ReliableUDPSender myReliableUDPSender;
+    // AckProcessor for sending ACK messages.
+    private AckProcessor ackProcessor;
+
+    // Client socket as a class attribute.
+    private DatagramSocket clientSocket;
 
     // Constructor creates the Game object.
     public Client(String gameSessionName) {
@@ -38,192 +49,269 @@ public class Client {
     }
 
     /**
-     * Submits a task that runs continuously in a loop on a thread from the pool.
-     * The task is wrapped in a while(true) loop.
+     * Starts the graphics-related tasks.
      */
-    public void addLoopTask(Runnable task) {
-        threadPool.submit(() -> {
-            while (true) {
-                try {
-                    task.run();
-                } catch (Exception e) {
-                    e.printStackTrace();
+    private void startGraphicsStuff(String clientName) {
+        SwingUtilities.invokeLater(() -> game.initUI(clientName));
+
+        AsyncManager.run(() -> {
+            try {
+                while (true) {
+                    game.updateActiveObject(clientName, outgoingQueue);
+                    Thread.sleep(16);
                 }
-                // Optionally pause briefly to avoid busy spinning.
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         });
     }
 
-    /**
-     * Submits a one-time asynchronous task to the thread pool.
-     */
-    public void addAsyncTask(Runnable task) {
-        threadPool.submit(task);
-    }
-
     public void run() {
-        // Prompt the user to enter their name.
-         System.out.print("Enter your name: ");
-         clientName = scanner.nextLine();
-        
+        try {
+            // Initialize the client socket once.
+            clientSocket = new DatagramSocket();
+            
+            // Initialize the reliable sender without a fixed destination.
+            myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 200);
+            
+            // Initialize the AckProcessor using the same socket.
+            ackProcessor = new AckProcessor(clientSocket);
+            ackProcessor.start();
 
-        // Initialize the UI and tie it to the local player.
-        game.initUI(clientName);
-
-        // Show current players.
-        System.out.println("Players now in the game on the client side:");
-        for (GameObject p : game.getGameObjects()) {
-            System.out.println(p);
-        }
-
-        // Optionally send a "mock" message to the server to register this client.
-        Message mockMessage = new Message(
-            "MOCK", 
-            new Object[] {"Hello from " + clientName}, 
-            null, 
-            new String[] {clientName}
-        );
-        outgoingQueue.offer(mockMessage);
-
-        try (DatagramSocket clientSocket = new DatagramSocket()) {
-            InetAddress serverIP = InetAddress.getByName(SERVER_ADDRESS);
-
-            // Receiver Task: Listen for UDP packets, decode them into Message objects,
-            // and place them into the 'incomingQueue'.
-            addLoopTask(() -> {
+            Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username }, null);
+            String[] concealedPrms = { "something1", "something2", username };
+            mockMessage.setConcealedParameters(concealedPrms);
+            // For demonstration, send the mock message to SERVER_ADDRESS:SERVER_PORT
+            InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
+            myReliableUDPSender.sendMessage(mockMessage, serverInet, SERVER_PORT);
+            
+            //sendBulkCreateMessages();
+            
+            
+            // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
+            AsyncManager.runLoop(() -> {
                 try {
                     byte[] receiveData = new byte[1024];
                     DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
                     clientSocket.receive(receivePacket);
                     String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                    System.out.println("Received: " + response);
+                    System.out.println("Received (UDP): " + response);
                     Message receivedMessage = MessageCodec.decode(response);
                     incomingQueue.offer(receivedMessage);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             });
-
-            // Consumer Task: Continuously poll 'incomingQueue' and push messages to the Game.
-            addLoopTask(() -> {
-                Message msg = incomingQueue.poll();
-                if (msg != null) {
-                    game.addIncomingMessage(msg);
+            
+            // Consumer Task: Process incoming messages.
+            AsyncManager.runLoop(() -> {
+                try {
+                    Message msg = incomingQueue.poll();
+                    if (msg != null) {
+                        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+                            // Process the ACK
+                            if (msg.getParameters() != null && msg.getParameters().length > 0) {
+                                String ackUuid = msg.getParameters()[0].toString();
+                                myReliableUDPSender.acknowledge(ackUuid);
+                            } else {
+                                System.out.println("Received ACK with no parameters.");
+                            }
+                        } else {
+                            // Non-ACK message logic
+                            if (msg.getUUID() != null) {
+                                InetSocketAddress dest = 
+                                    new InetSocketAddress(InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                ackProcessor.addAck(dest, msg.getUUID());
+                            }
+            
+                            // Check the "option" field to see what kind of message it is
+                            String option = msg.getOption();
+                            
+                            if ("GAME".equalsIgnoreCase(option)) {
+                                // If it's a GAME update, forward it to your game logic/UI
+                                game.addIncomingMessage(msg);
+                            } else if ("RESPONSE".equalsIgnoreCase(option)) {
+                                // If it's some sort of server "RESPONSE", call a dedicated handler
+                                AsyncManager.run(() -> {processServerResponse(msg);});
+                            } else {
+                                // For anything else, do whatever fallback logic you want
+                                System.out.println("Unknown message option: " + option);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             });
-
-            // Sender Task: Continuously poll 'outgoingQueue' and send messages over UDP to the server.
-            addLoopTask(() -> {
+            
+            // Sender Task: Continuously poll outgoingQueue and send messages using the reliable sender.
+            AsyncManager.runLoop(() -> {
                 Message msg = outgoingQueue.poll();
                 if (msg != null) {
-                    String msgStr = MessageCodec.encode(msg);
-                    byte[] sendData = msgStr.getBytes();
                     try {
-                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, serverIP, SERVER_PORT);
-                        clientSocket.send(sendPacket);
-                        System.out.println("Sent: " + msgStr);
-                    } catch (IOException e) {
+                        // Retrieve the existing concealed parameters.
+                        String[] concealed = msg.getConcealedParameters();
+                        if (concealed == null) {
+                            // If none exist, create a new array with one element.
+                            concealed = new String[] { username };
+                        } else {
+                            // Otherwise, create a new array with one extra slot.
+                            String[] newConcealed = new String[concealed.length + 1];
+                            System.arraycopy(concealed, 0, newConcealed, 0, concealed.length);
+                            // Insert the client's UUID as the last concealed parameter.
+                            newConcealed[newConcealed.length - 1] = username;
+                            concealed = newConcealed;
+                        }
+                        // Set the modified concealed parameters back on the message.
+                        msg.setConcealedParameters(concealed);
+            
+                        // For demonstration, send the message to the server.
+                        InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
+                        myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
-                } 
-            });
-
-            // Constantly check incoming messages
-addLoopTask(() -> {
-    Message msg = incomingQueue.poll();
-    if (msg != null) {
-        if ("NICKNAME_UPDATE".equals(msg.getMessageType())) {
-            Object[] params = msg.getParameters();
-            if (params.length >= 2) {
-                String oldNickname = params[0].toString();
-                String newNickname = params[1].toString();
-
-                System.out.println("Player " + oldNickname + " changed name to " + newNickname);
-
-                // Update player object
-                for (GameObject obj : game.getGameObjects()) {
-                    if (obj.getName().equals(oldNickname)) {
-                        ((Player) obj).setName(newNickname);
-                        break;
-                    }
                 }
-            }
-        } else {
-            game.addIncomingMessage(msg); 
-        }
-    }
-});
-
-
-            // Scheduled Game Updater at ~60 FPS.
-            ScheduledExecutorService updateScheduler = Executors.newSingleThreadScheduledExecutor();
-            updateScheduler.scheduleAtFixedRate(() -> {
-                game.updateActiveObject(clientName, outgoingQueue);
-            }, 0, 16, TimeUnit.MILLISECONDS);
-
+            });
+            
+            
             // Block the main thread indefinitely.
             Thread.currentThread().join();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-
-        
     }
+    
+    private void sendMessage(Message msg) {
+        outgoingQueue.offer(msg);
+    }
+    
+    /**
+     * Processes client update messages (if needed).
+     */
+    private void processServerResponse(Message msg) {
+        System.out.println("Handling RESPONSE message: " + msg);
+        
+        if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
+            // Expecting parameters:
+            // [serverGeneratedUuid, objectType, objectName, posX, posY, size, gameSession]
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 7) {
+                String serverUuid = params[0].toString();
+                String objectType = params[1].toString();
+                
+                // Pass the remaining parameters (from index 2 to the end) as varargs.
+                Object[] remainingParams = java.util.Arrays.copyOfRange(params, 2, params.length);
+                Future<GameObject> futureObj = game.addGameObjectAsync(objectType, serverUuid, remainingParams);
+                
+                try {
+                    GameObject newObj = futureObj.get();
+                    System.out.println("Created new game object with UUID: " + serverUuid 
+                            + " and name: " + newObj.getName());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("CREATE RESPONSE message does not contain enough parameters.");
+            }
+        } else if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())){
+                Object[] params = msg.getParameters();
+                String objectID = params[0].toString();
+                String newObjectName = params[1].toString();
+                List<GameObject> gameObjectList = game.getGameObjects();
 
+            for (GameObject gameObject : gameObjectList) {
+                if (gameObject.getId().equals(objectID)) {
+                    gameObject.setName(newObjectName);
+                }
+            }
+
+        } else {
+            System.out.println("Unhandled RESPONSE message type: " + msg.getMessageType());
+        }
+
+
+    }
+    
+    
+    
     public void startConsoleReaderLoop() {
-        addLoopTask(() -> {
-            // Because nextLine() is a blocking call, this single read will block each iteration
-            // until the user presses Enter. That's okay if you have multiple threads in the pool.
+        AsyncManager.runLoop(() -> {
             System.out.print("Command> ");
             String command = scanner.nextLine();
-    
             if ("exit".equalsIgnoreCase(command)) {
                 System.out.println("Exiting console reader...");
-                // Possibly interrupt this thread or do something else to break out
-                // But the outer while(true) belongs to addLoopTask() so you'd need a strategy:
                 Thread.currentThread().interrupt();
                 return;
             }
-
-            if (command.startsWith("nickname ")) {
-                String newNickname = command.substring(9).trim();
-                if (!newNickname.isEmpty()) {
-                    System.out.println("Changing nickname to: " + newNickname);
-    
-                    // Create the nickname change message and send it to the server
-                    Message nicknameChangeMessage = new Message(
-                        "NICKNAME_CHANGE",
-                        new Object[]{ newNickname },
-                        null,
-                        new String[]{ clientName } // Add old name as reference
-                    );
-    
-                    // Send message to server
-                    outgoingQueue.offer(nicknameChangeMessage);
-    
-                    // Update new nickname
-                    clientName = newNickname;
-                } else {
-                    System.out.println("Invalid nickname!");
-                }
-            } else {
-                System.out.println("Unknown command: " + command);
+            if (!command.contains("|")) {
+                command = command + "||";
+            }
+            try {
+                Message msg = MessageCodec.decode(command);
+                String[] concealedParams = { "something1", "something2" };
+                msg.setConcealedParameters(concealedParams);
+                sendMessage(msg);
+            } catch (Exception e) {
+                System.out.println("Invalid message format: " + command);
             }
         });
-        
-
     }
 
-    // Main method creates an instance of Client and runs it.
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void sendBulkCreateMessages() {
+        AsyncManager.run(() -> {
+            for (int i = 0; i < 50; i++) {
+                float x = 300.0f + i * 50;
+                float y = 200.0f + i*50;
+                // Create parameters array:
+                // [ "Player", "Mike", x, 200.0f, 25.0f, "GameSession1" ]
+                Object[] params = new Object[] {"Player", "Mike", x, y, 25.0f, "GameSession1"};
+                
+                // Create the message with type "CREATE" and option "REQUEST"
+                Message createMsg = new Message("CREATE", params, "REQUEST");
+                
+                // Optionally, set concealed parameters if required (here, we use "Mike" as an example).
+                createMsg.setConcealedParameters(new String[] {"Mike", "GameSession1"});
+                
+                // Enqueue the message for sending.
+                sendMessage(createMsg);
+                
+                // Optional: add a slight delay between messages to avoid flooding.
+                try {
+                    Thread.sleep(50); // 50 ms delay
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+    }
+    
     public static void main(String[] args) {
-        Client client = new Client("GameSession1");
-        client.startConsoleReaderLoop();
-        client.run();
+        try {
+
+            Scanner inputScanner = new Scanner(System.in);
+            System.out.print("Enter your name: ");
+            String userName = inputScanner.nextLine();
+
+            // Choose a random name from the list.
+            String[] names = {"Alice", "Bob", "Carol"};
+            String randomName = names[new java.util.Random().nextInt(names.length)];
+            System.out.println("Selected name: " + randomName);
+            
+            Client client = new Client("GameSession1");
+            
+            client.setUsername(userName);
+            System.out.println("Set client username: " + userName);
+            // Start the graphical interface using the randomly selected name.
+            client.startGraphicsStuff(randomName);
+            client.startConsoleReaderLoop();
+            client.run();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

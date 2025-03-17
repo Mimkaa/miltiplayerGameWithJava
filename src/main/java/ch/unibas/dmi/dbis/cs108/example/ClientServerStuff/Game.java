@@ -1,12 +1,16 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.awt.event.KeyListener;
 
 public class Game {
     // A thread-safe list of game objects (players, enemies, etc.).
@@ -15,38 +19,30 @@ public class Game {
     // The game (or session) name.
     private final String gameName;
 
-    // A fixed-size thread pool for asynchronous tasks (e.g., routing messages).
-    private final ExecutorService executor;
-
     // Reference to our Swing panel that draws game objects.
     private GamePanel gamePanel;
 
+    // Reference to the main JFrame (stored for key binding operations).
+    private JFrame frame;
+
     /**
      * Creates a Game instance with the specified gameName.
-     * This constructor creates three default players.
+     * This constructor creates several default game objects.
      */
     public Game(String gameName) {
         this.gameName = gameName;
-        // Add Player instances (which extend GameObject)
+        // Add default game objects.
         gameObjects.add(new Player("Alice", 100.0f, 200.0f, 10.0f, gameName));
         gameObjects.add(new Player("Bob",   150.0f, 250.0f, 12.0f, gameName));
         gameObjects.add(new Player("Carol", 200.0f, 300.0f, 15.0f, gameName));
-        gameObjects.add(new Square("Joe", 300, 300, 10, gameName));
-        gameObjects.add(new Ricardo("Ricardo", gameName, 400, 300, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/ricardo.png"));
-        gameObjects.add(new BandageGuy( "Ninja", gameName, 100.0f, 200.0f, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/bandageninja.jpg"));
-        this.executor = Executors.newFixedThreadPool(20);
-
-        // Start collecting incoming messages for each game object.
-        for (GameObject go : gameObjects) {
-            go.collectMessageUpdatesOnce();
-        }
+        // Additional game objects can be added here.
     }
 
     /**
      * Queues an asynchronous task to route an incoming message to the correct game object.
      */
     public void addIncomingMessage(Message msg) {
-        executor.submit(() -> routeMessageToGameObject(msg));
+        AsyncManager.run(() -> routeMessageToGameObject(msg));
     }
 
     /**
@@ -59,7 +55,7 @@ public class Game {
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(targetName)) {
                     go.addIncomingMessageAsync(msg);
-                    // Optionally ensure the collector is active.
+                    // The call here is sufficient to trigger message collection.
                     go.collectMessageUpdatesOnce();
                     System.out.println("Routed message to " + go.getName());
                     break;
@@ -73,7 +69,7 @@ public class Game {
      * The game object's updateAsync() method is called with the provided outgoingQueue.
      */
     public void updateActiveObject(String objectName, ConcurrentLinkedQueue<Message> outgoingQueue) {
-        executor.submit(() -> {
+        AsyncManager.run(() -> {
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(objectName)) {
                     go.updateAsync(outgoingQueue);
@@ -89,7 +85,7 @@ public class Game {
      */
     public void initUI(String localPlayerName) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Simple Game - " + gameName);
+            frame = new JFrame("Simple Game - " + gameName);
             // Assumes GamePanel can accept a GameObject[]; adjust accordingly.
             gamePanel = new GamePanel(gameObjects.toArray(new GameObject[0]));
             frame.add(gamePanel);
@@ -99,11 +95,8 @@ public class Game {
             // Attach key listener for the local player.
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(localPlayerName)) {
-                    // Assuming the local game object is a Player instance.
-                    
                     frame.addKeyListener(go.getKeyListener());
                     System.out.println("Connected controls for local player: " + go.getName());
-                    
                     break;
                 }
             }
@@ -125,16 +118,77 @@ public class Game {
     }
 
     /**
-     * Adds a new player with the specified name to this game session.
+     * Synchronously creates a new GameObject of the given type using the provided parameters,
+     * generates a new UUID, sets it in the object, adds it to the game,
+     * and returns the created GameObject as a Future.
+     *
+     * @param type   The type identifier (e.g., "Player", "Square", etc.).
+     * @param uuid   The UUID to set in the new game object.
+     * @param params A variable number of parameters to be passed to the object's constructor.
+     * @return A Future for the newly created game object.
      */
-    public void addPlayer(String playerName) {
-        // Create a new Player (which is a GameObject)
-        GameObject newPlayer = new Player(playerName, 0.0f, 0.0f, 5.0f, gameName);
-        gameObjects.add(newPlayer);
-        newPlayer.collectMessageUpdatesOnce();
-        System.out.println("Added new player: " + newPlayer.getName());
+    public Future<GameObject> addGameObjectAsync(String type, String uuid, Object... params) {
+        return AsyncManager.run(() -> {
+            // Create a new game object using the factory.
+            GameObject newObject = GameObjectFactory.create(type, params);
+            
+            // Set the UUID in the game object.
+            newObject.setId(uuid);
+            
+            // Add the new game object to the list.
+            gameObjects.add(newObject);
+            
+            System.out.println("Added new " + type + ": " + newObject.getName() + " with UUID: " + uuid);
+            
+            // Update the game panel (if available) on the EDT.
+            if (gamePanel != null) {
+                SwingUtilities.invokeLater(() -> 
+                    gamePanel.updateGameObjects(gameObjects.toArray(new GameObject[0]))
+                );
+            }
+            
+            // Return the reference to the created game object.
+            return newObject;
+        });
     }
-
+    
+    /**
+     * Rebinds the key listener for the game object with the specified UUID using the stored JFrame.
+     */
+    public void rebindKeyListenerForObject(String uuid) {
+        if (frame == null) {
+            System.out.println("Frame not initialized. Cannot rebind key listeners.");
+            return;
+        }
+        // Find the game object with the specified UUID.
+        for (GameObject go : gameObjects) {
+            if (go.getId().equals(uuid)) {
+                // Remove all existing key listeners from the frame.
+                for (KeyListener kl : frame.getKeyListeners()) {
+                    frame.removeKeyListener(kl);
+                }
+                // Add the key listener from the found game object.
+                frame.addKeyListener(go.getKeyListener());
+                System.out.println("Rebound key listener for object: " + go.getName() + " (UUID: " + uuid + ")");
+                // Update the panel to reflect any changes.
+                updateGamePanel();
+                return;
+            }
+        }
+        System.out.println("No game object found with UUID: " + uuid);
+    }
+    
+    /**
+     * Updates the game panel with the current list of game objects.
+     */
+    public void updateGamePanel() {
+        if (gamePanel != null) {
+            SwingUtilities.invokeLater(() -> 
+                gamePanel.updateGameObjects(gameObjects.toArray(new GameObject[0]))
+            );
+        }
+    }
+    
     /**
      * Returns the current list of game objects.
      */
@@ -150,10 +204,10 @@ public class Game {
     }
 
     /**
-     * Shuts down the game's executor.
+     * Shuts down the asynchronous execution.
      */
     public void shutdown() {
-        executor.shutdownNow();
-        System.out.println("Game [" + gameName + "] executor stopped.");
+        AsyncManager.shutdown();
+        System.out.println("Game [" + gameName + "] async manager stopped.");
     }
 }
