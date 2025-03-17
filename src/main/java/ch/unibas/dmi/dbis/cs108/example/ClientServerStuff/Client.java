@@ -5,6 +5,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.io.IOException;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
@@ -213,9 +214,23 @@ public class Client {
             } else {
                 System.out.println("CREATE RESPONSE message does not contain enough parameters.");
             }
+        } else if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())){
+                Object[] params = msg.getParameters();
+                String objectID = params[0].toString();
+                String newObjectName = params[1].toString();
+                List<GameObject> gameObjectList = game.getGameObjects();
+
+            for (GameObject gameObject : gameObjectList) {
+                if (gameObject.getId().equals(objectID)) {
+                    gameObject.setName(newObjectName);
+                }
+            }
+
         } else {
             System.out.println("Unhandled RESPONSE message type: " + msg.getMessageType());
         }
+
+
     }
     
     

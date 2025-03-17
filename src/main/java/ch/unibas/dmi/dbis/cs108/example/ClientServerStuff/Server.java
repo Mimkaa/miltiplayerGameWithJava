@@ -5,6 +5,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.UUID;
@@ -224,7 +225,7 @@ public class Server {
                 serverGeneratedUuid, 
                 (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
             );
-            
+
             try {
                 GameObject newObj = futureObj.get();
                 System.out.println("Created new game object with UUID: " + serverGeneratedUuid 
@@ -236,6 +237,53 @@ public class Server {
             // 7) Broadcast the new RESPONSE message to all clients.
             broadcastMessageToAll(responseMsg);
         }
+
+        //TODO: This is a template for future commands
+        if ("GETOBJECTID".equalsIgnoreCase(msg.getMessageType())) {
+            Object[] originalParams = msg.getParameters();
+            List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
+            String objectName = originalParams[0].toString();
+            String objectID = "";
+            for (GameObject gameObject : gameObjectList) {
+                if (gameObject.getName().equals(objectName)) {
+                    objectID = gameObject.getId();
+
+                }
+            }
+            Object[] newParams = new Object[1];
+            newParams[0] = objectID;
+            Message responseMsg = new Message("GETOBJECTID", newParams, "RESPONSE");
+            responseMsg.setUUID("");
+            broadcastMessageToAll(responseMsg);
+
+
+        }
+
+if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())) {
+            Object[] originalParams = msg.getParameters();
+            List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
+            String objectName = originalParams[0].toString();
+            String newObjectName = originalParams[1].toString();
+            String objectID = "";
+
+
+            for (GameObject gameObject : gameObjectList) {
+                if (gameObject.getName().equals(objectName)) {
+                    objectID = gameObject.getId();
+                    gameObject.setName(newObjectName);
+
+                }
+            }
+            Object[] newParams = new Object[2];
+            newParams[0] = objectID;
+            newParams[1] = newObjectName;
+            Message responseMsg = new Message("CHANGENAME", newParams, "RESPONSE");
+            responseMsg.setUUID("");
+            broadcastMessageToAll(responseMsg);
+
+
+        }
+
     }
     
     public static void main(String[] args) {
