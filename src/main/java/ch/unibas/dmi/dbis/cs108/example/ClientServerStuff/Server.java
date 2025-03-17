@@ -114,7 +114,7 @@ public class Server {
             }
     
             // 3) Distinguish between REQUEST and all other types
-            if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
+            if ("REQUEST".equals(msg.getOption())) {
                 // If it's a REQUEST, run a separate handler for that
                 AsyncManager.run(() -> handleRequest(msg, username));
             } else {
@@ -170,7 +170,7 @@ public class Server {
     
 
     private void handleRequest(Message msg, String senderUsername) {
-        if ("CRTE".equalsIgnoreCase(msg.getMessageType())) {
+        if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
             // Example incoming message: CRTE{REQUEST}[Player, Alice, 100, 150, 10, GameSession1]||
             // where "Player" is the type and "Alice" is the desired object name.
             
@@ -191,7 +191,7 @@ public class Server {
             //    - messageType = "CRTE"
             //    - option      = "RESPONSE"
             //    - parameters  = newParams
-            Message responseMsg = new Message("CRTE", newParams, "RESPONSE");
+            Message responseMsg = new Message("CREATE", newParams, "RESPONSE");
             
             // 5) Set responseMsg UUID to an empty string so the encoder won't append "null".
             responseMsg.setUUID("");

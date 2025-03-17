@@ -190,7 +190,7 @@ public class Client {
     private void processServerResponse(Message msg) {
         System.out.println("Handling RESPONSE message: " + msg);
         
-        if ("CRTE".equalsIgnoreCase(msg.getMessageType())) {
+        if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
             // Expecting parameters:
             // [serverGeneratedUuid, username, objectType, posX, posY, size, gameSession]
             Object[] params = msg.getParameters();
