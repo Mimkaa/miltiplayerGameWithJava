@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.awt.event.KeyListener;
 
 public class Game {
     // A thread-safe list of game objects (players, enemies, etc.).
@@ -21,6 +22,9 @@ public class Game {
     // Reference to our Swing panel that draws game objects.
     private GamePanel gamePanel;
 
+    // Reference to the main JFrame (stored for key binding operations).
+    private JFrame frame;
+
     /**
      * Creates a Game instance with the specified gameName.
      * This constructor creates several default game objects.
@@ -31,9 +35,7 @@ public class Game {
         gameObjects.add(new Player("Alice", 100.0f, 200.0f, 10.0f, gameName));
         gameObjects.add(new Player("Bob",   150.0f, 250.0f, 12.0f, gameName));
         gameObjects.add(new Player("Carol", 200.0f, 300.0f, 15.0f, gameName));
-        //gameObjects.add(new Square("Joe", 300, 300, 10, gameName));
-        //gameObjects.add(new Ricardo("Ricardo", gameName, 400, 300, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/ricardo.png"));
-        //gameObjects.add(new BandageGuy("Ninja", gameName, 100.0f, 200.0f, "src/main/java/ch/unibas/dmi/dbis/cs108/example/ClientServerStuff/resources/bandageninja.jpg"));
+        // Additional game objects can be added here.
     }
 
     /**
@@ -83,7 +85,7 @@ public class Game {
      */
     public void initUI(String localPlayerName) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Simple Game - " + gameName);
+            frame = new JFrame("Simple Game - " + gameName);
             // Assumes GamePanel can accept a GameObject[]; adjust accordingly.
             gamePanel = new GamePanel(gameObjects.toArray(new GameObject[0]));
             frame.add(gamePanel);
@@ -118,11 +120,12 @@ public class Game {
     /**
      * Synchronously creates a new GameObject of the given type using the provided parameters,
      * generates a new UUID, sets it in the object, adds it to the game,
-     * and returns the generated UUID.
+     * and returns the created GameObject as a Future.
      *
      * @param type   The type identifier (e.g., "Player", "Square", etc.).
+     * @param uuid   The UUID to set in the new game object.
      * @param params A variable number of parameters to be passed to the object's constructor.
-     * @return The generated UUID for the newly created game object.
+     * @return A Future for the newly created game object.
      */
     public Future<GameObject> addGameObjectAsync(String type, String uuid, Object... params) {
         return AsyncManager.run(() -> {
@@ -149,7 +152,43 @@ public class Game {
         });
     }
     
-
+    /**
+     * Rebinds the key listener for the game object with the specified UUID using the stored JFrame.
+     */
+    public void rebindKeyListenerForObject(String uuid) {
+        if (frame == null) {
+            System.out.println("Frame not initialized. Cannot rebind key listeners.");
+            return;
+        }
+        // Find the game object with the specified UUID.
+        for (GameObject go : gameObjects) {
+            if (go.getId().equals(uuid)) {
+                // Remove all existing key listeners from the frame.
+                for (KeyListener kl : frame.getKeyListeners()) {
+                    frame.removeKeyListener(kl);
+                }
+                // Add the key listener from the found game object.
+                frame.addKeyListener(go.getKeyListener());
+                System.out.println("Rebound key listener for object: " + go.getName() + " (UUID: " + uuid + ")");
+                // Update the panel to reflect any changes.
+                updateGamePanel();
+                return;
+            }
+        }
+        System.out.println("No game object found with UUID: " + uuid);
+    }
+    
+    /**
+     * Updates the game panel with the current list of game objects.
+     */
+    public void updateGamePanel() {
+        if (gamePanel != null) {
+            SwingUtilities.invokeLater(() -> 
+                gamePanel.updateGameObjects(gameObjects.toArray(new GameObject[0]))
+            );
+        }
+    }
+    
     /**
      * Returns the current list of game objects.
      */

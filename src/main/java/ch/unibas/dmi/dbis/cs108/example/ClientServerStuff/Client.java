@@ -71,7 +71,7 @@ public class Client {
             clientSocket = new DatagramSocket();
             
             // Initialize the reliable sender without a fixed destination.
-            myReliableUDPSender = new ReliableUDPSender(clientSocket, 10, 200);
+            myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 200);
             
             // Initialize the AckProcessor using the same socket.
             ackProcessor = new AckProcessor(clientSocket);
@@ -84,6 +84,7 @@ public class Client {
             InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
             myReliableUDPSender.sendMessage(mockMessage, serverInet, SERVER_PORT);
             
+            //sendBulkCreateMessages();
             
             
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
@@ -244,6 +245,34 @@ public class Client {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public void sendBulkCreateMessages() {
+        AsyncManager.run(() -> {
+            for (int i = 0; i < 50; i++) {
+                float x = 300.0f + i * 50;
+                float y = 200.0f + i*50;
+                // Create parameters array:
+                // [ "Player", "Mike", x, 200.0f, 25.0f, "GameSession1" ]
+                Object[] params = new Object[] {"Player", "Mike", x, y, 25.0f, "GameSession1"};
+                
+                // Create the message with type "CREATE" and option "REQUEST"
+                Message createMsg = new Message("CREATE", params, "REQUEST");
+                
+                // Optionally, set concealed parameters if required (here, we use "Mike" as an example).
+                createMsg.setConcealedParameters(new String[] {"Mike", "GameSession1"});
+                
+                // Enqueue the message for sending.
+                sendMessage(createMsg);
+                
+                // Optional: add a slight delay between messages to avoid flooding.
+                try {
+                    Thread.sleep(50); // 50 ms delay
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
     }
     
     public static void main(String[] args) {
