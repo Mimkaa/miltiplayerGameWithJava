@@ -8,6 +8,7 @@ import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Game {
@@ -123,23 +124,31 @@ public class Game {
      * @param params A variable number of parameters to be passed to the object's constructor.
      * @return The generated UUID for the newly created game object.
      */
-    public String addGameObject(String type, Object... params) {
-        // Create a new game object using the factory.
-        GameObject newObject = GameObjectFactory.create(type, params);
-        
-        // Generate a new UUID.
-        String uuid = UUID.randomUUID().toString();
-        
-        // Set the UUID in the game object.
-        newObject.setId(uuid);
-        
-        // Add the new game object to the list.
-        gameObjects.add(newObject);
-        
-        // No need to call collectMessageUpdatesOnce() here since the routing does that.
-        System.out.println("Added new " + type + ": " + newObject.getName() + " with UUID: " + uuid);
-        return uuid;
+    public Future<GameObject> addGameObjectAsync(String type, String uuid, Object... params) {
+        return AsyncManager.run(() -> {
+            // Create a new game object using the factory.
+            GameObject newObject = GameObjectFactory.create(type, params);
+            
+            // Set the UUID in the game object.
+            newObject.setId(uuid);
+            
+            // Add the new game object to the list.
+            gameObjects.add(newObject);
+            
+            System.out.println("Added new " + type + ": " + newObject.getName() + " with UUID: " + uuid);
+            
+            // Update the game panel (if available) on the EDT.
+            if (gamePanel != null) {
+                SwingUtilities.invokeLater(() -> 
+                    gamePanel.updateGameObjects(gameObjects.toArray(new GameObject[0]))
+                );
+            }
+            
+            // Return the reference to the created game object.
+            return newObject;
+        });
     }
+    
 
     /**
      * Returns the current list of game objects.

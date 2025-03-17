@@ -7,6 +7,8 @@ import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
+
 import javax.swing.SwingUtilities;
 import java.util.UUID;
 
@@ -105,27 +107,32 @@ public class Client {
                     Message msg = incomingQueue.poll();
                     if (msg != null) {
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-                            // Process the ACK (so you can call reliableSender.acknowledge(...))
+                            // Process the ACK
                             if (msg.getParameters() != null && msg.getParameters().length > 0) {
                                 String ackUuid = msg.getParameters()[0].toString();
                                 myReliableUDPSender.acknowledge(ackUuid);
-                                System.out.println("Processed ACK for UUID " + ackUuid);
                             } else {
                                 System.out.println("Received ACK with no parameters.");
                             }
                         } else {
-                            // Non-ACK message logic:
-                            // Possibly add the message's UUID to the AckProcessor if needed
+                            // Non-ACK message logic
                             if (msg.getUUID() != null) {
                                 InetSocketAddress dest = 
                                     new InetSocketAddress(InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
-                            // Forward GAME messages to the Game.
+            
+                            // Check the "option" field to see what kind of message it is
                             String option = msg.getOption();
+                            
                             if ("GAME".equalsIgnoreCase(option)) {
-                                game.addIncomingMessage(msg);  // <--- Only do this for non-ACKs
+                                // If it's a GAME update, forward it to your game logic/UI
+                                game.addIncomingMessage(msg);
+                            } else if ("RESPONSE".equalsIgnoreCase(option)) {
+                                // If it's some sort of server "RESPONSE", call a dedicated handler
+                                AsyncManager.run(() -> {processServerResponse(msg);});
                             } else {
+                                // For anything else, do whatever fallback logic you want
                                 System.out.println("Unknown message option: " + option);
                             }
                         }
@@ -180,13 +187,41 @@ public class Client {
     /**
      * Processes client update messages (if needed).
      */
-    private void processClientUpdateMessages(Message msg) {
-        if ("CHCK".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("CHCK message received: " + msg);
-        } else if ("BCST".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("Broadcast received: " + msg);
+    private void processServerResponse(Message msg) {
+        System.out.println("Handling RESPONSE message: " + msg);
+        
+        if ("CRTE".equalsIgnoreCase(msg.getMessageType())) {
+            // Expecting parameters:
+            // [serverGeneratedUuid, username, objectType, posX, posY, size, gameSession]
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 7) {
+                String serverUuid = params[0].toString();
+                String objectType = params[1].toString();
+                
+                // Unfold the remaining parameters from the array and pass them as varargs.
+                Future<GameObject> futureObj = game.addGameObjectAsync(
+                    objectType, 
+                    serverUuid,  
+                    params[2],
+                    params[3], params[4], params[5], params[6]
+                );
+                
+                try {
+                    GameObject newObj = futureObj.get();
+                    System.out.println("Created new game object with UUID: " + serverUuid 
+                            + " and name: " + newObj.getName());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("CRTE RESPONSE message does not contain enough parameters.");
+            }
+        } else {
+            System.out.println("Unhandled RESPONSE message type: " + msg.getMessageType());
         }
     }
+    
+    
     
     public void startConsoleReaderLoop() {
         AsyncManager.runLoop(() -> {
@@ -202,22 +237,35 @@ public class Client {
             }
             try {
                 Message msg = MessageCodec.decode(command);
+                String[] concealedParams = { "something1", "something2" };
+                msg.setConcealedParameters(concealedParams);
                 sendMessage(msg);
             } catch (Exception e) {
                 System.out.println("Invalid message format: " + command);
             }
         });
     }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
     
     public static void main(String[] args) {
         try {
+
+            Scanner inputScanner = new Scanner(System.in);
+            System.out.print("Enter your name: ");
+            String userName = inputScanner.nextLine();
+
             // Choose a random name from the list.
             String[] names = {"Alice", "Bob", "Carol"};
             String randomName = names[new java.util.Random().nextInt(names.length)];
             System.out.println("Selected name: " + randomName);
             
             Client client = new Client("GameSession1");
-            System.out.println("Generated client username: " + client.username);
+            
+            client.setUsername(userName);
+            System.out.println("Set client username: " + userName);
             // Start the graphical interface using the randomly selected name.
             client.startGraphicsStuff(randomName);
             client.startConsoleReaderLoop();

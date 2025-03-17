@@ -41,6 +41,11 @@ public abstract class GameObject {
         this.id = newId;
     }
 
+    public void setName(String newName)
+    {
+        this.name = newName;
+    }
+
     public String getName() {
         return name;
     }

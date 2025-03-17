@@ -7,6 +7,7 @@ import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.net.SocketException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 
 public class Server {
     public static final int SERVER_PORT = 9876;
@@ -82,61 +83,125 @@ public class Server {
      * @param senderSocket  The sender's socket address.
      */
     private void processMessage(Message msg, InetSocketAddress senderSocket) {
-        if (!"ACK".equalsIgnoreCase(msg.getMessageType())) {
-            // Extract the concealed parameters.
-            String[] concealed = msg.getConcealedParameters();
-            if (concealed != null && concealed.length >= 2) {
-                // Username is assumed to be the last item (post-decode),
-                // so we retrieve it from concealed[concealed.length - 1].
-                String username = concealed[concealed.length - 1];
-                clientsMap.put(username, senderSocket);
-                System.out.println("Registered user: " + username + " at " + senderSocket + 
-                                   ". Total clients: " + clientsMap.size());
-    
-                // Print the entire map to see all registered clients.
-                System.out.println("Current clientsMap after registering \"" + username + "\":");
-                clientsMap.forEach((user, address) -> {
-                    System.out.println("  " + user + " -> " + address);
-                });
-    
-                // If the message has a UUID, add it to the AckProcessor.
-                if (msg.getUUID() != null) {
-                    ackProcessor.addAck(senderSocket, msg.getUUID());
-                    System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
-                }
-                // Broadcast the message asynchronously.
-                AsyncManager.run(() -> broadcastMessage(msg, username));
-            } else {
-                System.out.println("Concealed parameters missing or too short.");
-            }
-        } else {
-            // Process ACK messages by calling reliableSender.acknowledge() with the message's UUID.
+        // 1) Check if it's an ACK
+        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+            // Process ACK
             String ackUuid = msg.getParameters()[0].toString();
             reliableSender.acknowledge(ackUuid);
             System.out.println("Processed ACK message for UUID " + msg.getUUID());
+            return;
+        }
+    
+        // 2) Otherwise, handle REQUEST or broadcast
+        String[] concealed = msg.getConcealedParameters();
+        if (concealed != null && concealed.length >= 2) {
+            // Username from the last element
+            String username = concealed[concealed.length - 1];
+            clientsMap.put(username, senderSocket);
+            System.out.println("Registered user: " + username + " at " + senderSocket
+                    + ". Total clients: " + clientsMap.size());
+    
+            // Print the entire map
+            System.out.println("Current clientsMap after registering \"" + username + "\":");
+            clientsMap.forEach((user, address) -> {
+                System.out.println("  " + user + " -> " + address);
+            });
+    
+            // If the message has a UUID, register it in the ACK processor
+            if (msg.getUUID() != null) {
+                ackProcessor.addAck(senderSocket, msg.getUUID());
+                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+            }
+    
+            // 3) Distinguish between REQUEST and all other types
+            if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
+                // If it's a REQUEST, run a separate handler for that
+                AsyncManager.run(() -> handleRequest(msg, username));
+            } else {
+                // Otherwise, broadcast the message asynchronously
+                AsyncManager.run(() -> broadcastMessageToOthers(msg, username));
+            }
+        } else {
+            System.out.println("Concealed parameters missing or too short.");
         }
     }
     
     
     /**
-     * Broadcasts the given message to all clients except the sender (identified by senderUsername).
-     */
-    private void broadcastMessage(Message msg, String senderUsername) {
-        
+ * Broadcasts a message to all known clients in clientsMap.
+    */
+    private void broadcastMessageToAll(Message msg) {
         for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
             InetSocketAddress clientAddress = entry.getValue();
-            // Send to every client whose username is not the sender's.
-            if (!clientUsername.equals(senderUsername)) {
+            
+            try {
+                reliableSender.sendMessage(msg, clientAddress.getAddress(), clientAddress.getPort());
+                System.out.println("Broadcast to " + clientUsername + " at " + clientAddress);
+            } catch (Exception e) {
+                System.err.println("Error sending message to " + clientUsername + " at " 
+                                + clientAddress + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Broadcasts a message to all clients except the one identified by `excludedUsername`.
+     */
+    private void broadcastMessageToOthers(Message msg, String excludedUsername) {
+        for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
+            String clientUsername = entry.getKey();
+            InetSocketAddress clientAddress = entry.getValue();
+            
+            // Send to every client whose username is not `excludedUsername`.
+            if (!clientUsername.equals(excludedUsername)) {
                 try {
                     reliableSender.sendMessage(msg, clientAddress.getAddress(), clientAddress.getPort());
-                    System.out.println("Forwarded message to UDP client " + clientUsername + " at " + clientAddress);
+                    System.out.println("Forwarded message to " + clientUsername + " at " + clientAddress);
                 } catch (Exception e) {
-                    System.err.println("Error sending message to " + clientUsername + " at " + clientAddress + ": " + e.getMessage());
+                    System.err.println("Error sending message to " + clientUsername + " at " 
+                                    + clientAddress + ": " + e.getMessage());
                 }
             }
         }
     }
+
+
+    
+
+    private void handleRequest(Message msg, String senderUsername) {
+        if ("CRTE".equalsIgnoreCase(msg.getMessageType())) {
+            // Example incoming message: CRTE{REQUEST}[Player, Alice, 100, 150, 10, GameSession1]||
+            // where "Player" is the type and "Alice" is the desired object name.
+            
+            // 1) Extract the original parameters from the request.
+            Object[] originalParams = msg.getParameters(); 
+            // e.g. ["Player", "Alice", "100", "150", "10", "GameSession1"]
+            
+            // 2) Generate a new UUID on the server side.
+            String serverGeneratedUuid = UUID.randomUUID().toString();
+            
+            // 3) Build a new parameter array:
+            //    [serverGeneratedUuid, objectType, objectName, posX, posY, size, gameSession]
+            Object[] newParams = new Object[originalParams.length + 1];
+            newParams[0] = serverGeneratedUuid;
+            System.arraycopy(originalParams, 0, newParams, 1, originalParams.length);
+            
+            // 4) Create a new message with:
+            //    - messageType = "CRTE"
+            //    - option      = "RESPONSE"
+            //    - parameters  = newParams
+            Message responseMsg = new Message("CRTE", newParams, "RESPONSE");
+            
+            // 5) Set responseMsg UUID to an empty string so the encoder won't append "null".
+            responseMsg.setUUID("");
+            
+            // 6) Broadcast the new RESPONSE message to all clients.
+            broadcastMessageToAll(responseMsg);
+        }
+    }
+    
+
     
     
     

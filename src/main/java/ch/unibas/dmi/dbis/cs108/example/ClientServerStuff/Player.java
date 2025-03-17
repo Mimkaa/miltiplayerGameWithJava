@@ -88,18 +88,23 @@ public class Player extends GameObject {
             Object[] params = msg.getParameters();
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = Float.parseFloat((String) params[0]);
-                float newY = Float.parseFloat((String) params[1]);
+                // Use ternary operators to check if the parameter is already a Number
+                float newX = (params[0] instanceof Number)
+                            ? ((Number) params[0]).floatValue()
+                            : Float.parseFloat(params[0].toString());
+                float newY = (params[1] instanceof Number)
+                            ? ((Number) params[1]).floatValue()
+                            : Float.parseFloat(params[1].toString());
                 synchronized (this) {
                     this.x = newX;
                     this.y = newY;
                 }
                 System.out.println("Processed MOVE for " + getName() +
-                                   " in game " + extractGameName(msg) +
-                                   ": new position x=" + newX + ", y=" + newY);
+                        " in game " + extractGameName(msg) +
+                        ": new position x=" + newX + ", y=" + newY);
             }
         }
-        // Additional message types can be processed here.
+        // Process additional message types as needed.
     }
 
     /**

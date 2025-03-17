@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
  * </pre>
  * The option is enclosed in curly braces if present, the parameters are enclosed in square brackets,
  * and the concealed parameters (all strings) are appended after a pipe delimiter with the UUID as the last concealed parameter.
+ * Each parameter is encoded with a type prefix.
  * </p>
  */
 public class MessageCodec {
@@ -40,7 +41,7 @@ public class MessageCodec {
         Object[] params = message.getParameters();
         if (params != null && params.length > 0) {
             sb.append(Arrays.stream(params)
-                            .map(Object::toString)
+                            .map(MessageCodec::encodeWithTypePrefix)
                             .collect(Collectors.joining(", ")));
         }
         sb.append("]");
@@ -58,6 +59,26 @@ public class MessageCodec {
         sb.append("|");
         
         return sb.toString();
+    }
+    
+    /**
+     * Helper method to encode a parameter with a type prefix.
+     */
+    private static String encodeWithTypePrefix(Object param) {
+        if (param instanceof Integer) {
+            return "I:" + param;
+        } else if (param instanceof Long) {
+            return "L:" + param;
+        } else if (param instanceof Float) {
+            return "F:" + param;
+        } else if (param instanceof Double) {
+            return "D:" + param;
+        } else if (param instanceof Boolean) {
+            return "B:" + param;
+        } else {
+            // Default to string.
+            return "S:" + param.toString();
+        }
     }
 
     /**
@@ -131,8 +152,33 @@ public class MessageCodec {
             parameters = new Object[0];
         } else {
             String[] tokens = paramsContent.split(",\\s*");
-            parameters = tokens;
+            parameters = new Object[tokens.length];
+            for (int i = 0; i < tokens.length; i++) {
+                parameters[i] = decodeWithTypePrefix(tokens[i]);
+            }
         }
         return new Message(messageType, parameters, option, null);
+    }
+    
+    /**
+     * Helper method to decode a parameter token that includes a type marker.
+     */
+    private static Object decodeWithTypePrefix(String token) {
+        if (token.startsWith("I:")) {
+            return Integer.parseInt(token.substring(2));
+        } else if (token.startsWith("L:")) {
+            return Long.parseLong(token.substring(2));
+        } else if (token.startsWith("F:")) {
+            return Float.parseFloat(token.substring(2));
+        } else if (token.startsWith("D:")) {
+            return Double.parseDouble(token.substring(2));
+        } else if (token.startsWith("B:")) {
+            return Boolean.parseBoolean(token.substring(2));
+        } else if (token.startsWith("S:")) {
+            return token.substring(2);
+        } else {
+            // Fallback: if no marker is found, return the token as is.
+            return token;
+        }
     }
 }
