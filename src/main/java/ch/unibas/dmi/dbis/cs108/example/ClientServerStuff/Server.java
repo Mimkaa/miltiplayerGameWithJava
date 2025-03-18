@@ -275,6 +275,19 @@ public class Server {
             broadcastMessageToAll(responseMsg);
         }
 
+        if ("PING".equalsIgnoreCase(msg.getMessageType())) {
+            // Look up the sender's InetSocketAddress from clientsMap using the senderUsername.
+            InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+            if (senderAddress != null) {
+                Message responseMsg = new Message("PONG", new Object[] {}, "RESPONSE");
+                enqueueMessage(responseMsg, senderAddress.getAddress(), senderAddress.getPort());
+                System.out.println("Enqueued PONG response to " + senderUsername + " at " + senderAddress);
+            } else {
+                System.out.println("Sender " + senderUsername + " not found in clientsMap!");
+            }
+            return;
+        }
+
         // Template for additional commands:
         if ("GETOBJECTID".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();

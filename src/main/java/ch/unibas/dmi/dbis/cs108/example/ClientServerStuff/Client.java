@@ -42,6 +42,9 @@ public class Client {
 
     // Client socket as a class attribute.
     private DatagramSocket clientSocket;
+    
+    // Instance of PingManager.
+    private PingManager pingManager;
 
     // Constructor creates the Game object.
     public Client(String gameSessionName) {
@@ -72,22 +75,23 @@ public class Client {
             clientSocket = new DatagramSocket();
             
             // Initialize the reliable sender without a fixed destination.
-            myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 200);
+            myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000);
             
             // Initialize the AckProcessor using the same socket.
             ackProcessor = new AckProcessor(clientSocket);
             ackProcessor.start();
 
-            Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username }, null);
+            // Create and start PingManager (pings every 1000 ms)
+            InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
+            pingManager = new PingManager(outgoingQueue, serverInet, SERVER_PORT, 300);
+            pingManager.start();
+
+            Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username }, "REQUEST");
             String[] concealedPrms = { "something1", "something2", username };
             mockMessage.setConcealedParameters(concealedPrms);
             // For demonstration, send the mock message to SERVER_ADDRESS:SERVER_PORT
-            InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
             myReliableUDPSender.sendMessage(mockMessage, serverInet, SERVER_PORT);
-            
-            //sendBulkCreateMessages();
-            
-            
+
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
             AsyncManager.runLoop(() -> {
                 try {
@@ -119,8 +123,7 @@ public class Client {
                         } else {
                             // Non-ACK message logic
                             if (msg.getUUID() != null) {
-                                InetSocketAddress dest = 
-                                    new InetSocketAddress(InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                InetSocketAddress dest = new InetSocketAddress(InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
             
@@ -131,10 +134,11 @@ public class Client {
                                 // If it's a GAME update, forward it to your game logic/UI
                                 game.addIncomingMessage(msg);
                             } else if ("RESPONSE".equalsIgnoreCase(option)) {
-                                // If it's some sort of server "RESPONSE", call a dedicated handler
-                                AsyncManager.run(() -> {processServerResponse(msg);});
+                                // When the server sends a response (including ping replies),
+                                // process it in the dedicated response handler.
+                                AsyncManager.run(() -> { processServerResponse(msg); });
                             } else {
-                                // For anything else, do whatever fallback logic you want
+                                // For anything else, do your fallback logic
                                 System.out.println("Unknown message option: " + option);
                             }
                         }
@@ -195,10 +199,20 @@ public class Client {
     
     /**
      * Processes client update messages (if needed).
+     * If the message is a ping reply (i.e. message type is "RESPONSE"),
+     * the time difference (in milliseconds) since the last ping is printed.
      */
     private void processServerResponse(Message msg) {
-        System.out.println("Handling RESPONSE message: " + msg);
+        // Check if this is a ping reply.
+        if ("PONG".equalsIgnoreCase(msg.getMessageType())) {
+            if (pingManager != null) {
+                game.updatePingIndicator(pingManager.getTimeDifferenceMillis());
+            }
+            // Exit after handling the ping reply.
+            return;
+        }
         
+        // Handle other types of responses.
         if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
             // Expecting parameters:
             // [serverGeneratedUuid, objectType, objectName, posX, posY, size, gameSession]
@@ -222,25 +236,20 @@ public class Client {
                 System.out.println("CREATE RESPONSE message does not contain enough parameters.");
             }
         } else if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())){
-                Object[] params = msg.getParameters();
-                String objectID = params[0].toString();
-                String newObjectName = params[1].toString();
-                List<GameObject> gameObjectList = game.getGameObjects();
+            Object[] params = msg.getParameters();
+            String objectID = params[0].toString();
+            String newObjectName = params[1].toString();
+            List<GameObject> gameObjectList = game.getGameObjects();
 
             for (GameObject gameObject : gameObjectList) {
                 if (gameObject.getId().equals(objectID)) {
                     gameObject.setName(newObjectName);
                 }
             }
-
         } else {
-            System.out.println("Unhandled RESPONSE message type: " + msg.getMessageType());
+            System.out.println("Unhandled response type: " + msg.getMessageType());
         }
-
-
     }
-    
-    
     
     public void startConsoleReaderLoop() {
         AsyncManager.runLoop(() -> {
@@ -273,15 +282,15 @@ public class Client {
         AsyncManager.run(() -> {
             for (int i = 0; i < 50; i++) {
                 float x = 300.0f + i * 50;
-                float y = 200.0f + i*50;
+                float y = 200.0f + i * 50;
                 // Create parameters array:
-                // [ "Player", "Mike", x, 200.0f, 25.0f, "GameSession1" ]
+                // [ "Player", "Mike", x, y, 25.0f, "GameSession1" ]
                 Object[] params = new Object[] {"Player", "Mike", x, y, 25.0f, "GameSession1"};
                 
                 // Create the message with type "CREATE" and option "REQUEST"
                 Message createMsg = new Message("CREATE", params, "REQUEST");
                 
-                // Optionally, set concealed parameters if required (here, we use "Mike" as an example).
+                // Optionally, set concealed parameters if required.
                 createMsg.setConcealedParameters(new String[] {"Mike", "GameSession1"});
                 
                 // Enqueue the message for sending.
@@ -299,7 +308,6 @@ public class Client {
     
     public static void main(String[] args) {
         try {
-
             Scanner inputScanner = new Scanner(System.in);
             System.out.print("Enter your name: ");
             String userName = inputScanner.nextLine();
@@ -310,9 +318,9 @@ public class Client {
             System.out.println("Selected name: " + randomName);
             
             Client client = new Client("GameSession1");
-            
             client.setUsername(userName);
             System.out.println("Set client username: " + userName);
+            
             // Start the graphical interface using the randomly selected name.
             client.startGraphicsStuff(randomName);
             client.startConsoleReaderLoop();

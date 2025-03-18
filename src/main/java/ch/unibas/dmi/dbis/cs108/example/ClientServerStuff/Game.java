@@ -38,6 +38,17 @@ public class Game {
         // Additional game objects can be added here.
     }
 
+     /**
+     * Updates the ping indicator on the game panel.
+     * This method ensures the update is performed on the EDT.
+     * @param pingValue the new ping value to be displayed.
+     */
+    public void updatePingIndicator(int pingValue) {
+        if (gamePanel != null) {
+            SwingUtilities.invokeLater(() -> gamePanel.setPingIndicator(pingValue));
+        }
+    }
+
     /**
      * Queues an asynchronous task to route an incoming message to the correct game object.
      */
