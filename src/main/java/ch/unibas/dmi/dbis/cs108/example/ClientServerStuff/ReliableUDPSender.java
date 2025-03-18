@@ -145,6 +145,32 @@ public class ReliableUDPSender {
         }
     }
 
+    /**
+     * Force-resends any pending message whose timer has expired,
+     * bypassing the predecessor check.
+     * This function iterates through all pending messages and, if the
+     * elapsed time since last sent is at least timeoutMillis, resends the message.
+     */
+    public void forceResendTimeouts() {
+        long now = System.currentTimeMillis();
+        if (pendingMessages.isEmpty()) {
+            return;
+        }
+        // Iterate over all pending messages.
+        for (PendingMessage pm : pendingMessages.values()) {
+            if (now - pm.lastSentTime >= timeoutMillis) {
+                try {
+                    sendPacket(pm.message, pm.destination, pm.destPort);
+                    pm.lastSentTime = now;
+                    System.out.println("Force resent message with UUID " + pm.message.getUUID() +
+                                       " (seq " + pm.message.getSequenceNumber() + "): " + MessageCodec.encode(pm.message));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
     
 
     

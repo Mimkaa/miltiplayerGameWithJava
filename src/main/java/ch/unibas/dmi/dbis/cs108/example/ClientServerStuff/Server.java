@@ -1,7 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import lombok.Getter;
-
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -117,8 +116,11 @@ public class Server {
     
     /**
      * Processes a received message.
-     * If the message is not an ACK, extracts the username from the second-to-last concealed parameter
-     * and registers the client in clientsMap.
+     * If the message is not an ACK, extracts the username from the last concealed parameter,
+     * registers the client in clientsMap, and then:
+     * - If the message option is "GAME", calls processMessageBestEffort(...) asynchronously,
+     *   which sends the message via best-effort UDP to all clients except the sender.
+     * - Otherwise, processes the message as before.
      *
      * @param msg          The decoded message.
      * @param senderSocket The sender's socket address.
@@ -150,14 +152,46 @@ public class Server {
                 System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
     
-            // 3) Distinguish between REQUEST and all other types.
-            if ("REQUEST".equals(msg.getOption())) {
+            // 3) Distinguish based on message option.
+            if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                // For game messages, send best effort.
+                AsyncManager.run(() -> processMessageBestEffort(msg, senderSocket));
+            } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
             } else {
                 AsyncManager.run(() -> broadcastMessageToOthers(msg, username));
             }
         } else {
             System.out.println("Concealed parameters missing or too short.");
+        }
+    }
+    
+    /**
+     * Processes a GAME-type message using best-effort UDP send.
+     * This method sends the message to all clients except the sender.
+     *
+     * @param msg          The message to send.
+     * @param senderSocket The sender's socket address.
+     */
+    private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
+        try {
+            InetAddress dest;
+            int port;
+            // For each registered client except the sender, send the message best effort.
+            for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
+                if (!entry.getValue().equals(senderSocket)) {
+                    dest = entry.getValue().getAddress();
+                    port = entry.getValue().getPort();
+                    // Send using a simple UDP send (best effort) directly on the server socket.
+                    String encoded = MessageCodec.encode(msg);
+                    byte[] data = encoded.getBytes();
+                    DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
+                    serverSocket.send(packet);
+                    System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
     
@@ -228,7 +262,7 @@ public class Server {
                 serverGeneratedUuid, 
                 (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
             );
-
+            
             try {
                 GameObject newObj = futureObj.get();
                 System.out.println("Created new game object with UUID: " + serverGeneratedUuid 
@@ -241,7 +275,7 @@ public class Server {
             broadcastMessageToAll(responseMsg);
         }
 
-        //TODO: This is a template for future commands
+        // Template for additional commands:
         if ("GETOBJECTID".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();
             List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
@@ -250,7 +284,6 @@ public class Server {
             for (GameObject gameObject : gameObjectList) {
                 if (gameObject.getName().equals(objectName)) {
                     objectID = gameObject.getId();
-
                 }
             }
             Object[] newParams = new Object[1];
@@ -258,23 +291,18 @@ public class Server {
             Message responseMsg = new Message("GETOBJECTID", newParams, "RESPONSE");
             responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
-
-
         }
 
-if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())) {
+        if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();
             List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
             String objectName = originalParams[0].toString();
             String newObjectName = originalParams[1].toString();
             String objectID = "";
-
-
             for (GameObject gameObject : gameObjectList) {
                 if (gameObject.getName().equals(objectName)) {
                     objectID = gameObject.getId();
                     gameObject.setName(newObjectName);
-
                 }
             }
             Object[] newParams = new Object[2];
@@ -283,10 +311,7 @@ if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())) {
             Message responseMsg = new Message("CHANGENAME", newParams, "RESPONSE");
             responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
-
-
         }
-
     }
     
     public static void main(String[] args) {

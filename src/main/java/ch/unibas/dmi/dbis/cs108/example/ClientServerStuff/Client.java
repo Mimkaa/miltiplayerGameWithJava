@@ -149,31 +149,38 @@ public class Client {
                 Message msg = outgoingQueue.poll();
                 if (msg != null) {
                     try {
-                        // Retrieve the existing concealed parameters.
+                        // Retrieve the existing concealed parameters and update them.
                         String[] concealed = msg.getConcealedParameters();
                         if (concealed == null) {
-                            // If none exist, create a new array with one element.
                             concealed = new String[] { username };
                         } else {
-                            // Otherwise, create a new array with one extra slot.
                             String[] newConcealed = new String[concealed.length + 1];
                             System.arraycopy(concealed, 0, newConcealed, 0, concealed.length);
-                            // Insert the client's UUID as the last concealed parameter.
                             newConcealed[newConcealed.length - 1] = username;
                             concealed = newConcealed;
                         }
-                        // Set the modified concealed parameters back on the message.
                         msg.setConcealedParameters(concealed);
             
-                        // For demonstration, send the message to the server.
                         InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
-                        myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
+                        // If the option is "GAME", send via simple UDP.
+                        if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                            String encoded = MessageCodec.encode(msg);
+                            byte[] data = encoded.getBytes();
+                            DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
+                            // Create a new socket for a best effort send.
+                            try (DatagramSocket udpSocket = new DatagramSocket()) {
+                                udpSocket.send(packet);
+                                System.out.println("Best effort sent: " + encoded);
+                            }
+                        } else {
+                            // For other options, use the reliable sender.
+                            myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
             });
-            
             
             // Block the main thread indefinitely.
             Thread.currentThread().join();
