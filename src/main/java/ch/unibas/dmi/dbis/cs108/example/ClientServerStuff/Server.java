@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import lombok.Getter;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -22,6 +24,7 @@ public class Server {
     
     // Reliable sender and ACK processor.
     private ReliableUDPSender reliableSender;
+    @Getter
     private AckProcessor ackProcessor;
 
     // The Game instance.
@@ -161,7 +164,7 @@ public class Server {
     /**
      * Broadcasts a message to all known clients in clientsMap.
      */
-    private void broadcastMessageToAll(Message msg) {
+    public void broadcastMessageToAll(Message msg) {
         for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
             InetSocketAddress clientAddress = entry.getValue();
@@ -178,7 +181,7 @@ public class Server {
     /**
      * Broadcasts a message to all clients except the one identified by excludedUsername.
      */
-    private void broadcastMessageToOthers(Message msg, String excludedUsername) {
+    public void broadcastMessageToOthers(Message msg, String excludedUsername) {
         for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
             InetSocketAddress clientAddress = entry.getValue();

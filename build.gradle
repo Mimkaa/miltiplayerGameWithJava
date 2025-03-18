@@ -49,6 +49,10 @@ dependencies {
     Since it is a `testCompile` dependency, it will not be part of the final product, only during testing.
      */
     testImplementation("org.junit.jupiter:junit-jupiter:5.+")
+
+    compileOnly 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
 }
 
 test {
