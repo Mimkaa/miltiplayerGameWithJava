@@ -147,7 +147,7 @@ public class Server {
             clientsMap.forEach((user, address) -> System.out.println("  " + user + " -> " + address));
     
             // If the message has a UUID, register it in the ACK processor.
-            if (msg.getUUID() != null || !"GAME".equalsIgnoreCase(msg.getOption())) {
+            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                 ackProcessor.addAck(senderSocket, msg.getUUID());
                 System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
