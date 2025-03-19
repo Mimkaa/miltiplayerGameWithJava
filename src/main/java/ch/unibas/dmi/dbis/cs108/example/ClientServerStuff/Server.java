@@ -325,6 +325,47 @@ public class Server {
             responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
         }
+
+        //handles Logout-request
+        if ("LOGOUT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+",""))) {
+            //prints in the server, that a client is logging out
+            System.out.println("Client logging out:" + senderUsername);
+
+            //Broadcast the new RESPONSE to all clients
+            Message logoutmessage = new Message ("LOGOUT", msg.getParameters(), "RESPONSE");
+
+            logoutmessage.setUUID("");
+            broadcastMessageToAll(logoutmessage);
+
+            //remove clients
+            System.out.println("Removed user: " + senderUsername);
+            clientsMap.remove(senderUsername);
+        }
+        if ("LOGIN".equalsIgnoreCase(msg.getMessageType())) {
+            //print Client loggin in
+            System.out.println("Client logging in:" + senderUsername);
+            //takes the first parameter of the received message
+            String firstParam = msg.getParameters()[0].toString();
+            //create a new array of size one
+            Object[] newParams = new Object[1];
+            //gets all the characters
+            GameObject[] gameObjects = MyGameInstance.getGameObjects().toArray(new GameObject[0]);
+            //loops through all the characters and compares the first parameter of the received message with the character's name
+            for (GameObject gameObject : gameObjects) {
+                if (firstParam.equals(gameObject.getName())) {
+                    newParams[0] = gameObject.getId();
+                    break;//take the USERID and put it in the parameter of the new message
+                }
+            }
+            //send message to the client
+            Message Loginmessage = new Message("LOGIN", newParams, "RESPONSE");
+            Loginmessage.setUUID("");
+
+            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
+            enqueueMessage(Loginmessage, clientAdress.getAddress(), clientAdress.getPort());
+
+        }
+
     }
     
     public static void main(String[] args) {

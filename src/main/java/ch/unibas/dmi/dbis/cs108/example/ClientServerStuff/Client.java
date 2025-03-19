@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
-
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
 import java.util.UUID;
 
@@ -34,6 +34,7 @@ public class Client {
     // Fields to store additional client state.
     private String idGameObject;
     private String idGame;
+    private final AtomicReference<String> clientName = new AtomicReference<>("");
 
     // Reliable UDP Sender.
     private ReliableUDPSender myReliableUDPSender;
@@ -54,13 +55,15 @@ public class Client {
     /**
      * Starts the graphics-related tasks.
      */
-    private void startGraphicsStuff(String clientName) {
-        SwingUtilities.invokeLater(() -> game.initUI(clientName));
+    public void startGraphicsStuff(String initialClientName) {
+        clientName.set(initialClientName); // Set initial name
+
+        SwingUtilities.invokeLater(() -> game.initUI(clientName.get()));
 
         AsyncManager.run(() -> {
             try {
                 while (true) {
-                    game.updateActiveObject(clientName, outgoingQueue);
+                    game.updateActiveObject(clientName.get(), outgoingQueue); // Always get the latest client name
                     Thread.sleep(16);
                 }
             } catch (InterruptedException e) {
@@ -68,6 +71,7 @@ public class Client {
             }
         });
     }
+
 
     public void run() {
         try {
@@ -83,8 +87,8 @@ public class Client {
 
             // Create and start PingManager (pings every 1000 ms)
             InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
-            pingManager = new PingManager(outgoingQueue, serverInet, SERVER_PORT, 300);
-            pingManager.start();
+            //pingManager = new PingManager(outgoingQueue, serverInet, SERVER_PORT, 300);
+            //pingManager.start();
 
             Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username }, "REQUEST");
             String[] concealedPrms = { "something1", "something2", username };
@@ -246,7 +250,49 @@ public class Client {
                     gameObject.setName(newObjectName);
                 }
             }
-        } else {
+        }else if ("LOGIN".equalsIgnoreCase(msg.getMessageType().trim())) {
+            System.out.println("Loggin in..");
+            System.out.println(msg);
+            if (msg.getParameters() == null || msg.getParameters().length < 1) {
+                System.err.println("Error: LOGIN response missing parameters");
+                return;
+            }
+
+            boolean playerFound = false;
+            //get the USERID
+            String assignedUUID = msg.getParameters()[0].toString();
+            System.out.println("LOGIN confirmed for UUID: "+ assignedUUID);
+
+            //compares all the USERID's with the ID from the created player
+            for (GameObject gameObject : game.getGameObjects()) {
+                if (gameObject.getId().equals(assignedUUID)){
+                    System.out.println("Found gameObject: " + gameObject);
+                    playerFound = true;
+
+                    //initialize initUI for the Keybinds
+                    SwingUtilities.invokeLater(() -> {
+                        game.rebindKeyListeners(gameObject.getName());
+                        this.clientName.set(gameObject.getName());
+                        game.updateGamePanel();
+                        game.updateActiveObject(gameObject.getName(), outgoingQueue);
+                    });
+                    System.out.println(gameObject.getName());
+
+                }
+            }
+
+        }
+        // handles Logout
+        else if("LOGOUT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s +",""))) {
+            //printing Logging out
+            System.out.println("Logging out");
+
+            System.exit(0);
+            return;
+        }
+
+
+        else {
             System.out.println("Unhandled response type: " + msg.getMessageType());
         }
     }

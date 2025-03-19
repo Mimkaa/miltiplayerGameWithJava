@@ -199,7 +199,42 @@ public class Game {
             );
         }
     }
-    
+
+    /**
+     * Removes all current KeyListeners from the JFrame and adds the KeyListener
+     * for the GameObject associated with the given UUID (if found).
+     *
+     * @param localPlayerId The UUID of the GameObject whose KeyListener should be added.
+     */
+    public void rebindKeyListeners(String localPlayerId) {
+        SwingUtilities.invokeLater(() -> {
+
+            if (frame == null) {
+                System.err.println("No UI frame exists yet. Cannot rebind key listeners.");
+                return;
+            }
+
+            // Remove all currently registered KeyListeners
+            for (KeyListener kl : frame.getKeyListeners()) {
+                frame.removeKeyListener(kl);
+            }
+
+            // Add the KeyListener for the matching GameObject (the local player)
+            for (GameObject go : gameObjects) {
+                System.out.println(go.getName());
+                System.out.println(go.getClass().getName());
+                System.out.println(this.frame);
+                if (go.getName().equals(localPlayerId)) {
+                    frame.addKeyListener(go.getKeyListener());
+                    System.out.println("Connected controls for local player: " + go.getName());
+                    break;
+                }
+            }
+        });
+    }
+
+
+
     /**
      * Returns the current list of game objects.
      */
