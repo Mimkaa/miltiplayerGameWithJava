@@ -96,6 +96,8 @@ public class Client {
             // For demonstration, send the mock message to SERVER_ADDRESS:SERVER_PORT
             myReliableUDPSender.sendMessage(mockMessage, serverInet, SERVER_PORT);
 
+            game.startPlayersCommandProcessingLoop();
+
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
             AsyncManager.runLoop(() -> {
                 try {
@@ -170,16 +172,14 @@ public class Client {
                         msg.setConcealedParameters(concealed);
             
                         InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
-                        // If the option is "GAME", send via simple UDP.
+                        // If the option is "GAME", send via simple UDP using the existing clientSocket.
                         if ("GAME".equalsIgnoreCase(msg.getOption())) {
                             String encoded = MessageCodec.encode(msg);
                             byte[] data = encoded.getBytes();
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
-                            // Create a new socket for a best effort send.
-                            try (DatagramSocket udpSocket = new DatagramSocket()) {
-                                udpSocket.send(packet);
-                                System.out.println("Best effort sent: " + encoded);
-                            }
+                            // Use the already initialized clientSocket for sending.
+                            clientSocket.send(packet);
+                            System.out.println("Best effort sent: " + encoded);
                         } else {
                             // For other options, use the reliable sender.
                             myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);

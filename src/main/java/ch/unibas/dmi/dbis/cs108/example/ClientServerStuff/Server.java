@@ -64,7 +64,7 @@ public class Server {
             ackProcessor.start();
             
             MyGameInstance = new Game("GameSession1");
-            
+            MyGameInstance.startPlayersCommandProcessingLoop();
             // Start a dedicated sender thread that continuously polls outgoingQueue.
             AsyncManager.runLoop(() -> {
                 OutgoingMessage om = outgoingQueue.poll();
@@ -147,7 +147,7 @@ public class Server {
             clientsMap.forEach((user, address) -> System.out.println("  " + user + " -> " + address));
     
             // If the message has a UUID, register it in the ACK processor.
-            if (msg.getUUID() != null) {
+            if (msg.getUUID() != null || !"GAME".equalsIgnoreCase(msg.getOption())) {
                 ackProcessor.addAck(senderSocket, msg.getUUID());
                 System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
@@ -155,6 +155,7 @@ public class Server {
             // 3) Distinguish based on message option.
             if ("GAME".equalsIgnoreCase(msg.getOption())) {
                 // For game messages, send best effort.
+                MyGameInstance.addIncomingMessage(msg);
                 AsyncManager.run(() -> processMessageBestEffort(msg, senderSocket));
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));

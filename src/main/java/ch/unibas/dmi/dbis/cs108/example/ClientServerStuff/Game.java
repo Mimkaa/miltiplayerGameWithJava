@@ -119,12 +119,22 @@ public class Game {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     for (GameObject go : gameObjects) {
-                        go.processCommandsNonBlocking();
+                        //go.processCommandsNonBlocking();
                     }
                     gamePanel.repaint();
                 }
             });
             timer.start();
+        });
+    }
+
+    public void startPlayersCommandProcessingLoop() {
+        AsyncManager.runLoop(() -> {
+            for (GameObject go : gameObjects) {
+                
+                go.processCommandsNonBlocking();
+                
+            }
         });
     }
 
@@ -163,31 +173,6 @@ public class Game {
         });
     }
     
-    /**
-     * Rebinds the key listener for the game object with the specified UUID using the stored JFrame.
-     */
-    public void rebindKeyListenerForObject(String uuid) {
-        if (frame == null) {
-            System.out.println("Frame not initialized. Cannot rebind key listeners.");
-            return;
-        }
-        // Find the game object with the specified UUID.
-        for (GameObject go : gameObjects) {
-            if (go.getId().equals(uuid)) {
-                // Remove all existing key listeners from the frame.
-                for (KeyListener kl : frame.getKeyListeners()) {
-                    frame.removeKeyListener(kl);
-                }
-                // Add the key listener from the found game object.
-                frame.addKeyListener(go.getKeyListener());
-                System.out.println("Rebound key listener for object: " + go.getName() + " (UUID: " + uuid + ")");
-                // Update the panel to reflect any changes.
-                updateGamePanel();
-                return;
-            }
-        }
-        System.out.println("No game object found with UUID: " + uuid);
-    }
     
     /**
      * Updates the game panel with the current list of game objects.
