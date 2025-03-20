@@ -386,6 +386,22 @@ public class Server {
                     System.out.println(go.getName());
             }
         }
+        //Handles Exit-request to close the Client
+        if ("EXIT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+",""))) {
+            //prints in the server, that a client is logging out
+            System.out.println("Client logging out:" + senderUsername);
+
+            //Broadcast the new RESPONSE to all clients
+            Message logoutmessage = new Message("EXIT", msg.getParameters(), "RESPONSE");
+
+            logoutmessage.setUUID("");
+            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
+            enqueueMessage(logoutmessage, clientAdress.getAddress(), clientAdress.getPort());
+
+            //remove clients
+            System.out.println("Removed user: " + senderUsername);
+            clientsMap.remove(senderUsername);
+        }
 
     }
     
