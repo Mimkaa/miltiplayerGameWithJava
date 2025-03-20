@@ -1,16 +1,15 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-//import lombok.Getter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
 
 public class Server {
     public static final int SERVER_PORT = 9876;
@@ -30,11 +29,10 @@ public class Server {
     
     // Reliable sender and ACK processor.
     private ReliableUDPSender reliableSender;
-    //@Getter
     private AckProcessor ackProcessor;
 
     // The Game instance.
-    private Game MyGameInstance;
+    private Game myGameInstance;
     
     // Outgoing message queue to hold messages for reliable sending.
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
@@ -70,8 +68,9 @@ public class Server {
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
             
-            MyGameInstance = new Game("GameSession1");
-            MyGameInstance.startPlayersCommandProcessingLoop();
+            myGameInstance = new Game("GameSession1");
+            myGameInstance.startPlayersCommandProcessingLoop();
+            
             // Start a dedicated sender thread that continuously polls outgoingQueue.
             AsyncManager.runLoop(() -> {
                 OutgoingMessage om = outgoingQueue.poll();
@@ -105,10 +104,11 @@ public class Server {
                         String messageString = new String(data);
                         System.out.println("Received: " + messageString + " from " + senderSocket);
                         
-                        AsyncManager.run(() -> {
-                            Message msg = MessageCodec.decode(messageString);
-                            processMessage(msg, senderSocket);
-                        });
+                        // Decode the message.
+                        Message msg = MessageCodec.decode(messageString);
+                        
+                        // Dispatch message processing asynchronously.
+                        AsyncManager.run(() -> processMessage(msg, senderSocket));
                         
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -122,12 +122,12 @@ public class Server {
     }
     
     /**
-     * Processes a received message.
-     * If the message is not an ACK, extracts the username from the last concealed parameter,
+     * Synchronously processes a received message.
+     * If the message is not an ACK, it extracts the username from the last concealed parameter,
      * registers the client in clientsMap, and then:
-     * - If the message option is "GAME", calls processMessageBestEffort(...) asynchronously,
-     *   which sends the message via best-effort UDP to all clients except the sender.
-     * - Otherwise, processes the message as before.
+     * - For "GAME" messages, it updates the game logic/UI and sends the message best effort.
+     * - For "REQUEST", it handles the request.
+     * - Otherwise, it broadcasts the message to other clients.
      *
      * @param msg          The decoded message.
      * @param senderSocket The sender's socket address.
@@ -146,28 +146,50 @@ public class Server {
         if (concealed != null && concealed.length >= 2) {
             // Username from the last element.
             String username = concealed[concealed.length - 1];
+
+            // If the username already exists in the clients map, send a collision response.
+            if (clientsMap.containsKey(username)) {
+                InetSocketAddress existingSocket = clientsMap.get(username);
+                // Only treat it as a collision if the sender socket differs.
+                if (!existingSocket.equals(senderSocket)) {
+                    if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
+                        ackProcessor.addAck(senderSocket, msg.getUUID());
+                    }
+                    String suggestedNickname = Nickname_Generator.generateNickname();
+                    Message collisionResponse = new Message(
+                            "NAME_TAKEN",
+                            new Object[]{ suggestedNickname },
+                            "RESPONSE"
+                    );
+                    collisionResponse.setUUID(""); // so "null" doesn't get appended in the encoding
+                    enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
+                    return;
+                }
+            }
+            // Register the new client.
             clientsMap.put(username, senderSocket);
+    
             System.out.println("Registered user: " + username + " at " + senderSocket
                     + ". Total clients: " + clientsMap.size());
     
             System.out.println("Current clientsMap after registering \"" + username + "\":");
             clientsMap.forEach((user, address) -> System.out.println("  " + user + " -> " + address));
     
-            // If the message has a UUID, register it in the ACK processor.
+            // If the message has a UUID and is not a "GAME" message, register it in the ACK processor.
             if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                 ackProcessor.addAck(senderSocket, msg.getUUID());
                 System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
     
-            // 3) Distinguish based on message option.
+            // 3) Process based on message option synchronously.
             if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                // For game messages, send best effort.
-                MyGameInstance.addIncomingMessage(msg);
-                AsyncManager.run(() -> processMessageBestEffort(msg, senderSocket));
+                // For GAME messages, update game logic/UI.
+                myGameInstance.addIncomingMessage(msg);
+                processMessageBestEffort(msg, senderSocket);
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
-                AsyncManager.run(() -> handleRequest(msg, username));
+                handleRequest(msg, username);
             } else {
-                AsyncManager.run(() -> broadcastMessageToOthers(msg, username));
+                broadcastMessageToOthers(msg, username);
             }
         } else {
             System.out.println("Concealed parameters missing or too short.");
@@ -176,7 +198,7 @@ public class Server {
     
     /**
      * Processes a GAME-type message using best-effort UDP send.
-     * This method sends the message to all clients except the sender.
+     * Sends the message to all clients except the sender.
      *
      * @param msg          The message to send.
      * @param senderSocket The sender's socket address.
@@ -265,7 +287,7 @@ public class Server {
             responseMsg.setUUID("");
             
             // 6) Update the game by adding the new game object asynchronously.
-            Future<GameObject> futureObj = MyGameInstance.addGameObjectAsync(
+            Future<GameObject> futureObj = myGameInstance.addGameObjectAsync(
                 originalParams[0].toString(),  // object type, e.g. "Player"
                 serverGeneratedUuid, 
                 (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
@@ -282,7 +304,7 @@ public class Server {
             // 7) Broadcast the new RESPONSE message to all clients.
             broadcastMessageToAll(responseMsg);
         }
-
+    
         if ("PING".equalsIgnoreCase(msg.getMessageType())) {
             // Look up the sender's InetSocketAddress from clientsMap using the senderUsername.
             InetSocketAddress senderAddress = clientsMap.get(senderUsername);
@@ -295,11 +317,11 @@ public class Server {
             }
             return;
         }
-
+    
         // Template for additional commands:
         if ("GETOBJECTID".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();
-            List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
+            List<GameObject> gameObjectList = myGameInstance.getGameObjects();
             String objectName = originalParams[0].toString();
             String objectID = "";
             for (GameObject gameObject : gameObjectList) {
@@ -313,10 +335,10 @@ public class Server {
             responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
         }
-
+    
         if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();
-            List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
+            List<GameObject> gameObjectList = myGameInstance.getGameObjects();
             String objectName = originalParams[0].toString();
             String newObjectName = originalParams[1].toString();
             String objectID = "";
@@ -333,83 +355,97 @@ public class Server {
             responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
         }
-
-        //handles Logout-request
+        
+        if ("USERJOINED".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+",""))) {
+            Object[] originalParams = msg.getParameters();
+            String nickname = originalParams[0].toString();
+            boolean hasRepetition = false;
+            for (String key : clientsMap.keySet()) {
+                if (key.equals(nickname)) {
+                    hasRepetition = true;
+                }
+            }
+            if (hasRepetition) {
+                String suggestedNickname = Nickname_Generator.generateNickname();
+                Object[] newParams = new Object[1];
+                newParams[0] = suggestedNickname;
+                Message responseMsg = new Message("USERJOINED", newParams, "RESPONSE");
+                // You can enqueue or directly send this response as needed.
+                InetSocketAddress clientAddress = clientsMap.get(nickname);
+                if (clientAddress != null) {
+                    enqueueMessage(responseMsg, clientAddress.getAddress(), clientAddress.getPort());
+                }
+            }
+        }
+    
+        // Handles Logout-request.
         if ("LOGOUT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+",""))) {
-            //prints in the server, that a client is logging out
-            System.out.println("Client logging out:" + senderUsername);
-
-            //Broadcast the new RESPONSE to all clients
-            Message logoutmessage = new Message ("LOGOUT", msg.getParameters(), "RESPONSE");
-
-            logoutmessage.setUUID("");
-            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
-            enqueueMessage(logoutmessage, clientAdress.getAddress(), clientAdress.getPort());
-
-            //remove clients
+            System.out.println("Client logging out: " + senderUsername);
+    
+            // Broadcast the LOGOUT RESPONSE to all clients.
+            Message logoutMessage = new Message("LOGOUT", msg.getParameters(), "RESPONSE");
+            logoutMessage.setUUID("");
+            InetSocketAddress clientAddress = clientsMap.get(senderUsername);
+            if (clientAddress != null) {
+                enqueueMessage(logoutMessage, clientAddress.getAddress(), clientAddress.getPort());
+            }
+    
+            // Remove client.
             System.out.println("Removed user: " + senderUsername);
             clientsMap.remove(senderUsername);
         }
+    
         if ("LOGIN".equalsIgnoreCase(msg.getMessageType())) {
-            //print Client loggin in
-            System.out.println("Client logging in:" + senderUsername);
-            //takes the first parameter of the received message
+            System.out.println("Client logging in: " + senderUsername);
             String firstParam = msg.getParameters()[0].toString();
-            //create a new array of size one
             Object[] newParams = new Object[1];
-            //gets all the characters
-            GameObject[] gameObjects = MyGameInstance.getGameObjects().toArray(new GameObject[0]);
-            //loops through all the characters and compares the first parameter of the received message with the character's name
+            GameObject[] gameObjects = myGameInstance.getGameObjects().toArray(new GameObject[0]);
             for (GameObject gameObject : gameObjects) {
                 if (firstParam.equals(gameObject.getName())) {
                     newParams[0] = gameObject.getId();
-                    break;//take the USERID and put it in the parameter of the new message
-                }
-            }
-            //send message to the client
-            Message Loginmessage = new Message("LOGIN", newParams, "RESPONSE");
-            Loginmessage.setUUID("");
-
-            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
-            enqueueMessage(Loginmessage, clientAdress.getAddress(), clientAdress.getPort());
-
-        }
-        //command for deleting the player
-        if ("DELETE".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("Client deleting:" + senderUsername);
-            Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
-            broadcastMessageToAll(deleteMessage);
-            String targetPlayerName = msg.getParameters()[0].toString();
-
-            // remove the player from the server
-            for (GameObject go : MyGameInstance.getGameObjects()) {
-                if (go.getName().equals(targetPlayerName)) {
-                    MyGameInstance.getGameObjects().remove(go);
                     break;
                 }
             }
-            //for debugging
-            for (GameObject go : MyGameInstance.getGameObjects()) {
-                    System.out.println(go.getName());
+            Message loginMessage = new Message("LOGIN", newParams, "RESPONSE");
+            loginMessage.setUUID("");
+            InetSocketAddress clientAddr = clientsMap.get(senderUsername);
+            if (clientAddr != null) {
+                enqueueMessage(loginMessage, clientAddr.getAddress(), clientAddr.getPort());
             }
         }
-        //Handles Exit-request to close the Client
+    
+        // Command for deleting the player.
+        if ("DELETE".equalsIgnoreCase(msg.getMessageType())) {
+            System.out.println("Client deleting: " + senderUsername);
+            Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
+            broadcastMessageToAll(deleteMessage);
+            String targetPlayerName = msg.getParameters()[0].toString();
+    
+            // Remove the player from the game.
+            for (GameObject go : myGameInstance.getGameObjects()) {
+                if (go.getName().equals(targetPlayerName)) {
+                    myGameInstance.getGameObjects().remove(go);
+                    break;
+                }
+            }
+            // For debugging.
+            for (GameObject go : myGameInstance.getGameObjects()) {
+                System.out.println(go.getName());
+            }
+        }
+    
+        // Handles Exit-request to close the client.
         if ("EXIT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+",""))) {
-            //prints in the server, that a client is logging out
-            System.out.println("Client logging out:" + senderUsername);
-
-            //Broadcast the new RESPONSE to all clients
-            Message logoutmessage = new Message("EXIT", msg.getParameters(), "RESPONSE");
-
-            logoutmessage.setUUID("");
-            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
-            enqueueMessage(logoutmessage, clientAdress.getAddress(), clientAdress.getPort());
-
-            //remove clients
+            System.out.println("Client logging out: " + senderUsername);
+            Message exitMessage = new Message("EXIT", msg.getParameters(), "RESPONSE");
+            exitMessage.setUUID("");
+            InetSocketAddress clientAddr = clientsMap.get(senderUsername);
+            if (clientAddr != null) {
+                enqueueMessage(exitMessage, clientAddr.getAddress(), clientAddr.getPort());
+            }
             System.out.println("Removed user: " + senderUsername);
             clientsMap.remove(senderUsername);
         }
-
     }
     
     public static void main(String[] args) {
