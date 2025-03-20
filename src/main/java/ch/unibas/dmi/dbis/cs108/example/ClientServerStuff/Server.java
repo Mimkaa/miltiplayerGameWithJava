@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import lombok.Getter;
+//import lombok.Getter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -23,7 +23,7 @@ public class Server {
     
     // Reliable sender and ACK processor.
     private ReliableUDPSender reliableSender;
-    @Getter
+    //@Getter
     private AckProcessor ackProcessor;
 
     // The Game instance.

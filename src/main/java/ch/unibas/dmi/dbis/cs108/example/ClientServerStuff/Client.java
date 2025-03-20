@@ -183,6 +183,7 @@ public class Client {
                         } else {
                             // For other options, use the reliable sender.
                             myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
+                            System.out.println("Reliable sent: " + MessageCodec.encode(msg));
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -198,7 +199,9 @@ public class Client {
     }
     
     private void sendMessage(Message msg) {
-        outgoingQueue.offer(msg);
+        AsyncManager.run(() -> {
+            System.out.println(msg);
+            outgoingQueue.offer(msg);});
     }
     
     /**
@@ -282,13 +285,38 @@ public class Client {
             }
 
         }
-        // handles Logout
-        else if("LOGOUT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s +",""))) {
+        // handles Exit, it closes the client
+        else if("EXIT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s +",""))) {
             //printing Logging out
-            System.out.println("Logging out");
+            System.out.println("Exiting game...");
 
             System.exit(0);
             return;
+        }
+        else if ("LOGOUT".equalsIgnoreCase(msg.getMessageType())) {
+            System.out.println("Logging out " + msg.getParameters()[0].toString());
+
+            try {
+                String[] concealedParams = { "something1", "something2" };
+                String messagelogString = "DELETE{REQUEST}[" + msg.getParameters()[0].toString() + "]||";
+
+                // Decode a new DELETE message
+                Message logoutMessage = MessageCodec.decode(messagelogString);
+                logoutMessage.setConcealedParameters(concealedParams);
+
+                // Create the destination (same as your server address/port)
+                InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
+
+                // Send it via reliable sender
+                myReliableUDPSender.sendMessage(logoutMessage, dest, SERVER_PORT);
+                System.out.println("Reliable sent: " + MessageCodec.encode(logoutMessage));
+
+            } catch (Exception e) {
+                // If you want more specific handling, consider catching the exact exceptions
+                // e.g., UnknownHostException, IOException, etc.
+                System.err.println("Failed to send DELETE message reliably: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
         //handles deletion of the player
         else if("DELETE".equalsIgnoreCase(msg.getMessageType())) {
