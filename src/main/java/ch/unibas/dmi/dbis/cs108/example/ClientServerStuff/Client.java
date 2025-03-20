@@ -401,13 +401,25 @@ public class Client {
     public static void main(String[] args) {
         try {
             Scanner inputScanner = new Scanner(System.in);
-            System.out.print("Enter your name: ");
+
+            // generate suggested name
+            String suggestedNickname = Nickname_Generator.generateNickname();
+            System.out.println("Suggested Nickname: " + suggestedNickname);
+            System.out.println("Please enter to use suggested name, or type your own: ");
+
+            //Get the nickname
             String userName = inputScanner.nextLine();
-    
-            // Choose a random name from the list.
-            String[] names = {"Alice", "Bob", "Carol"};
-            String randomName = names[new java.util.Random().nextInt(names.length)];
-            System.out.println("Selected name: " + randomName);
+
+            // If nothing was entered, use the suggested nickname
+            System.out.println("entered nick:"+userName);
+            if (userName.isEmpty()) {
+                userName = suggestedNickname;
+            }
+
+
+
+
+
     
             Client client = new Client("GameSession1");
             client.setUsername(userName);
