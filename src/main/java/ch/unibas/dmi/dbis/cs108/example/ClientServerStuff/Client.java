@@ -7,11 +7,11 @@ import java.net.InetSocketAddress;
 import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
-import java.util.UUID;
 
 public class Client {
     public static final String SERVER_ADDRESS = "localhost";
@@ -28,13 +28,12 @@ public class Client {
     // Scanner for the terminal.
     private final Scanner scanner = new Scanner(System.in);
 
-    // The client's username.
-    private String username = UUID.randomUUID().toString();
+    // The client's username as an atomic reference.
+    private final AtomicReference<String> username = new AtomicReference<>(UUID.randomUUID().toString());
 
-    // Fields to store additional client state.
+    // Additional client state.
     private String idGameObject;
     private String idGame;
-    private final AtomicReference<String> clientName = new AtomicReference<>("");
 
     // Reliable UDP Sender.
     private ReliableUDPSender myReliableUDPSender;
@@ -55,15 +54,14 @@ public class Client {
     /**
      * Starts the graphics-related tasks.
      */
-    public void startGraphicsStuff(String initialClientName) {
-        clientName.set(initialClientName); // Set initial name
-
-        SwingUtilities.invokeLater(() -> game.initUI(clientName.get()));
-
+    public void startGraphicsStuff() {
+        SwingUtilities.invokeLater(() -> game.initUI(username.get()));
+        
         AsyncManager.run(() -> {
             try {
                 while (true) {
-                    game.updateActiveObject(clientName.get(), outgoingQueue); // Always get the latest client name
+                    // Always use the current username
+                    game.updateActiveObject(username.get(), outgoingQueue);
                     Thread.sleep(16);
                 }
             } catch (InterruptedException e) {
@@ -71,7 +69,6 @@ public class Client {
             }
         });
     }
-
 
     public void run() {
         try {
@@ -85,16 +82,19 @@ public class Client {
             ackProcessor = new AckProcessor(clientSocket);
             ackProcessor.start();
 
-            // Create and start PingManager (pings every 1000 ms)
-            InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
-            //pingManager = new PingManager(outgoingQueue, serverInet, SERVER_PORT, 300);
-            //pingManager.start();
+            // (Optional) Create and start PingManager if needed.
+            // InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
+            // pingManager = new PingManager(outgoingQueue, serverInet, SERVER_PORT, 300);
+            // pingManager.start();
 
-            Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username }, "REQUEST");
-            String[] concealedPrms = { "something1", "something2", username };
+            Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username.get() }, "REQUEST");
+            String[] concealedPrms = { "something1", "something2", username.get() };
             mockMessage.setConcealedParameters(concealedPrms);
-            // For demonstration, send the mock message to SERVER_ADDRESS:SERVER_PORT
+            InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
             myReliableUDPSender.sendMessage(mockMessage, serverInet, SERVER_PORT);
+
+
+
 
             game.startPlayersCommandProcessingLoop();
 
@@ -140,11 +140,9 @@ public class Client {
                                 // If it's a GAME update, forward it to your game logic/UI
                                 game.addIncomingMessage(msg);
                             } else if ("RESPONSE".equalsIgnoreCase(option)) {
-                                // When the server sends a response (including ping replies),
-                                // process it in the dedicated response handler.
-                                AsyncManager.run(() -> { processServerResponse(msg); });
+                                // Process responses (including ping replies) asynchronously.
+                                AsyncManager.run(() -> processServerResponse(msg));
                             } else {
-                                // For anything else, do your fallback logic
                                 System.out.println("Unknown message option: " + option);
                             }
                         }
@@ -159,14 +157,14 @@ public class Client {
                 Message msg = outgoingQueue.poll();
                 if (msg != null) {
                     try {
-                        // Retrieve the existing concealed parameters and update them.
+                        // Update the concealed parameters to always include the latest username.
                         String[] concealed = msg.getConcealedParameters();
                         if (concealed == null) {
-                            concealed = new String[] { username };
+                            concealed = new String[] { username.get() };
                         } else {
                             String[] newConcealed = new String[concealed.length + 1];
                             System.arraycopy(concealed, 0, newConcealed, 0, concealed.length);
-                            newConcealed[newConcealed.length - 1] = username;
+                            newConcealed[newConcealed.length - 1] = username.get();
                             concealed = newConcealed;
                         }
                         msg.setConcealedParameters(concealed);
@@ -177,7 +175,6 @@ public class Client {
                             String encoded = MessageCodec.encode(msg);
                             byte[] data = encoded.getBytes();
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
-                            // Use the already initialized clientSocket for sending.
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
                         } else {
@@ -199,39 +196,28 @@ public class Client {
     }
     
     private void sendMessage(Message msg) {
-        AsyncManager.run(() -> {
-            System.out.println(msg);
-            outgoingQueue.offer(msg);});
+        AsyncManager.run(() -> outgoingQueue.offer(msg));
+        
     }
     
     /**
-     * Processes client update messages (if needed).
-     * If the message is a ping reply (i.e. message type is "RESPONSE"),
-     * the time difference (in milliseconds) since the last ping is printed.
+     * Processes messages from the server.
      */
     private void processServerResponse(Message msg) {
-        // Check if this is a ping reply.
         if ("PONG".equalsIgnoreCase(msg.getMessageType())) {
             if (pingManager != null) {
                 game.updatePingIndicator(pingManager.getTimeDifferenceMillis());
             }
-            // Exit after handling the ping reply.
             return;
         }
         
-        // Handle other types of responses.
         if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
-            // Expecting parameters:
-            // [serverGeneratedUuid, objectType, objectName, posX, posY, size, gameSession]
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 7) {
                 String serverUuid = params[0].toString();
                 String objectType = params[1].toString();
-                
-                // Pass the remaining parameters (from index 2 to the end) as varargs.
                 Object[] remainingParams = java.util.Arrays.copyOfRange(params, 2, params.length);
                 Future<GameObject> futureObj = game.addGameObjectAsync(objectType, serverUuid, remainingParams);
-                
                 try {
                     GameObject newObj = futureObj.get();
                     System.out.println("Created new game object with UUID: " + serverUuid 
@@ -253,34 +239,32 @@ public class Client {
                     gameObject.setName(newObjectName);
                 }
             }
-        }else if ("LOGIN".equalsIgnoreCase(msg.getMessageType().trim())) {
-            System.out.println("Loggin in..");
+        } else if ("LOGIN".equalsIgnoreCase(msg.getMessageType().trim())) {
+            System.out.println("Logging in...");
             System.out.println(msg);
             if (msg.getParameters() == null || msg.getParameters().length < 1) {
                 System.err.println("Error: LOGIN response missing parameters");
                 return;
             }
 
-            boolean playerFound = false;
-            //get the USERID
+            // Get the assigned UUID and update the username accordingly.
             String assignedUUID = msg.getParameters()[0].toString();
-            System.out.println("LOGIN confirmed for UUID: "+ assignedUUID);
+            System.out.println("LOGIN confirmed for UUID: " + assignedUUID);
 
-            //compares all the USERID's with the ID from the created player
+            boolean playerFound = false;
             for (GameObject gameObject : game.getGameObjects()) {
-                if (gameObject.getId().equals(assignedUUID)){
+                if (gameObject.getId().equals(assignedUUID)) {
                     System.out.println("Found gameObject: " + gameObject);
                     playerFound = true;
 
-                    //initialize initUI for the Keybinds
                     SwingUtilities.invokeLater(() -> {
                         game.rebindKeyListeners(gameObject.getName());
-                        this.clientName.set(gameObject.getName());
+                        // Update the atomic username.
+                        username.set(gameObject.getName());
                         game.updateGamePanel();
-                        game.updateActiveObject(gameObject.getName(), outgoingQueue);
+                        game.updateActiveObject(username.get(), outgoingQueue);
                     });
                     System.out.println(gameObject.getName());
-
                 }
             }
 
@@ -360,8 +344,8 @@ public class Client {
         });
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setUsername(String newUsername) {
+        username.set(newUsername);
     }
 
     public void sendBulkCreateMessages() {
@@ -369,50 +353,81 @@ public class Client {
             for (int i = 0; i < 50; i++) {
                 float x = 300.0f + i * 50;
                 float y = 200.0f + i * 50;
-                // Create parameters array:
-                // [ "Player", "Mike", x, y, 25.0f, "GameSession1" ]
                 Object[] params = new Object[] {"Player", "Mike", x, y, 25.0f, "GameSession1"};
-                
-                // Create the message with type "CREATE" and option "REQUEST"
                 Message createMsg = new Message("CREATE", params, "REQUEST");
-                
-                // Optionally, set concealed parameters if required.
                 createMsg.setConcealedParameters(new String[] {"Mike", "GameSession1"});
-                
-                // Enqueue the message for sending.
                 sendMessage(createMsg);
-                
-                // Optional: add a slight delay between messages to avoid flooding.
                 try {
-                    Thread.sleep(50); // 50 ms delay
+                    Thread.sleep(50); // 50 ms delay to avoid flooding
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
             }
         });
     }
+
+    public void login() {
+        try {
+            // Build the string for the CREATE message.
+            // Format: CREATE{REQUEST}[S:Player, S:<username>, F:100.0, F:100.0, F:25.0, S:GameSession1]||
+            String createStr = "CREATE{REQUEST}[S:Player, S:" + username.get() 
+                    + ", F:100.0, F:100.0, F:25.0, S:GameSession1]||";
+            Message createMsg = MessageCodec.decode(createStr);
+            String[] concealedParams = { "something1", "something2" };
+            createMsg.setConcealedParameters(concealedParams);
+            
+            // Queue the CREATE message.
+            sendMessage(createMsg);
+            System.out.println("Sent CREATE message: " + createStr);
+            
+            // Optionally, wait for a short period to allow the CREATE to be processed.
+            Thread.sleep(1000);
+            
+            // Build the string for the LOGIN message.
+            // Format: LOGIN{REQUEST}[<username>]||
+            String loginStr = "LOGIN{REQUEST}[" + username.get() + "]||";
+            Message loginMsg = MessageCodec.decode(loginStr);
+            loginMsg.setConcealedParameters(concealedParams);
+            
+            // Queue the LOGIN message.
+            sendMessage(loginMsg);
+            System.out.println("Sent LOGIN message: " + loginStr);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
     
     public static void main(String[] args) {
         try {
             Scanner inputScanner = new Scanner(System.in);
             System.out.print("Enter your name: ");
             String userName = inputScanner.nextLine();
-
+    
             // Choose a random name from the list.
             String[] names = {"Alice", "Bob", "Carol"};
             String randomName = names[new java.util.Random().nextInt(names.length)];
             System.out.println("Selected name: " + randomName);
-            
+    
             Client client = new Client("GameSession1");
             client.setUsername(userName);
             System.out.println("Set client username: " + userName);
-            
-            // Start the graphical interface using the randomly selected name.
-            client.startGraphicsStuff(randomName);
+    
+            // Start the graphical interface and console reader.
+            client.startGraphicsStuff();
             client.startConsoleReaderLoop();
-            client.run();
+    
+            // First, run the network initialization.
+            new Thread(() -> client.run()).start();
+            
+            // Then, once run() is up and the reliable sender is initialized, you can call fullLogin().
+            // Consider waiting a little bit or using a callback/flag to ensure initialization.
+            Thread.sleep(1000); 
+            client.login();
+    
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+    
 }
