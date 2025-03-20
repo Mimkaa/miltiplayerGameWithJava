@@ -15,6 +15,14 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @Getter
 public class Server {
     public static final int SERVER_PORT = 9876;
+
+    // IMPORTANT FOR GETTING ONLY O N E SERVER INSTANCE!!!!!!!
+    public static Server getInstance() {
+        return SingletonHelper.INSTANCE;
+    }
+    private static class SingletonHelper {
+        private static final Server INSTANCE = new Server();
+    }
     
     // Concurrent map to track clients: key = username, value = InetSocketAddress.
     private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();

@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import chat.ChatManager;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -18,6 +20,8 @@ import chat.ChatUIHelper;
 public class Client {
     public static final String SERVER_ADDRESS = "25.12.99.19";
     public static final int SERVER_PORT = 9876;
+
+    public ChatManager.ClientChatManager clientChatManager;
 
     // Global queue for outgoing messages.
     private final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
@@ -49,8 +53,6 @@ public class Client {
     // Instance of PingManager (optional).
     private PingManager pingManager;
 
-    // Chat integration: dedicated client chat manager.
-    private ChatManager.ClientChatManager clientChatManager;
 
     // Constructor creates the Game object.
     public Client(String gameSessionName) {

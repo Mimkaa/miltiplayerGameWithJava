@@ -67,11 +67,7 @@ public class ChatManager {
      * Server-side ChatManager that handles chat messages on the server.
      */
     public static class ServerChatManager {
-        private final Server server;
 
-        public ServerChatManager(Server server) {
-            this.server = server;
-        }
 
         /**
          * Processes an incoming CHAT message:
@@ -79,6 +75,7 @@ public class ChatManager {
          * 2. Sends an ACK back to the sender.
          */
         public void handleChatMessage(Message msg, InetSocketAddress senderSocket) {
+            Server server = Server.getInstance();
             // Broadcast the chat message to all clients.
             server.broadcastMessageToAll(msg);
             // Send an ACK to the sender to prevent repeated retransmission.
