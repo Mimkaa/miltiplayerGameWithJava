@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-//import lombok.Getter;
+import lombok.Getter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+@Getter
 public class Server {
     public static final int SERVER_PORT = 9876;
     
@@ -23,7 +24,6 @@ public class Server {
     
     // Reliable sender and ACK processor.
     private ReliableUDPSender reliableSender;
-    //@Getter
     private AckProcessor ackProcessor;
 
     // The Game instance.
@@ -336,8 +336,7 @@ public class Server {
             Message logoutmessage = new Message ("LOGOUT", msg.getParameters(), "RESPONSE");
 
             logoutmessage.setUUID("");
-            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
-            enqueueMessage(logoutmessage, clientAdress.getAddress(), clientAdress.getPort());
+            broadcastMessageToAll(logoutmessage);
 
             //remove clients
             System.out.println("Removed user: " + senderUsername);
@@ -366,41 +365,6 @@ public class Server {
             InetSocketAddress clientAdress = clientsMap.get(senderUsername);
             enqueueMessage(Loginmessage, clientAdress.getAddress(), clientAdress.getPort());
 
-        }
-        //command for deleting the player
-        if ("DELETE".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("Client deleting:" + senderUsername);
-            Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
-            broadcastMessageToAll(deleteMessage);
-            String targetPlayerName = msg.getParameters()[0].toString();
-
-            // remove the player from the server
-            for (GameObject go : MyGameInstance.getGameObjects()) {
-                if (go.getName().equals(targetPlayerName)) {
-                    MyGameInstance.getGameObjects().remove(go);
-                    break;
-                }
-            }
-            //for debugging
-            for (GameObject go : MyGameInstance.getGameObjects()) {
-                    System.out.println(go.getName());
-            }
-        }
-        //Handles Exit-request to close the Client
-        if ("EXIT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+",""))) {
-            //prints in the server, that a client is logging out
-            System.out.println("Client logging out:" + senderUsername);
-
-            //Broadcast the new RESPONSE to all clients
-            Message logoutmessage = new Message("EXIT", msg.getParameters(), "RESPONSE");
-
-            logoutmessage.setUUID("");
-            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
-            enqueueMessage(logoutmessage, clientAdress.getAddress(), clientAdress.getPort());
-
-            //remove clients
-            System.out.println("Removed user: " + senderUsername);
-            clientsMap.remove(senderUsername);
         }
 
     }
