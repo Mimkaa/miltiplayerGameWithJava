@@ -4,7 +4,9 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import javax.swing.SwingUtilities;
 import java.net.InetSocketAddress;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ChatManager {
 
@@ -13,11 +15,11 @@ public class ChatManager {
      */
     public static class ClientChatManager {
         private ChatPanel chatPanel;
-        private String username;
+        private AtomicReference username;
         private String gameName;
         private ConcurrentLinkedQueue<Message> outgoingQueue;
 
-        public ClientChatManager(String username, String gameName, ConcurrentLinkedQueue<Message> outgoingQueue) {
+        public ClientChatManager(AtomicReference username, String gameName, ConcurrentLinkedQueue<Message> outgoingQueue, String uuid) {
             this.username = username;
             this.gameName = gameName;
             this.outgoingQueue = outgoingQueue;
@@ -25,7 +27,7 @@ public class ChatManager {
             chatPanel = new ChatPanel(new ChatPanel.ChatPanelListener() {
                 @Override
                 public void onChatMessage(String message) {
-                    sendChatMessage(message);
+                    sendChatMessage(message, uuid);
                 }
                 @Override
                 public void onTyping() {
@@ -43,8 +45,9 @@ public class ChatManager {
          * Wraps the given text into a CHAT message and enqueues it.
          * The concealed parameters include the sender's username and the game name.
          */
-        public void sendChatMessage(String text) {
-            Message chatMsg = new Message("CHAT", new Object[]{ text }, null, new String[]{ username, gameName });
+        public void sendChatMessage(String text, String uuid) {
+            String usernameString = username.toString();
+            Message chatMsg = new Message("CHAT", new Object[]{ text }, null, new String[]{ usernameString, gameName }, uuid);
             outgoingQueue.offer(chatMsg);
         }
 
@@ -74,17 +77,19 @@ public class ChatManager {
          * 1. Broadcasts it to all clients.
          * 2. Sends an ACK back to the sender.
          */
-        public void handleChatMessage(Message msg, InetSocketAddress senderSocket) {
+        public void handleChatMessage(Message msg, InetSocketAddress senderSocket, String uuid) {
             Server server = Server.getInstance();
             // Broadcast the chat message to all clients.
             server.broadcastMessageToAll(msg);
             // Send an ACK to the sender to prevent repeated retransmission.
-            String uuid = msg.getUUID();
+            System.out.println("Processed CHAT message 66 ");
             if (uuid != null && !uuid.isEmpty()) {
+                System.out.println("Processed CHAT message 55wqewe ");
                 server.getAckProcessor().addAck(senderSocket, uuid);
+                System.out.println("Processed CHAT message 55 ");
                 Message ackMsg = new Message("ACK", new Object[]{ uuid }, null);
-                ackMsg.setUUID("");
                 server.getReliableSender().sendMessage(ackMsg, senderSocket.getAddress(), senderSocket.getPort());
+                System.out.println("Processed CHAT message 555 ");
             }
         }
     }

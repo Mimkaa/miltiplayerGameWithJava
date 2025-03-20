@@ -63,7 +63,7 @@ public class ReliableUDPSender {
                 // Atomically assign the sequence number.
                 int seq = nextSeqNum.getAndIncrement();
                 msg.setSequenceNumber(seq);
-                msg.setUUID(uuid);
+                msg.setUuid(uuid);
                 
                 if (pendingMessages.size() < windowSize) {
                     // Add the message to the pending map.
@@ -130,7 +130,7 @@ public class ReliableUDPSender {
                     try {
                         sendPacket(pm.message, pm.destination, pm.destPort);
                         pm.lastSentTime = now;
-                        System.out.println("Retransmitted message with UUID " + pm.message.getUUID() +
+                        System.out.println("Retransmitted message with UUID " + pm.message.getUuid() +
                                            " (seq " + seq + "): " + MessageCodec.encode(pm.message));
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -138,7 +138,7 @@ public class ReliableUDPSender {
                 } else {
                     // Update timer if predecessor is still pending.
                     pm.lastSentTime = now;
-                    System.out.println("Updated timer for message with UUID " + pm.message.getUUID() +
+                    System.out.println("Updated timer for message with UUID " + pm.message.getUuid() +
                                        " (seq " + seq + ")");
                 }
             }
@@ -162,7 +162,7 @@ public class ReliableUDPSender {
                 try {
                     sendPacket(pm.message, pm.destination, pm.destPort);
                     pm.lastSentTime = now;
-                    System.out.println("Force resent message with UUID " + pm.message.getUUID() +
+                    System.out.println("Force resent message with UUID " + pm.message.getUuid() +
                                        " (seq " + pm.message.getSequenceNumber() + "): " + MessageCodec.encode(pm.message));
                 } catch (Exception e) {
                     e.printStackTrace();

@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import lombok.Getter;
+
 import java.util.Arrays;
 
 /**
@@ -11,12 +13,14 @@ import java.util.Arrays;
  * The sequence number is intended to be appended as the last concealed parameter when encoding.
  * </p>
  */
+@Getter
 public class Message {
     private String messageType;
     private Object[] parameters;
     private String option;               // Optional field
     private String[] concealedParameters; // Concealed parameters (all strings)
-    private long sequenceNumber;         // Sequence number for reliable delivery
+    private long sequenceNumber;
+    @Getter// Sequence number for reliable delivery
     private String uuid;                 // Unique identifier for this message
 
     /**
@@ -33,8 +37,26 @@ public class Message {
         this.option = option;
         this.concealedParameters = concealedParameters;
         this.sequenceNumber = 0; // default until set
-        this.uuid = null; // default until set
+        this.uuid = getParameters()[0].toString();// default until set
     }
+    /**
+     * Constructs a new Message.
+     *
+     * @param messageType         the type of the message
+     * @param parameters          the array of parameters for the message
+     * @param option              an optional field associated with the message
+     * @param concealedParameters an array of concealed parameters (e.g., username) that are not visible in the main message part
+     */
+    public Message(String messageType, Object[] parameters, String option, String[] concealedParameters, String uuid) {
+        this.messageType = messageType;
+        this.parameters = parameters;
+        this.option = option;
+        this.concealedParameters = concealedParameters;
+        this.sequenceNumber = 0; // default until set
+        this.uuid = uuid;
+    }
+
+
 
     /**
      * Constructs a new Message without concealed parameters.
@@ -88,21 +110,14 @@ public class Message {
         this.sequenceNumber = sequenceNumber;
     }
 
-    /**
-     * Returns the UUID of the message.
-     *
-     * @return the UUID as a String.
-     */
-    public String getUUID() {
-        return uuid;
-    }
+
 
     /**
      * Sets the UUID of the message.
      *
      * @param uuid the unique identifier to set.
      */
-    public void setUUID(String uuid) {
+    public void setUuid(String uuid) {
         this.uuid = uuid;
     }
 
@@ -134,7 +149,7 @@ public class Message {
         clone.setSequenceNumber(this.sequenceNumber);
         
         // Reset the UUID so that sendMessage will generate a new one for each clone.
-        clone.setUUID(null);
+        clone.setUuid(null);
         
         return clone;
     }

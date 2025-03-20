@@ -8,7 +8,7 @@ public class ChatUIHelper {
      * Installs the chat UI into the provided JFrame.
      * This method adds a toggle button at the top to show/hide the chat panel.
      *
-     * @param frame     the main application JFrame
+     *
      * @param chatPanel the ChatPanel instance to install
      */
     public static void installChatUI(JFrame frame, JPanel chatPanel) {

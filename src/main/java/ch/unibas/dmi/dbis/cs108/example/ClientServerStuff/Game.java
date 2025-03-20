@@ -12,6 +12,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.awt.event.KeyListener;
+
+import chat.ChatUIHelper;
 import lombok.Getter;
 
 @Getter
@@ -26,7 +28,9 @@ public class Game {
     private GamePanel gamePanel;
 
     // Reference to the main JFrame (stored for key binding operations).
+
     private JFrame frame;
+
 
     /**
      * Creates a Game instance with the specified gameName.
@@ -93,7 +97,7 @@ public class Game {
      * Initializes and displays the Swing UI that shows our game objects,
      * and attaches key controls to the local player.
      */
-    public void initUI(String localPlayerName) {
+    public void initUI(String localPlayerName, Client client) {
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Simple Game - " + gameName);
             // Make sure the frame is using a BorderLayout:
@@ -114,7 +118,8 @@ public class Game {
             }
             
             frame.setVisible(true);
-            
+            ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel());
+            /*
             // A Swing Timer to repaint the panel at ~60 FPS and process non-blocking commands.
             Timer timer = new Timer(16, new ActionListener() {
                 @Override
@@ -126,7 +131,11 @@ public class Game {
                 }
             });
             timer.start();
+             */
         });
+
+
+
     }
 
     public void startPlayersCommandProcessingLoop() {

@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import chat.ChatManager;
 import lombok.Getter;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -14,14 +16,19 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Getter
 public class Server {
+    // Private constructor to prevent external instantiation.
+    private Server() { }
     public static final int SERVER_PORT = 9876;
 
+    ChatManager.ServerChatManager serverChatManager;
+
     // IMPORTANT FOR GETTING ONLY O N E SERVER INSTANCE!!!!!!!
-    public static Server getInstance() {
-        return SingletonHelper.INSTANCE;
-    }
+    // Static inner helper class that holds the singleton instance.
     private static class SingletonHelper {
         private static final Server INSTANCE = new Server();
+    }
+    public static Server getInstance() {
+        return SingletonHelper.INSTANCE;
     }
     
     // Concurrent map to track clients: key = username, value = InetSocketAddress.
@@ -35,7 +42,7 @@ public class Server {
     private AckProcessor ackProcessor;
 
     // The Game instance.
-    private Game MyGameInstance;
+    private Game MY_GAME_INSTANCE;
     
     // Outgoing message queue to hold messages for reliable sending.
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
@@ -71,8 +78,8 @@ public class Server {
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
             
-            MyGameInstance = new Game("GameSession1");
-            MyGameInstance.startPlayersCommandProcessingLoop();
+            MY_GAME_INSTANCE = new Game("GameSession1");
+            MY_GAME_INSTANCE.startPlayersCommandProcessingLoop();
             // Start a dedicated sender thread that continuously polls outgoingQueue.
             AsyncManager.runLoop(() -> {
                 OutgoingMessage om = outgoingQueue.poll();
@@ -134,14 +141,32 @@ public class Server {
      * @param senderSocket The sender's socket address.
      */
     private void processMessage(Message msg, InetSocketAddress senderSocket) {
-        // 1) Check if it's an ACK.
-        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-            String ackUuid = msg.getParameters()[0].toString();
-            reliableSender.acknowledge(ackUuid);
-            System.out.println("Processed ACK message for UUID " + msg.getUUID());
-            return;
+        switch (msg.getMessageType().toUpperCase()) {
+
+            case "ACK" -> {
+
+                String ackUuid = msg.getParameters()[0].toString();
+                reliableSender.acknowledge(ackUuid);
+                System.out.println("Processed ACK message for UUID " + msg.getUuid());
+            }
+
+            case "CHAT" -> {
+                String uuid = msg.getParameters()[0].toString();
+                System.out.println("Processed CHAT message 1 ");
+                if (serverChatManager == null){
+                    serverChatManager = new ChatManager.ServerChatManager();
+                }
+                serverChatManager.handleChatMessage(msg, senderSocket, uuid);
+                reliableSender.acknowledge(uuid);
+            }
+
+            default -> {
+                System.out.println("Unknown message type: " + msg.getMessageType());
+            }
         }
-    
+
+
+
         // 2) Otherwise, handle REQUEST or broadcast.
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
@@ -155,15 +180,15 @@ public class Server {
             clientsMap.forEach((user, address) -> System.out.println("  " + user + " -> " + address));
     
             // If the message has a UUID, register it in the ACK processor.
-            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+            if (msg.getUuid() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                ackProcessor.addAck(senderSocket, msg.getUuid());
+                System.out.println("Added message UUID " + msg.getUuid() + " to ACK handler");
             }
     
             // 3) Distinguish based on message option.
             if ("GAME".equalsIgnoreCase(msg.getOption())) {
                 // For game messages, send best effort.
-                MyGameInstance.addIncomingMessage(msg);
+                MY_GAME_INSTANCE.addIncomingMessage(msg);
                 AsyncManager.run(() -> processMessageBestEffort(msg, senderSocket));
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
@@ -263,10 +288,10 @@ public class Server {
             Message responseMsg = new Message("CREATE", newParams, "RESPONSE");
             
             // 5) Set the response message's UUID to an empty string so the encoder won't append "null".
-            responseMsg.setUUID("");
+            responseMsg.setUuid("");
             
             // 6) Update the game by adding the new game object asynchronously.
-            Future<GameObject> futureObj = MyGameInstance.addGameObjectAsync(
+            Future<GameObject> futureObj = MY_GAME_INSTANCE.addGameObjectAsync(
                 originalParams[0].toString(),  // object type, e.g. "Player"
                 serverGeneratedUuid, 
                 (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
@@ -300,7 +325,7 @@ public class Server {
         // Template for additional commands:
         if ("GETOBJECTID".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();
-            List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
+            List<GameObject> gameObjectList = MY_GAME_INSTANCE.getGameObjects();
             String objectName = originalParams[0].toString();
             String objectID = "";
             for (GameObject gameObject : gameObjectList) {
@@ -311,13 +336,13 @@ public class Server {
             Object[] newParams = new Object[1];
             newParams[0] = objectID;
             Message responseMsg = new Message("GETOBJECTID", newParams, "RESPONSE");
-            responseMsg.setUUID("");
+            responseMsg.setUuid("");
             broadcastMessageToAll(responseMsg);
         }
 
         if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())) {
             Object[] originalParams = msg.getParameters();
-            List<GameObject> gameObjectList = MyGameInstance.getGameObjects();
+            List<GameObject> gameObjectList = MY_GAME_INSTANCE.getGameObjects();
             String objectName = originalParams[0].toString();
             String newObjectName = originalParams[1].toString();
             String objectID = "";
@@ -331,7 +356,7 @@ public class Server {
             newParams[0] = objectID;
             newParams[1] = newObjectName;
             Message responseMsg = new Message("CHANGENAME", newParams, "RESPONSE");
-            responseMsg.setUUID("");
+            responseMsg.setUuid("");
             broadcastMessageToAll(responseMsg);
         }
 
@@ -343,7 +368,7 @@ public class Server {
             //Broadcast the new RESPONSE to all clients
             Message logoutmessage = new Message ("LOGOUT", msg.getParameters(), "RESPONSE");
 
-            logoutmessage.setUUID("");
+            logoutmessage.setUuid("");
             broadcastMessageToAll(logoutmessage);
 
             //remove clients
@@ -358,7 +383,7 @@ public class Server {
             //create a new array of size one
             Object[] newParams = new Object[1];
             //gets all the characters
-            GameObject[] gameObjects = MyGameInstance.getGameObjects().toArray(new GameObject[0]);
+            GameObject[] gameObjects = MY_GAME_INSTANCE.getGameObjects().toArray(new GameObject[0]);
             //loops through all the characters and compares the first parameter of the received message with the character's name
             for (GameObject gameObject : gameObjects) {
                 if (firstParam.equals(gameObject.getName())) {
@@ -368,7 +393,7 @@ public class Server {
             }
             //send message to the client
             Message Loginmessage = new Message("LOGIN", newParams, "RESPONSE");
-            Loginmessage.setUUID("");
+            Loginmessage.setUuid("");
 
             InetSocketAddress clientAdress = clientsMap.get(senderUsername);
             enqueueMessage(Loginmessage, clientAdress.getAddress(), clientAdress.getPort());
