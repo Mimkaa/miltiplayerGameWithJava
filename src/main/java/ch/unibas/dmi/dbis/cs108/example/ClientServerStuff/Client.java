@@ -14,7 +14,7 @@ import javax.swing.SwingUtilities;
 import java.util.UUID;
 
 public class Client {
-    public static final String SERVER_ADDRESS = "localhost";
+    public static final String SERVER_ADDRESS = "25.12.99.19";
     public static final int SERVER_PORT = 9876;
 
     // Global queue for outgoing messages.
