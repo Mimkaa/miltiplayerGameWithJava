@@ -12,6 +12,7 @@ import java.util.concurrent.Future;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+@Getter
 public class Server {
     public static final int SERVER_PORT = 9876;
     
@@ -23,7 +24,6 @@ public class Server {
     
     // Reliable sender and ACK processor.
     private ReliableUDPSender reliableSender;
-    @Getter
     private AckProcessor ackProcessor;
 
     // The Game instance.
