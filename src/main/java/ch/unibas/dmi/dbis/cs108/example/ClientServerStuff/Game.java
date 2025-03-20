@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
@@ -11,7 +12,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.awt.event.KeyListener;
+import lombok.Getter;
 
+@Getter
 public class Game {
     // A thread-safe list of game objects (players, enemies, etc.).
     private final CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>();
@@ -93,9 +96,11 @@ public class Game {
     public void initUI(String localPlayerName) {
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Simple Game - " + gameName);
+            // Make sure the frame is using a BorderLayout:
+            frame.setLayout(new BorderLayout());
             // Assumes GamePanel can accept a GameObject[]; adjust accordingly.
             gamePanel = new GamePanel(gameObjects.toArray(new GameObject[0]));
-            frame.add(gamePanel);
+            frame.add(gamePanel, BorderLayout.CENTER);
             frame.setSize(800, 600);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
