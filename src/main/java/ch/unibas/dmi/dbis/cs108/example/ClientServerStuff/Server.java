@@ -138,8 +138,37 @@ public class Server {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
             // Username from the last element.
+
             String username = concealed[concealed.length - 1];
+
+
+            if (clientsMap.containsKey(username)) {
+                // Optional: register the message's UUID if present
+                if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
+                    ackProcessor.addAck(senderSocket, msg.getUUID());
+                }
+
+
+                String suggestedNickname = Nickname_Generator.generateNickname();
+
+
+                Message collisionResponse = new Message(
+                        "NAME_TAKEN",
+                        new Object[]{ suggestedNickname },
+                        "RESPONSE"
+                );
+                collisionResponse.setUUID(""); // so "null" doesn't get appended in the encoding
+
+                // Send it back to the same sender
+                enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
+
+                // DO NOT process the message any further.
+                return;
+            }
             clientsMap.put(username, senderSocket);
+
+
+
             System.out.println("Registered user: " + username + " at " + senderSocket
                     + ". Total clients: " + clientsMap.size());
     
@@ -160,7 +189,7 @@ public class Server {
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
             } else {
-                AsyncManager.run(() -> broadcastMessageToOthers(msg, username));
+                AsyncManager.run(() -> broadcastMessageToOthers(msg,  username));
             }
         } else {
             System.out.println("Concealed parameters missing or too short.");
@@ -325,6 +354,31 @@ public class Server {
             Message responseMsg = new Message("CHANGENAME", newParams, "RESPONSE");
             responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
+        }
+        if("USERJOINED".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+","")))
+        {
+            Object[] originalParams = msg.getParameters();
+            String nickname = originalParams[0].toString();
+            boolean hasRepetition = false;
+            for (String key : clientsMap.keySet()) {
+                if(key.equals(nickname))
+                {
+                    hasRepetition = true;
+                }
+            }
+
+            if (hasRepetition)
+            {
+                String suggestedNickname = Nickname_Generator.generateNickname();
+
+                Object[] newParams = new Object[1];
+                newParams[0] = (Object) suggestedNickname;
+
+                Message responseMsg = new Message("USERJOINED", newParams , "RESPONSE");
+
+
+            }
+
         }
 
         //handles Logout-request
