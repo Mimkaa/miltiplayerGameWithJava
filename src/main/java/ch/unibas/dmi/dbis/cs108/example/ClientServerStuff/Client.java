@@ -14,7 +14,7 @@ import javax.swing.SwingUtilities;
 import java.util.UUID;
 
 public class Client {
-    public static final String SERVER_ADDRESS = "25.12.99.19";
+    public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
 
     // Global queue for outgoing messages.
@@ -289,6 +289,18 @@ public class Client {
 
             System.exit(0);
             return;
+        }
+        //handles deletion of the player
+        else if("DELETE".equalsIgnoreCase(msg.getMessageType())) {
+            String targetPlayerId = msg.getParameters()[0].toString();
+
+            for (GameObject go : game.getGameObjects()) {
+                if (go.getName().equals(targetPlayerId)) {
+                    game.getGameObjects().remove(go);
+                    break;
+                }
+            }
+            game.updateGamePanel();
         }
 
 

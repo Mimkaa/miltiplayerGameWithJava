@@ -336,7 +336,8 @@ public class Server {
             Message logoutmessage = new Message ("LOGOUT", msg.getParameters(), "RESPONSE");
 
             logoutmessage.setUUID("");
-            broadcastMessageToAll(logoutmessage);
+            InetSocketAddress clientAdress = clientsMap.get(senderUsername);
+            enqueueMessage(logoutmessage, clientAdress.getAddress(), clientAdress.getPort());
 
             //remove clients
             System.out.println("Removed user: " + senderUsername);
@@ -365,6 +366,25 @@ public class Server {
             InetSocketAddress clientAdress = clientsMap.get(senderUsername);
             enqueueMessage(Loginmessage, clientAdress.getAddress(), clientAdress.getPort());
 
+        }
+        //command for deleting the player
+        if ("DELETE".equalsIgnoreCase(msg.getMessageType())) {
+            System.out.println("Client deleting:" + senderUsername);
+            Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
+            broadcastMessageToAll(deleteMessage);
+            String targetPlayerName = msg.getParameters()[0].toString();
+
+            // remove the player from the server
+            for (GameObject go : MyGameInstance.getGameObjects()) {
+                if (go.getName().equals(targetPlayerName)) {
+                    MyGameInstance.getGameObjects().remove(go);
+                    break;
+                }
+            }
+            //for debugging
+            for (GameObject go : MyGameInstance.getGameObjects()) {
+                    System.out.println(go.getName());
+            }
         }
 
     }
