@@ -31,11 +31,7 @@ public class Game {
      */
     public Game(String gameName) {
         this.gameName = gameName;
-        // Add default game objects.
-        gameObjects.add(new Player("Alice", 100.0f, 200.0f, 10.0f, gameName));
-        gameObjects.add(new Player("Bob",   150.0f, 250.0f, 12.0f, gameName));
-        gameObjects.add(new Player("Carol", 200.0f, 300.0f, 15.0f, gameName));
-        // Additional game objects can be added here.
+        
     }
 
      /**
