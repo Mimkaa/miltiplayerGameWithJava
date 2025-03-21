@@ -156,7 +156,7 @@ public class Client {
 
                             case "CHAT" -> {
                                 // Delegate chat processing to clientChatManager.
-                                clientChatManager.processIncomingChatMessage(msg);
+                                clientChatManager.processIncomingChatMessage(msg, ackProcessor);
                                 System.out.println("Processed CHAT message");
                             }
 

@@ -5,6 +5,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import javax.swing.SwingUtilities;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -60,7 +61,7 @@ public class ChatManager {
         /**
          * Processes an incoming CHAT message and displays it in the chat panel.
          */
-        public void processIncomingChatMessage(Message msg) {
+        public void processIncomingChatMessage(Message msg, AckProcessor ackProcessor) {
             Object[] params = msg.getParameters();
             String chatText = (params != null && params.length > 0) ? params[0].toString() : "";
             // Expect the first concealed parameter to be the sender's name.
@@ -69,6 +70,8 @@ public class ChatManager {
             boolean isLocal = senderName.equals(username);
             String fullMessage = senderName + ": " + chatText;
             SwingUtilities.invokeLater(() -> chatPanel.appendMessage(fullMessage, isLocal));
+            InetSocketAddress socketAddress = new InetSocketAddress("localhost", 9876);
+            ackProcessor.addAck(socketAddress, msg.getUUID());
         }
     }
 
@@ -97,4 +100,4 @@ public class ChatManager {
             }
         }
     }
-    
+

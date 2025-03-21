@@ -3,13 +3,17 @@ package chat;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Helper class to install and manage the chat UI within the main game frame.
+ */
 public class ChatUIHelper {
+
     /**
      * Installs the chat UI into the provided JFrame.
      * This method adds a toggle button at the top to show/hide the chat panel.
      *
-     *
-     * @param chatPanel the ChatPanel instance to install
+     * @param frame     the main application frame.
+     * @param chatPanel the chat panel instance to install.
      */
     public static void installChatUI(JFrame frame, JPanel chatPanel) {
         // Create a top panel for the toggle button.
@@ -27,10 +31,23 @@ public class ChatUIHelper {
             boolean visible = chatPanel.isVisible();
             chatPanel.setVisible(!visible);
             toggleButton.setText(visible ? "Open Chat" : "Close Chat");
-            // Optionally, transfer focus to the chat panel or back to the game.
+
             if (!visible) {
-                chatPanel.requestFocusInWindow();
+                // When opening chat, request focus on the chat input component if available.
+                // Assuming your ChatPanel class has a method getChatInputField() that returns a JTextField.
+                if (chatPanel instanceof ChatPanel) {
+                    ChatPanel cp = (ChatPanel) chatPanel;
+                    JTextField chatInputField = cp.getInputField();
+                    if (chatInputField != null) {
+                        chatInputField.requestFocusInWindow();
+                    } else {
+                        chatPanel.requestFocusInWindow();
+                    }
+                } else {
+                    chatPanel.requestFocusInWindow();
+                }
             } else {
+                // When closing chat, set the focus back to the main frame.
                 frame.requestFocusInWindow();
             }
             frame.revalidate();

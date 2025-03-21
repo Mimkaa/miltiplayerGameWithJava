@@ -152,10 +152,13 @@ public class Server {
 
             case "CHAT" -> {
                 System.out.println("Processed CHAT message 1 ");
-                if (serverChatManager == null){
+                if (serverChatManager == null) {
                     serverChatManager = new ChatManager.ServerChatManager();
                 }
-                serverChatManager.handleChatMessage(msg, senderSocket, ackProcessor);
+                // Broadcast the chat message to all clients.
+                AsyncManager.run(() -> broadcastMessageToAll(msg));
+                System.out.println("Processed CHAT 2");
+                // For CHAT messages, skip the additional common processing.
 
             }
 
@@ -191,6 +194,8 @@ public class Server {
                 AsyncManager.run(() -> processMessageBestEffort(msg, senderSocket));
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
+            } else if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
+            // Do nothing here for CHAT messages—already handled above.
             } else {
                 AsyncManager.run(() -> broadcastMessageToOthers(msg, username));
             }

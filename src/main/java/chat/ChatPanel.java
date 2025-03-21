@@ -1,10 +1,13 @@
 package chat;
 
+import lombok.Getter;
+
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 
+@Getter
 public class ChatPanel extends JPanel {
     private JTextPane chatPane;
     private JTextField inputField;
