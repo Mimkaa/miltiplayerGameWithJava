@@ -18,13 +18,22 @@ public class ChatUIHelper {
     public static void installChatUI(JFrame frame, JPanel chatPanel) {
         // Create a top panel for the toggle button.
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton toggleButton = new JButton("Open Chat");
+        JButton toggleButton = new JButton("Close Chat"); // Chat is open by default
         topPanel.add(toggleButton);
         frame.add(topPanel, BorderLayout.NORTH);
 
-        // Initially hide the chat panel.
-        chatPanel.setVisible(false);
+        // Chat is visible at startup.
+        chatPanel.setVisible(true);
         frame.add(chatPanel, BorderLayout.SOUTH);
+
+        // Request focus on the chat input field at startup if it's a ChatPanel.
+        if (chatPanel instanceof ChatPanel) {
+            ChatPanel cp = (ChatPanel) chatPanel;
+            JTextField chatInputField = cp.getInputField();
+            if (chatInputField != null) {
+                chatInputField.requestFocusInWindow();
+            }
+        }
 
         // Toggle the chat panel's visibility when the button is clicked.
         toggleButton.addActionListener(e -> {
@@ -33,8 +42,7 @@ public class ChatUIHelper {
             toggleButton.setText(visible ? "Open Chat" : "Close Chat");
 
             if (!visible) {
-                // When opening chat, request focus on the chat input component if available.
-                // Assuming your ChatPanel class has a method getChatInputField() that returns a JTextField.
+                // Chat just opened, focus on the chat input field if available.
                 if (chatPanel instanceof ChatPanel) {
                     ChatPanel cp = (ChatPanel) chatPanel;
                     JTextField chatInputField = cp.getInputField();
@@ -47,9 +55,11 @@ public class ChatUIHelper {
                     chatPanel.requestFocusInWindow();
                 }
             } else {
-                // When closing chat, set the focus back to the main frame.
+                // Chat just closed, focus back on the game frame.
                 frame.requestFocusInWindow();
             }
+
+            // Refresh layout just in case.
             frame.revalidate();
         });
     }
