@@ -35,9 +35,10 @@ public class Game {
      */
     private final String gameName;
 
+
     /**
      * A reference to the {@link GamePanel} that renders the game objects.
-     * This is created and set when {@link #initUI(String)} is called.
+     * This is created and set when  is called.
      */
     private GamePanel gamePanel;
 
@@ -148,7 +149,7 @@ public class Game {
             }
             
             frame.setVisible(true);
-            ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel());
+            ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel() );
             /*
             // A Swing Timer to repaint the panel at ~60 FPS and process non-blocking commands.
             Timer timer = new Timer(16, new ActionListener() {

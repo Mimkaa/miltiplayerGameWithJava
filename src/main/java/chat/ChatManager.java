@@ -51,7 +51,7 @@ public class ChatManager {
         public void sendChatMessage(String text) {
             String usernameString = username.get();
             // Include the username and text as the parameters.
-            Message chatMsg = new Message("CHAT", new Object[]{usernameString, text}, "REQUEST", new String[]{usernameString, gameName});
+            Message chatMsg = new Message("CHAT", new Object[]{usernameString, text}, "GAME", new String[]{usernameString, gameName});
             // Overwrite the concealed parameters with the fixed values.
             chatMsg.setConcealedParameters(new String[]{"gameObject", "gameSession"});
             String encodedMessage = MessageCodec.encode(chatMsg);
