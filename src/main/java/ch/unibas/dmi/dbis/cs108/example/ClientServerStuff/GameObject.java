@@ -6,59 +6,110 @@ import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
+/**
+ * The {@code GameObject} class serves as an abstract base for game entities that can manage and
+ * process incoming messages, schedule local updates, and synchronize state across different
+ * game instances or clients.
+ * <p>
+ * It maintains a unique identifier, a reference to the game session it belongs to, and provides
+ * an internal queue for incoming messages and commands. Subclasses must implement drawing logic
+ * and local/global update methods.
+ * </p>
+ */
 public abstract class GameObject {
 
-    // Unique identifier for this game object.
+    /**
+     * A unique identifier for this game object, generated via {@link UUID#randomUUID()}.
+     */
     private String id = UUID.randomUUID().toString();
 
-    // The "game name" or session ID this player belongs to.
+    /**
+     * The name of the game or session that this object belongs to.
+     */
     private final String myGameName;
 
+    /**
+     * A display-friendly name for this game object (e.g., player name).
+     */
     protected String name;
 
-    // Holds incoming messages from external sources.
+    /**
+     * Holds messages incoming from external sources, to be processed asynchronously.
+     */
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
-    
-    // Command queue for update logic and message collection.
+
+    /**
+     * A queue for storing commands (tasks) that are processed in a non-blocking manner.
+     */
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
-    
-    // Internal reference for the outgoing message queue.
-    // Initially null; will be set from updateAsync() if not provided yet.
+
+    /**
+     * A reference to the outgoing message queue used by this object. It is initially {@code null}
+     * and may be set by {@link #updateAsync(ConcurrentLinkedQueue)} if it is not already set.
+     */
     protected ConcurrentLinkedQueue<Message> messageQueue = null;
 
+    /**
+     * Constructs a {@code GameObject} with a specified name and game name.
+     *
+     * @param name       A display name or identifier for this object.
+     * @param myGameName The name of the game or session this object belongs to.
+     */
     public GameObject(String name, String myGameName) {
         this.name = name;
         this.myGameName = myGameName;
     }
 
-    // Getter for the unique ID.
+    /**
+     * Returns the unique identifier of this game object.
+     *
+     * @return the unique ID as a {@code String}.
+     */
     public String getId() {
         return id;
     }
-    
-    // Setter for the unique ID.
+
+    /**
+     * Sets a new unique identifier for this game object.
+     *
+     * @param newId a {@code String} representing the new unique ID.
+     */
     public void setId(String newId) {
         this.id = newId;
     }
 
-    public void setName(String newName)
-    {
+    /**
+     * Sets a new display name or identifier for this game object.
+     *
+     * @param newName a {@code String} for the object's name.
+     */
+    public void setName(String newName) {
         this.name = newName;
     }
 
+    /**
+     * Returns the display name or identifier for this game object.
+     *
+     * @return the current name as a {@code String}.
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the name of the game/session to which this object belongs.
+     *
+     * @return the game name as a {@code String}.
+     */
     public String getGameName() {
         return myGameName;
     }
 
     /**
-     * Schedules an asynchronous update command. If the internal messageQueue is not yet set,
-     * it is initialized with the provided queue.
+     * Schedules an asynchronous update command that calls {@link #myUpdateLocal()}.
+     * If the internal message queue is not set, it will be initialized with the provided queue.
      *
-     * @param providedQueue the queue to use for sending messages if the internal reference is empty.
+     * @param providedQueue a queue for outgoing messages, used if the internal queue is {@code null}.
      */
     public void updateAsync(ConcurrentLinkedQueue<Message> providedQueue) {
         if (this.messageQueue == null && providedQueue != null) {
@@ -73,33 +124,33 @@ public abstract class GameObject {
     }
 
     /**
-     * Abstract method for local update logic.
-     * Subclasses (like Player) should override this method.
+     * Abstract method for local update logic, to be implemented by subclasses.
+     * This is called by the asynchronous update mechanism.
      */
     protected abstract void myUpdateLocal();
 
     /**
-     * Abstract method for global update logic.
-     * Subclasses should override this to process an incoming message.
+     * Abstract method for handling global updates from incoming messages.
+     * Subclasses should implement logic for processing specific message types.
      *
-     * @param msg the message to process.
+     * @param msg a {@link Message} containing information to process.
      */
     protected abstract void myUpdateGlobal(Message msg);
 
     /**
-     * Helper method to enqueue a message into the internal messageQueue.
+     * Sends a message by placing it into the internal {@link #messageQueue}, attaching this
+     * object's name and game name as concealed parameters.
+     *
+     * @param msg the {@link Message} to be sent to the queue.
      */
     protected void sendMessage(Message msg) {
         if (messageQueue != null) {
-            // Retrieve the current concealed parameters.
             String[] concealed = msg.getConcealedParameters();
-            // Ensure there is enough space for two parameters.
             if (concealed == null || concealed.length < 2) {
                 concealed = new String[2];
             }
-            // Set the unique ID and game name.
-            concealed[0] = getName();       // Unique identifier from the GameObject.
-            concealed[1] = getGameName();   // Game name or session ID.
+            concealed[0] = getName();
+            concealed[1] = getGameName();
             msg.setConcealedParameters(concealed);
             msg.setOption("GAME");
             messageQueue.offer(msg);
@@ -107,28 +158,33 @@ public abstract class GameObject {
     }
 
     /**
-     * Schedules the addition of a new incoming message to this object's incomingMessages queue.
+     * Schedules an operation to add an incoming message to this object's
+     * {@link #incomingMessages} queue. This is done asynchronously.
+     *
+     * @param message the {@link Message} to be added to the queue.
      */
     public void addIncomingMessageAsync(Message message) {
         AsyncManager.run(() -> incomingMessages.offer(message));
     }
 
     /**
-     * Schedules a one-time collector command to poll for incoming messages.
-     * (This should be called once during initialization and then re‑scheduled
-     * after processing commands in the game loop.)
+     * Schedules a one-time collector command to poll the {@link #incomingMessages} queue.
+     * This should be called once during initialization, and then re-scheduled after commands
+     * are processed in the game loop.
      */
     public void collectMessageUpdatesOnce() {
         AsyncManager.run(() -> commandQueue.offer(createIncomingMessageCommand()));
     }
-    
+
     /**
-     * Creates a non-blocking command that polls for an incoming message.
-     * If a message is found, it is processed immediately.
+     * Creates a command that checks for an incoming message in the {@link #incomingMessages} queue.
+     * If a message is found, {@link #myUpdateGlobal(Message)} is invoked to process it.
+     *
+     * @return a {@link Command} instance that performs one poll operation on the message queue.
      */
     protected Command createIncomingMessageCommand() {
         return new CodeCommand(() -> {
-            Message msg = incomingMessages.poll(); // Non-blocking poll.
+            Message msg = incomingMessages.poll();
             if (msg != null) {
                 myUpdateGlobal(msg);
             }
@@ -136,64 +192,91 @@ public abstract class GameObject {
     }
 
     /**
-     * Processes all commands from the command queue without blocking.
-     * This should be called from the game loop (e.g., via a Swing Timer).
+     * Processes all commands currently in the {@link #commandQueue} without blocking.
+     * After processing, it re-schedules the collector command to be run again asynchronously.
      */
     public void processCommandsNonBlocking() {
         Command cmd;
         while ((cmd = commandQueue.poll()) != null) {
             cmd.execute();
         }
-        // After processing, re-schedule the collector command asynchronously.
         collectMessageUpdatesOnce();
     }
 
     /**
-     * Shuts down the asynchronous execution.
-     * Call this only once when the application ends.
+     * Shuts down the underlying asynchronous mechanism. Should only be called once
+     * when the application is ending.
      */
     public static void shutdownAsync() {
         AsyncManager.shutdown();
     }
 
     /**
-     * Helper method to extract the game name from a Message's concealed parameters.
+     * Extracts and returns the game name (the second element) from a message's concealed parameters,
+     * or returns a default value if unavailable.
+     *
+     * @param msg the {@link Message} from which to extract game information.
+     * @return the extracted game name, or {@code "UnknownGame"} if not found.
      */
     protected String extractGameName(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length > 1) {
-            return concealed[1];  // [0] is player name, [1] is game name.
+            return concealed[1];
         }
         return "UnknownGame";
     }
 
+    /**
+     * An abstract draw method that must be implemented by subclasses to
+     * render this object using the provided {@link Graphics} context.
+     *
+     * @param g the {@code Graphics} context used for drawing.
+     */
     public abstract void draw(Graphics g);
-    
-    // --- Command Pattern Definitions ---
-    
+
+    /**
+     * Returns a default {@link KeyAdapter} that does nothing on key events.
+     * Subclasses can override this method to provide custom controls.
+     *
+     * @return a no-op {@link KeyAdapter}.
+     */
     public KeyAdapter getKeyListener() {
         return new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                // Default does nothing.
             }
 
             @Override
             public void keyReleased(KeyEvent e) {
-                // Default does nothing.
             }
         };
     }
-    
+
+    /**
+     * A command in the Command pattern, representing an action to be executed.
+     */
     public interface Command {
         void execute();
     }
-    
+
+    /**
+     * A {@link Command} implementation that wraps a {@link Runnable} task.
+     */
     public static class CodeCommand implements Command {
         private final Runnable code;
+
+        /**
+         * Constructs a {@code CodeCommand} with the given {@link Runnable}.
+         *
+         * @param code a {@code Runnable} representing the action to be executed.
+         */
         public CodeCommand(Runnable code) {
             this.code = code;
         }
+
+        /**
+         * Executes the wrapped {@link Runnable} task.
+         */
         public void execute() {
             code.run();
         }

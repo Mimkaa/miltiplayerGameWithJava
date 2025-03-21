@@ -315,7 +315,6 @@ public class Client {
             game.updateGamePanel();
         }
 
-
         else {
             System.out.println("Unhandled response type: " + msg.getMessageType());
         }

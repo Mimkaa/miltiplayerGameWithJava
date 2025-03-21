@@ -1,4 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
+
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -7,10 +8,10 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-
 import javax.imageio.ImageIO;
 
 public class BandageGuy extends GameObject {
+
     private float posX;
     private float posY;
     private Image image;
@@ -44,15 +45,10 @@ public class BandageGuy extends GameObject {
 
     @Override
     protected void myUpdateLocal() {
-        // Lokale Updates hier implementieren
-        posX += inputX*speed;
-        posY += inputY*speed;
-        if(previousX != posX || previousY != posY) {
-            Message moveMsg = new Message(
-                    "MOVE",
-                    new Object[]{ posX, posY },
-                    null
-            );
+        posX += inputX * speed;
+        posY += inputY * speed;
+        if (previousX != posX || previousY != posY) {
+            Message moveMsg = new Message("MOVE", new Object[] { posX, posY }, null);
             sendMessage(moveMsg);
         }
         previousX = posX;
@@ -61,11 +57,9 @@ public class BandageGuy extends GameObject {
 
     @Override
     protected void myUpdateGlobal(Message msg) {
-        // Globale Updates hier implementieren
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
-           
             if (params.length >= 2) {
                 float newX = (params[0] instanceof Number) ? ((Number) params[0]).floatValue() : posX;
                 float newY = (params[1] instanceof Number) ? ((Number) params[1]).floatValue() : posY;
@@ -73,9 +67,8 @@ public class BandageGuy extends GameObject {
                     this.posX = newX;
                     this.posY = newY;
                 }
-                System.out.println("Processed MOVE for " + getName() +
-                        " in game " + extractGameName(msg) +
-                        ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed MOVE for " + getName() + " in game " + extractGameName(msg)
+                        + ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
@@ -86,19 +79,36 @@ public class BandageGuy extends GameObject {
             @Override
             public void keyPressed(KeyEvent e) {
                 switch (e.getKeyCode()) {
-                    case KeyEvent.VK_W: inputY = -1; break;
-                    case KeyEvent.VK_S: inputY = 1; break;
-                    case KeyEvent.VK_A: inputX = -1; break;
-                    case KeyEvent.VK_D: inputX = 1; break;
+                    case KeyEvent.VK_W:
+                        inputY = -1;
+                        break;
+                    case KeyEvent.VK_S:
+                        inputY = 1;
+                        break;
+                    case KeyEvent.VK_A:
+                        inputX = -1;
+                        break;
+                    case KeyEvent.VK_D:
+                        inputX = 1;
+                        break;
+                    default:
+                        break;
                 }
             }
+
             @Override
             public void keyReleased(KeyEvent e) {
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_W:
-                    case KeyEvent.VK_S: inputY = 0; break;
+                    case KeyEvent.VK_S:
+                        inputY = 0;
+                        break;
                     case KeyEvent.VK_A:
-                    case KeyEvent.VK_D: inputX = 0; break;
+                    case KeyEvent.VK_D:
+                        inputX = 0;
+                        break;
+                    default:
+                        break;
                 }
             }
         };
