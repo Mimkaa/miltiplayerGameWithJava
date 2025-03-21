@@ -131,9 +131,7 @@ public class Game {
     public void initUI(String localPlayerName, Client client) {
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Simple Game - " + gameName);
-            // Make sure the frame is using a BorderLayout:
             frame.setLayout(new BorderLayout());
-            // Assumes GamePanel can accept a GameObject[]; adjust accordingly.
             gamePanel = new GamePanel(gameObjects.toArray(new GameObject[0]));
             frame.add(gamePanel, BorderLayout.CENTER);
             frame.setSize(800, 600);
@@ -147,24 +145,21 @@ public class Game {
                     break;
                 }
             }
-            
+
             frame.setVisible(true);
-            ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel() );
-            /*
-            // A Swing Timer to repaint the panel at ~60 FPS and process non-blocking commands.
+            ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel());
+
+            // Start a Timer to repaint the game panel at ~60 FPS.
             Timer timer = new Timer(16, new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    for (GameObject go : gameObjects) {
-                        // go.processCommandsNonBlocking();
-                    }
                     gamePanel.repaint();
                 }
             });
             timer.start();
-             */
         });
     }
+
 
     /**
      * Starts an asynchronous loop that continuously processes commands for all
