@@ -1,5 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import chat.ChatManager;
+import lombok.Getter;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -11,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 
+@Getter
 /**
  * The {@code Server} class implements a simple UDP-based server that
  * can handle both reliable and best-effort messages. It manages a
@@ -24,11 +28,22 @@ import java.util.concurrent.Future;
  * asynchronously.
  */
 public class Server {
+    // Private constructor to prevent external instantiation.
+    private Server() { }
 
     /**
      * The default server port on which this server listens for incoming UDP traffic.
      */
     public static final int SERVER_PORT = 9876;
+
+    ChatManager.ServerChatManager serverChatManager;
+
+    // IMPORTANT FOR GETTING ONLY O N E SERVER INSTANCE!!!!!!!
+    // Static inner helper class that holds the singleton instance.
+    private static class SingletonHelper {
+        private static final Server INSTANCE = new Server();
+
+    // Concurrent map to track clients: key = username, value = InetSocketAddress.
 
     /**
      * Returns the singleton instance of the {@code Server}.
@@ -200,6 +215,21 @@ public class Server {
             System.out.println("Processed ACK message for UUID " + msg.getUUID());
             return;
         }
+        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
+
+            System.out.println("Processed CHAT message 1 ");
+            if (serverChatManager == null) {
+                serverChatManager = new ChatManager.ServerChatManager();
+            }
+            // Broadcast the chat message to all clients.
+            AsyncManager.run(() -> broadcastMessageToAll(msg));
+            System.out.println("Processed CHAT 2");
+            // For CHAT messages, skip the additional common processing.
+
+        }
+
+        }
+    }
 
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
@@ -242,10 +272,13 @@ public class Server {
                 processMessageBestEffort(msg, senderSocket);
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 handleRequest(msg, username);
+                AsyncManager.run(() -> handleRequest(msg, username));
+            } else if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
+            // Do nothing here for CHAT messages—already handled above.
             } else {
                 broadcastMessageToOthers(msg, username);
-            }
-        } else {
+                }
+            } else {
             System.out.println("Concealed parameters missing or too short.");
         }
     }
@@ -490,7 +523,7 @@ public class Server {
      *
      * @param args command-line arguments (none expected)
      */
-    public static void main(String[] args) {
+    public void main(String[] args) {
         new Server().start();
     }
 }

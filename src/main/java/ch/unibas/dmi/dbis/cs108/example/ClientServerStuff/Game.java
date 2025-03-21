@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
@@ -12,6 +13,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.awt.event.KeyListener;
 
+import chat.ChatUIHelper;
+import lombok.Getter;
+
+@Getter
 /**
  * The {@code Game} class manages a collection of {@link GameObject}s within a given
  * game or session. It provides methods to create, update, and route messages to
@@ -122,14 +127,18 @@ public class Game {
      *
      * @param localPlayerName The name of the local player's {@link GameObject}.
      */
-    public void initUI(String localPlayerName) {
+    public void initUI(String localPlayerName, Client client) {
         SwingUtilities.invokeLater(() -> {
             frame = new JFrame("Simple Game - " + gameName);
+            // Make sure the frame is using a BorderLayout:
+            frame.setLayout(new BorderLayout());
+            // Assumes GamePanel can accept a GameObject[]; adjust accordingly.
             gamePanel = new GamePanel(gameObjects.toArray(new GameObject[0]));
-            frame.add(gamePanel);
+            frame.add(gamePanel, BorderLayout.CENTER);
             frame.setSize(800, 600);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+            // Attach key listener for the local player.
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(localPlayerName)) {
                     frame.addKeyListener(go.getKeyListener());
@@ -137,9 +146,11 @@ public class Game {
                     break;
                 }
             }
-
+            
             frame.setVisible(true);
-
+            ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel());
+            /*
+            // A Swing Timer to repaint the panel at ~60 FPS and process non-blocking commands.
             Timer timer = new Timer(16, new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -150,6 +161,7 @@ public class Game {
                 }
             });
             timer.start();
+             */
         });
     }
 
@@ -178,10 +190,18 @@ public class Game {
      */
     public Future<GameObject> addGameObjectAsync(String type, String uuid, Object... params) {
         return AsyncManager.run(() -> {
+            // Create a new game object using the factory.
             GameObject newObject = GameObjectFactory.create(type, params);
+
+            // Set the UUID in the game object.
             newObject.setId(uuid);
+            
+            // Add the new game object to the list.
             gameObjects.add(newObject);
+            
             System.out.println("Added new " + type + ": " + newObject.getName() + " with UUID: " + uuid);
+            
+            // Update the game panel (if available) on the EDT.
             if (gamePanel != null) {
                 SwingUtilities.invokeLater(() ->
                         gamePanel.updateGameObjects(gameObjects.toArray(new GameObject[0]))
@@ -216,9 +236,13 @@ public class Game {
                 System.err.println("No UI frame exists yet. Cannot rebind key listeners.");
                 return;
             }
+
+            // Remove all currently registered KeyListeners
             for (KeyListener kl : frame.getKeyListeners()) {
                 frame.removeKeyListener(kl);
             }
+
+            // Add the KeyListener for the matching GameObject (the local player)
             for (GameObject go : gameObjects) {
                 System.out.println(go.getName());
                 System.out.println(go.getClass().getName());

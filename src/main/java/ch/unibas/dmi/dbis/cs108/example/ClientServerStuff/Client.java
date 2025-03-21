@@ -1,5 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import chat.ChatManager;
+import lombok.Getter;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -12,10 +15,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.SwingUtilities;
-
+@Getter
 public class Client {
     public static final String SERVER_ADDRESS = "localhost";
     public static final int SERVER_PORT = 9876;
+
+    public ChatManager.ClientChatManager clientChatManager;
 
     // Global queue for outgoing messages.
     private final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
@@ -52,11 +57,28 @@ public class Client {
     }
 
     /**
+     * Initializes the client chat manager.
+     * IMPORTANT: Call this BEFORE setting up the UI so that clientChatManager is not null.
+     */
+    public void initChatManager() {
+        this.clientChatManager = new ChatManager.ClientChatManager(username, game.getGameName(), outgoingQueue, getIdGame()); //TODO: look at client uuid.
+    }
+
+
+    /**
      * Starts the graphics-related tasks.
      */
     public void startGraphicsStuff() {
-        SwingUtilities.invokeLater(() -> game.initUI(username.get()));
-        
+
+        SwingUtilities.invokeLater(() -> {
+            // Initialize the game UI.
+            game.initUI(username.get(), this);
+            // Now install the chat UI. This adds a toggle button (Open Chat / Close Chat) at the top.
+            // Note: game.getFrame() must return the JFrame used in initUI().
+        });
+
+
+
         AsyncManager.run(() -> {
             try {
                 while (true) {
@@ -82,16 +104,22 @@ public class Client {
             ackProcessor = new AckProcessor(clientSocket);
             ackProcessor.start();
 
+            // IMPORTANT: Ensure the chat manager is initialized BEFORE starting the UI.
+            initChatManager();
+
+
             // (Optional) Create and start PingManager if needed.
             // InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
             // pingManager = new PingManager(outgoingQueue, serverInet, SERVER_PORT, 300);
             // pingManager.start();
 
-            Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username.get() }, "REQUEST");
+           /* Message mockMessage = new Message("MOCK", new Object[] { "Hello from " + username.get() }, "REQUEST");
             String[] concealedPrms = { "something1", "something2", username.get() };
             mockMessage.setConcealedParameters(concealedPrms);
             InetAddress serverInet = InetAddress.getByName(SERVER_ADDRESS);
             myReliableUDPSender.sendMessage(mockMessage, serverInet, SERVER_PORT);
+
+            */
 
 
 
@@ -112,10 +140,11 @@ public class Client {
                     e.printStackTrace();
                 }
             });
-            
+
             // Consumer Task: Process incoming messages.
             AsyncManager.runLoop(() -> {
                 try {
+                    // Poll a message from the incomingQueue.
                     Message msg = incomingQueue.poll();
                     if (msg != null) {
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
@@ -126,6 +155,11 @@ public class Client {
                             } else {
                                 System.out.println("Received ACK with no parameters.");
                             }
+                        }
+                        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
+                            // Delegate chat processing to clientChatManager.
+                            clientChatManager.processIncomingChatMessage(msg, ackProcessor);
+                            System.out.println("Processed CHAT message");
                         } else {
                             // Non-ACK message logic
                             if (msg.getUUID() != null) {
@@ -315,6 +349,7 @@ public class Client {
             game.updateGamePanel();
         }
 
+
         else {
             System.out.println("Unhandled response type: " + msg.getMessageType());
         }
@@ -423,7 +458,11 @@ public class Client {
             Client client = new Client("GameSession1");
             client.setUsername(userName);
             System.out.println("Set client username: " + userName);
-    
+
+            // IMPORTANT: Initialize the chat manager BEFORE starting graphics/UI.
+            client.initChatManager();
+
+
             // Start the graphical interface and console reader.
             client.startGraphicsStuff();
             client.startConsoleReaderLoop();
