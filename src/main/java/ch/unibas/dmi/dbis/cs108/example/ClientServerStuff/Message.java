@@ -37,7 +37,7 @@ public class Message {
         this.option = option;
         this.concealedParameters = concealedParameters;
         this.sequenceNumber = 0; // default until set
-        this.uuid = getParameters()[0].toString();// default until set
+        this.uuid = null;// default until set
     }
     /**
      * Constructs a new Message.

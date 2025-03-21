@@ -151,13 +151,12 @@ public class Server {
             }
 
             case "CHAT" -> {
-                String uuid = msg.getParameters()[0].toString();
                 System.out.println("Processed CHAT message 1 ");
                 if (serverChatManager == null){
                     serverChatManager = new ChatManager.ServerChatManager();
                 }
-                serverChatManager.handleChatMessage(msg, senderSocket, uuid);
-                reliableSender.acknowledge(uuid);
+                serverChatManager.handleChatMessage(msg, senderSocket, ackProcessor);
+
             }
 
             default -> {

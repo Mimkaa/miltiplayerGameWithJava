@@ -1,6 +1,8 @@
 package chat;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AckProcessor;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import javax.swing.SwingUtilities;
 import java.net.InetSocketAddress;
@@ -27,7 +29,7 @@ public class ChatManager {
             chatPanel = new ChatPanel(new ChatPanel.ChatPanelListener() {
                 @Override
                 public void onChatMessage(String message) {
-                    sendChatMessage(message, uuid);
+                    sendChatMessage(message);
                 }
                 @Override
                 public void onTyping() {
@@ -45,10 +47,14 @@ public class ChatManager {
          * Wraps the given text into a CHAT message and enqueues it.
          * The concealed parameters include the sender's username and the game name.
          */
-        public void sendChatMessage(String text, String uuid) {
+        public void sendChatMessage(String text) {
             String usernameString = username.toString();
-            Message chatMsg = new Message("CHAT", new Object[]{ text }, null, new String[]{ usernameString, gameName }, uuid);
-            outgoingQueue.offer(chatMsg);
+            String[] concealedParams = { "something1", "something2" };
+            Message chatMsg = new Message("CHAT", new Object[]{ text }, null, new String[]{ usernameString, gameName });
+            chatMsg.setConcealedParameters(concealedParams);
+            String encodedMessage = MessageCodec.encode(chatMsg);
+            System.out.println("Encoded chat message: " + encodedMessage);
+            outgoingQueue.offer(MessageCodec.decode(encodedMessage));
         }
 
         /**
@@ -77,22 +83,18 @@ public class ChatManager {
          * 1. Broadcasts it to all clients.
          * 2. Sends an ACK back to the sender.
          */
-        public void handleChatMessage(Message msg, InetSocketAddress senderSocket, String uuid) {
+        public void handleChatMessage(Message msg, InetSocketAddress senderSocket, AckProcessor ackProcessor) {
             Server server = Server.getInstance();
             // Broadcast the chat message to all clients.
             server.broadcastMessageToAll(msg);
             // Send an ACK to the sender to prevent repeated retransmission.
-            System.out.println("Processed CHAT message 66 ");
-            if (uuid != null && !uuid.isEmpty()) {
-                System.out.println("Processed CHAT message 55wqewe ");
-                server.getAckProcessor().addAck(senderSocket, uuid);
-                System.out.println("Processed CHAT message 55 ");
-                Message ackMsg = new Message("ACK", new Object[]{ uuid }, null);
-                server.getReliableSender().sendMessage(ackMsg, senderSocket.getAddress(), senderSocket.getPort());
-                System.out.println("Processed CHAT message 555 ");
+            System.out.println("Broadcasted Message to all Clients");
+
+
+            ackProcessor.addAck(senderSocket, msg.getUuid());
+            System.out.println("Added message UUID " + msg.getUuid() + " to ACK handler");
+
             }
         }
     }
-
-
-}
+    
