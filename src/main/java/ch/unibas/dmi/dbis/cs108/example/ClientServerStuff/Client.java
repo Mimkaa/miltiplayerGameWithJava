@@ -148,7 +148,7 @@ public class Client {
                                 if (msg.getParameters() != null && msg.getParameters().length > 0) {
                                     String ackUuid = msg.getParameters()[0].toString();
                                     myReliableUDPSender.acknowledge(ackUuid);
-                                    System.out.println("Processed ACK message for UUID " + msg.getUuid());
+                                    System.out.println("Processed ACK message for UUID " + msg.getUUID());
                                 } else {
                                     System.out.println("Received ACK with no parameters.");
                                 }
@@ -163,10 +163,10 @@ public class Client {
                             default -> {
                                 // Non-ACK message logic.
                                 // If the message UUID is not null, register it for ACK processing.
-                                if (msg.getUuid() != null) {
+                                if (msg.getUUID() != null) {
                                     InetSocketAddress dest = new InetSocketAddress(
                                             InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
-                                    ackProcessor.addAck(dest, msg.getUuid());
+                                    ackProcessor.addAck(dest, msg.getUUID());
                                 }
 
                                 // Check the "option" field to determine the type of message.

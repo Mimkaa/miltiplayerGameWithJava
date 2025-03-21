@@ -49,7 +49,7 @@ public class MessageCodec {
         // Append concealed parameters and the UUID between pipe delimiters.
         sb.append("|");
         String[] concealed = message.getConcealedParameters();
-        String uuidStr = message.getUuid(); // Obtain the UUID from the message.
+        String uuidStr = message.getUUID(); // Obtain the UUID from the message.
         if (concealed != null && concealed.length > 0) {
             sb.append(String.join(", ", concealed));
             sb.append(", ").append(uuidStr);
@@ -116,13 +116,13 @@ public class MessageCodec {
         // Expect that the last concealed parameter is the UUID.
         if (concealedParameters.length > 0) {
             String uuid = concealedParameters[concealedParameters.length - 1];
-            message.setUuid(uuid);
+            message.setUUID(uuid);
             // Remove the last element from the concealed parameters.
             String[] newConcealed = new String[concealedParameters.length - 1];
             System.arraycopy(concealedParameters, 0, newConcealed, 0, concealedParameters.length - 1);
             message.setConcealedParameters(newConcealed);
         } else {
-            message.setUuid(null);
+            message.setUUID(null);
         }
         
         return message;

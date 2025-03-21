@@ -91,8 +91,8 @@ public class ChatManager {
             System.out.println("Broadcasted Message to all Clients");
 
 
-            ackProcessor.addAck(senderSocket, msg.getUuid());
-            System.out.println("Added message UUID " + msg.getUuid() + " to ACK handler");
+            ackProcessor.addAck(senderSocket, msg.getUUID());
+            System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
 
             }
         }

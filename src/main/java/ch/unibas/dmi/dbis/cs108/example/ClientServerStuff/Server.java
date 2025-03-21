@@ -147,7 +147,7 @@ public class Server {
 
                 String ackUuid = msg.getParameters()[0].toString();
                 reliableSender.acknowledge(ackUuid);
-                System.out.println("Processed ACK message for UUID " + msg.getUuid());
+                System.out.println("Processed ACK message for UUID " + msg.getUUID());
             }
 
             case "CHAT" -> {
@@ -179,9 +179,9 @@ public class Server {
             clientsMap.forEach((user, address) -> System.out.println("  " + user + " -> " + address));
     
             // If the message has a UUID, register it in the ACK processor.
-            if (msg.getUuid() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                ackProcessor.addAck(senderSocket, msg.getUuid());
-                System.out.println("Added message UUID " + msg.getUuid() + " to ACK handler");
+            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                ackProcessor.addAck(senderSocket, msg.getUUID());
+                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
     
             // 3) Distinguish based on message option.
@@ -287,7 +287,7 @@ public class Server {
             Message responseMsg = new Message("CREATE", newParams, "RESPONSE");
             
             // 5) Set the response message's UUID to an empty string so the encoder won't append "null".
-            responseMsg.setUuid("");
+            responseMsg.setUUID("");
             
             // 6) Update the game by adding the new game object asynchronously.
             Future<GameObject> futureObj = MY_GAME_INSTANCE.addGameObjectAsync(
@@ -335,7 +335,7 @@ public class Server {
             Object[] newParams = new Object[1];
             newParams[0] = objectID;
             Message responseMsg = new Message("GETOBJECTID", newParams, "RESPONSE");
-            responseMsg.setUuid("");
+            responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
         }
 
@@ -355,7 +355,7 @@ public class Server {
             newParams[0] = objectID;
             newParams[1] = newObjectName;
             Message responseMsg = new Message("CHANGENAME", newParams, "RESPONSE");
-            responseMsg.setUuid("");
+            responseMsg.setUUID("");
             broadcastMessageToAll(responseMsg);
         }
 
@@ -367,7 +367,7 @@ public class Server {
             //Broadcast the new RESPONSE to all clients
             Message logoutmessage = new Message ("LOGOUT", msg.getParameters(), "RESPONSE");
 
-            logoutmessage.setUuid("");
+            logoutmessage.setUUID("");
             broadcastMessageToAll(logoutmessage);
 
             //remove clients
@@ -392,7 +392,7 @@ public class Server {
             }
             //send message to the client
             Message Loginmessage = new Message("LOGIN", newParams, "RESPONSE");
-            Loginmessage.setUuid("");
+            Loginmessage.setUUID("");
 
             InetSocketAddress clientAdress = clientsMap.get(senderUsername);
             enqueueMessage(Loginmessage, clientAdress.getAddress(), clientAdress.getPort());
