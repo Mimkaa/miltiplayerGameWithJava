@@ -1,6 +1,7 @@
 package chat;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AckProcessor;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -25,8 +26,8 @@ public class ChatManager {
             this.username = username;
             this.gameName = gameName;
             this.outgoingQueue = outgoingQueue;
-            // Create the chat panel with a listener that sends messages and notifies typing.
-            chatPanel = new ChatPanel(new ChatPanel.ChatPanelListener() {
+            // Use the singleton ChatPanel instance instead of creating a new one.
+            chatPanel = ChatPanel.getInstance(new ChatPanel.ChatPanelListener() {
                 @Override
                 public void onChatMessage(String message) {
                     sendChatMessage(message);
@@ -37,10 +38,19 @@ public class ChatManager {
                     System.out.println(username.get() + " is typing...");
                 }
             });
+            // For debugging, print the hash code of the singleton instance.
+            System.out.println("ClientChatManager using ChatPanel instance: " + chatPanel.hashCode());
         }
 
         public ChatPanel getChatPanel() {
             return chatPanel;
+        }
+
+        /**
+         * Optionally, set a new ChatPanel instance.
+         */
+        public void setCurrentPanel(ChatPanel panel) {
+            this.chatPanel = panel;
         }
 
         /**
@@ -69,6 +79,7 @@ public class ChatManager {
             String chatText   = (params != null && params.length > 1) ? params[1].toString() : "";
             boolean isLocal = senderName.equals(username.get());
             String fullMessage = senderName + ": " + chatText;
+            System.out.println("Processing chat message: " + msg);
             SwingUtilities.invokeLater(() -> chatPanel.appendMessage(fullMessage, isLocal));
             InetSocketAddress socketAddress = new InetSocketAddress("localhost", 9876);
             ackProcessor.addAck(socketAddress, msg.getUUID());

@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import chat.ChatManager;
+import chat.ChatPanel;
 import lombok.Getter;
 
 import java.net.DatagramPacket;
@@ -73,6 +74,12 @@ public class Client {
      */
     public void initChatManager() {
         this.clientChatManager = new ChatManager.ClientChatManager(username, game.getGameName(), outgoingQueue, getIdGame());
+        
+    }
+
+    public ChatPanel getChatPanel()
+    {
+        return  this.clientChatManager.getChatPanel();
     }
 
     /**
@@ -198,6 +205,8 @@ public class Client {
             e.printStackTrace();
         }
     }
+
+    
     
     /**
      * Static sendMessage method to update the message with the latest username and enqueue it.

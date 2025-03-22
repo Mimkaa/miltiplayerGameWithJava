@@ -148,6 +148,7 @@ public class Game {
 
             frame.setVisible(true);
             ChatUIHelper.installChatUI(frame, client.getClientChatManager().getChatPanel());
+            
 
             // Start a Timer to repaint the game panel at ~60 FPS.
             Timer timer = new Timer(16, new ActionListener() {

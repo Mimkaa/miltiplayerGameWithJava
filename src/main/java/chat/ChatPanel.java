@@ -1,14 +1,13 @@
 package chat;
 
-import lombok.Getter;
-
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 
-@Getter
 public class ChatPanel extends JPanel {
+    private static ChatPanel instance; // singleton instance
+
     private JTextPane chatPane;
     private JTextField inputField;
     private JLabel typingIndicatorLabel;
@@ -17,9 +16,33 @@ public class ChatPanel extends JPanel {
     private SimpleAttributeSet remoteStyle;
     private ChatPanelListener listener;
 
-    public ChatPanel(ChatPanelListener listener) {
+    // Private constructor prevents external instantiation.
+    private ChatPanel(ChatPanelListener listener) {
         this.listener = listener;
         initUI();
+        System.out.println("ChatPanel created, instance hashCode: " + this.hashCode());
+    }
+
+    /**
+     * Returns the singleton instance of ChatPanel.
+     * If not yet created, it will be created using the provided listener.
+     * Subsequent calls will return the same instance, and the listener parameter is ignored.
+     *
+     * @param listener the ChatPanelListener to use on initial creation.
+     * @return the singleton ChatPanel instance.
+     */
+    public static synchronized ChatPanel getInstance(ChatPanelListener listener) {
+        if (instance == null) {
+            instance = new ChatPanel(listener);
+        }
+        return instance;
+    }
+    
+    /**
+     * Optionally, if you need to update the listener later.
+     */
+    public void setChatPanelListener(ChatPanelListener listener) {
+        this.listener = listener;
     }
 
     private void initUI() {
@@ -76,9 +99,12 @@ public class ChatPanel extends JPanel {
         SimpleAttributeSet style = isLocal ? localStyle : remoteStyle;
         String timeStamp = new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date());
         String fullMessage = "[" + timeStamp + "] " + message + "\n";
+        System.out.println("Appending message: " + fullMessage);
         try {
             doc.insertString(doc.getLength(), fullMessage, style);
             chatPane.setCaretPosition(doc.getLength());
+            chatPane.revalidate();
+            chatPane.repaint();
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
@@ -97,6 +123,9 @@ public class ChatPanel extends JPanel {
      */
     public void clearTypingIndicator() {
         typingIndicatorLabel.setText(" ");
+    }
+    public JTextField getInputField() {
+        return inputField;
     }
 
     /**
