@@ -1,200 +1,144 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 /**
- * The {@code Message} class represents a protocol message with a specified type, a list of parameters,
- * an optional field, concealed parameters that do not appear in the main message part, a sequence
- * number for tracking reliable delivery, and a unique identifier (UUID).
+ * Represents a protocol message that includes a message type, an array of parameters,
+ * an optional field, concealed parameters, a sequence number for reliable delivery, 
+ * and a unique identifier (UUID).
+ *
  * <p>
- * The {@link #sequenceNumber} may be appended as the last concealed parameter when the message is
- * encoded for transmission, depending on the protocol requirements.
+ * The sequence number is intended to be appended as the last concealed parameter when encoding.
  * </p>
  */
 public class Message {
-
     private String messageType;
     private Object[] parameters;
-    private String option;
-    private String[] concealedParameters;
-    private long sequenceNumber;
-    private String uuid;
+    private String option;               // Optional field
+    private String[] concealedParameters; // Concealed parameters (all strings)
+    private long sequenceNumber;         // Sequence number for reliable delivery
+    private String uuid;                 // Unique identifier for this message
 
     /**
-     * Constructs a new {@code Message} with specified message type, parameters, an optional field,
-     * and concealed parameters.
+     * Constructs a new Message.
      *
-     * @param messageType         the type (or category) of the message
-     * @param parameters          an array of objects representing the message parameters
+     * @param messageType         the type of the message
+     * @param parameters          the array of parameters for the message
      * @param option              an optional field associated with the message
-     * @param concealedParameters an array of strings that should remain hidden or not displayed
+     * @param concealedParameters an array of concealed parameters (e.g., username) that are not visible in the main message part
      */
     public Message(String messageType, Object[] parameters, String option, String[] concealedParameters) {
         this.messageType = messageType;
         this.parameters = parameters;
         this.option = option;
-        this.concealedParameters = concealedParameters;
-        this.sequenceNumber = 0;
-        this.uuid = null;
+        if (concealedParameters == null) {
+            this.concealedParameters = new String[]{"gameObjectName", "gameSessionName"};
+        } else {
+            this.concealedParameters = concealedParameters;
+        }
+        this.sequenceNumber = 0; // default until set
+        // Generate a new UUID upon creation.
+        this.uuid = UUID.randomUUID().toString();
     }
 
     /**
-     * Constructs a new {@code Message} without specifying concealed parameters.
-     * The concealed parameters are set to {@code null} by default.
+     * Constructs a new Message without concealed parameters.
+     * The concealed parameters are set to null.
      *
      * @param messageType the type of the message
-     * @param parameters  an array of objects representing the message parameters
+     * @param parameters  the array of parameters for the message
      * @param option      an optional field associated with the message
      */
     public Message(String messageType, Object[] parameters, String option) {
         this(messageType, parameters, option, null);
     }
 
-    /**
-     * Returns the message type.
-     *
-     * @return a {@code String} representing the message type
-     */
     public String getMessageType() {
         return messageType;
     }
 
-    /**
-     * Sets the message type.
-     *
-     * @param messageType a {@code String} representing the new message type
-     */
     public void setMessageType(String messageType) {
         this.messageType = messageType;
     }
 
-    /**
-     * Returns the array of parameters associated with this message.
-     *
-     * @return an {@code Object[]} containing the message parameters
-     */
     public Object[] getParameters() {
         return parameters;
     }
 
-    /**
-     * Sets the array of parameters for this message.
-     *
-     * @param parameters an {@code Object[]} containing the new parameters
-     */
     public void setParameters(Object[] parameters) {
         this.parameters = parameters;
     }
 
-    /**
-     * Returns the optional field associated with this message.
-     *
-     * @return a {@code String} representing an optional field
-     */
     public String getOption() {
         return option;
     }
 
-    /**
-     * Sets the optional field for this message.
-     *
-     * @param option a {@code String} representing a new optional field
-     */
     public void setOption(String option) {
         this.option = option;
     }
 
-    /**
-     * Returns the concealed parameters associated with this message.
-     *
-     * @return a {@code String[]} containing the concealed parameters
-     */
     public String[] getConcealedParameters() {
         return concealedParameters;
     }
 
-    /**
-     * Sets the concealed parameters for this message.
-     *
-     * @param concealedParameters a {@code String[]} for the concealed parameters
-     */
     public void setConcealedParameters(String[] concealedParameters) {
         this.concealedParameters = concealedParameters;
     }
 
-    /**
-     * Returns the sequence number for this message, used for reliable delivery.
-     *
-     * @return a {@code long} representing the sequence number
-     */
     public long getSequenceNumber() {
         return sequenceNumber;
     }
 
-    /**
-     * Sets the sequence number for this message.
-     *
-     * @param sequenceNumber a {@code long} representing a new sequence number
-     */
     public void setSequenceNumber(long sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
     }
 
     /**
-     * Returns the unique identifier (UUID) of this message.
+     * Returns the UUID of the message.
      *
-     * @return a {@code String} containing the UUID, or {@code null} if not set
+     * @return the UUID as a String.
      */
     public String getUUID() {
         return uuid;
     }
 
     /**
-     * Sets the unique identifier (UUID) of this message.
+     * Sets the UUID of the message.
      *
-     * @param uuid a {@code String} representing the new UUID
+     * @param uuid the unique identifier to set.
      */
     public void setUUID(String uuid) {
         this.uuid = uuid;
     }
 
-    /**
-     * Returns a string representation of this message, including its type, sequence number,
-     * UUID, parameters, option, and concealed parameters.
-     *
-     * @return a {@code String} describing the current state of this message
-     */
     @Override
     public String toString() {
-        return "Message [type=" + messageType
-                + ", seq=" + sequenceNumber
-                + ", uuid=" + uuid
-                + ", params=" + Arrays.toString(parameters)
-                + ", option=" + option
-                + ", concealed=" + Arrays.toString(concealedParameters) + "]";
+        return "Message [type=" + messageType +
+               ", seq=" + sequenceNumber +
+               ", uuid=" + uuid +
+               ", params=" + Arrays.toString(parameters) +
+               ", option=" + option +
+               ", concealed=" + Arrays.toString(concealedParameters) + "]";
     }
 
-    /**
-     * Creates a shallow copy of this message. Parameter arrays and concealed parameters
-     * are copied, while the UUID is reset to {@code null} so that each cloned message
-     * can be assigned its own unique identifier.
-     *
-     * @return a new {@code Message} instance with the same content as this one, but
-     *         without a UUID
-     */
     @Override
     public Message clone() {
-        Object[] clonedParams = (this.parameters != null)
-                ? Arrays.copyOf(this.parameters, this.parameters.length)
+        // Create copies of the parameters arrays (shallow copy is sufficient if the objects are immutable).
+        Object[] clonedParams = (this.parameters != null) 
+                ? Arrays.copyOf(this.parameters, this.parameters.length) 
                 : null;
-        String[] clonedConcealed = (this.concealedParameters != null)
-                ? Arrays.copyOf(this.concealedParameters, this.concealedParameters.length)
+        String[] clonedConcealed = (this.concealedParameters != null) 
+                ? Arrays.copyOf(this.concealedParameters, this.concealedParameters.length) 
                 : null;
-
+        
+        // Create a new Message instance with the copied values.
         Message clone = new Message(this.messageType, clonedParams, this.option, clonedConcealed);
+        
+        // Optionally, copy the sequence number if it's relevant.
         clone.setSequenceNumber(this.sequenceNumber);
-        clone.setUUID(null);
-
+        
+        // The clone constructor will automatically assign a new UUID.
         return clone;
     }
 }

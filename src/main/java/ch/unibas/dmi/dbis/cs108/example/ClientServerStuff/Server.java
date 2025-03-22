@@ -15,37 +15,19 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 
 @Getter
-/**
- * The {@code Server} class implements a simple UDP-based server that
- * can handle both reliable and best-effort messages. It manages a
- * set of registered clients, a game instance, and the logic for
- * handling various message types and requests (including creation
- * of new game objects and user login/logout).
- */
 public class Server {
 
     // ================================
     // Singleton Implementation
     // ================================
 
-    /**
-     * Private constructor to prevent external instantiation.
-     */
     private Server() {
     }
 
-    /**
-     * Static inner helper class that holds the singleton instance.
-     */
     private static class SingletonHelper {
         private static final Server INSTANCE = new Server();
     }
 
-    /**
-     * Returns the singleton instance of the {@code Server}.
-     *
-     * @return the singleton {@code Server} instance
-     */
     public static Server getInstance() {
         return SingletonHelper.INSTANCE;
     }
@@ -58,17 +40,14 @@ public class Server {
 
     private ChatManager.ServerChatManager serverChatManager;
 
-    private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
+    // Make the clients map and the outgoing queue static.
+    private static final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
+    private static final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
     private DatagramSocket serverSocket;
-
     private ReliableUDPSender reliableSender;
-
     private AckProcessor ackProcessor;
-
     private Game myGameInstance;
-
-    private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
     // ================================
     // Outgoing Message Inner Class
@@ -88,6 +67,24 @@ public class Server {
 
     private void enqueueMessage(Message msg, InetAddress address, int port) {
         outgoingQueue.offer(new OutgoingMessage(msg, address, port));
+    }
+
+    // ================================
+    // Helper: makeResponse
+    // ================================
+    /**
+     * Creates a response message by copying the type and concealed parameters from
+     * the original message, accepting new parameters, and setting the option to "RESPONSE".
+     *
+     * @param original the original Message from which to copy the type and concealed parameters.
+     * @param newParams the new parameters for the response.
+     * @return a new Message instance representing the response.
+     */
+    public static Message makeResponse(Message original, Object[] newParams) {
+        String type = original.getMessageType();
+        String[] concealed = original.getConcealedParameters();
+        Message response = new Message(type, newParams, "RESPONSE", concealed);
+        return response;
     }
 
     // ================================
@@ -122,7 +119,7 @@ public class Server {
                 }
             });
 
-            // Listen for incoming packets
+            // Listen for incoming packets in a separate thread.
             new Thread(() -> {
                 while (true) {
                     try {
@@ -172,7 +169,6 @@ public class Server {
             if (serverChatManager == null) {
                 serverChatManager = new ChatManager.ServerChatManager();
             }
-
             AsyncManager.run(() -> broadcastMessageToAll(msg));
             System.out.println("Processed CHAT message 2");
             return;
@@ -360,7 +356,6 @@ public class Server {
         Object[] originalParams = msg.getParameters();
         String objectName = originalParams[0].toString();
         String newObjectName = originalParams[1].toString();
-
         String objectID = "";
 
         for (GameObject gameObject : myGameInstance.getGameObjects()) {
@@ -428,7 +423,8 @@ public class Server {
 
     private void handleDeleteRequest(Message msg, String senderUsername) {
         System.out.println("Client deleting: " + senderUsername);
-        Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
+        //Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
+        Message deleteMessage = makeResponse(msg, msg.getParameters());
         broadcastMessageToAll(deleteMessage);
 
         String targetPlayerName = msg.getParameters()[0].toString();

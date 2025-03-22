@@ -56,7 +56,7 @@ public class Ricardo extends GameObject {
     @Override
     protected void myUpdateLocal() {
         // Check if rotation changed.
-        if (rotation != oldRotation && messageQueue != null) {
+        if (rotation != oldRotation ) {
             Message rotateMsg = new Message(
                 "ROTATE",
                 new Object[]{ rotation },

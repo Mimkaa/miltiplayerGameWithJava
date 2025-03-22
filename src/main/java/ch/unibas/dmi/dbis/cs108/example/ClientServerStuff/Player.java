@@ -69,7 +69,7 @@ public class Player extends GameObject {
         y += inputY * speed;
         
         // If the position has changed, send a MOVE message.
-        if ((x != oldX || y != oldY) && messageQueue != null) {
+        if ((x != oldX || y != oldY) ) {
             Message moveMsg = new Message(
                 "MOVE",
                 new Object[]{ x, y },

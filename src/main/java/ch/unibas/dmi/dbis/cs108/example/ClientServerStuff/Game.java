@@ -114,7 +114,7 @@ public class Game {
         AsyncManager.run(() -> {
             for (GameObject go : gameObjects) {
                 if (go.getName().equals(objectName)) {
-                    go.updateAsync(outgoingQueue);
+                    go.updateAsync();
                     break;
                 }
             }

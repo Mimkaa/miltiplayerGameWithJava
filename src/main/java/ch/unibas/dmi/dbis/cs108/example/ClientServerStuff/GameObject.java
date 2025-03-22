@@ -43,11 +43,7 @@ public abstract class GameObject {
      */
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
 
-    /**
-     * A reference to the outgoing message queue used by this object. It is initially {@code null}
-     * and may be set by {@link #updateAsync(ConcurrentLinkedQueue)} if it is not already set.
-     */
-    protected ConcurrentLinkedQueue<Message> messageQueue = null;
+    // Removed the instance-specific messageQueue as it is no longer needed.
 
     /**
      * Constructs a {@code GameObject} with a specified name and game name.
@@ -107,18 +103,10 @@ public abstract class GameObject {
 
     /**
      * Schedules an asynchronous update command that calls {@link #myUpdateLocal()}.
-     * If the internal message queue is not set, it will be initialized with the provided queue.
-     *
-     * @param providedQueue a queue for outgoing messages, used if the internal queue is {@code null}.
      */
-    public void updateAsync(ConcurrentLinkedQueue<Message> providedQueue) {
-        if (this.messageQueue == null && providedQueue != null) {
-            this.messageQueue = providedQueue;
-        }
+    public void updateAsync() {
         AsyncManager.run(() -> {
-            Command updateCommand = new CodeCommand(() -> {
-                myUpdateLocal();
-            });
+            Command updateCommand = new CodeCommand(() -> myUpdateLocal());
             commandQueue.offer(updateCommand);
         });
     }
@@ -138,23 +126,23 @@ public abstract class GameObject {
     protected abstract void myUpdateGlobal(Message msg);
 
     /**
-     * Sends a message by placing it into the internal {@link #messageQueue}, attaching this
-     * object's name and game name as concealed parameters.
+     * Sends a message by attaching this object's name and game name as concealed parameters,
+     * then delegating the sending to the Client's static sendMessage method.
      *
-     * @param msg the {@link Message} to be sent to the queue.
+     * @param msg the {@link Message} to be sent.
      */
     protected void sendMessage(Message msg) {
-        if (messageQueue != null) {
-            String[] concealed = msg.getConcealedParameters();
-            if (concealed == null || concealed.length < 2) {
-                concealed = new String[2];
-            }
-            concealed[0] = getName();
-            concealed[1] = getGameName();
-            msg.setConcealedParameters(concealed);
-            msg.setOption("GAME");
-            messageQueue.offer(msg);
+        // Attach concealed parameters.
+        String[] concealed = msg.getConcealedParameters();
+        if (concealed == null || concealed.length < 2) {
+            concealed = new String[2];
         }
+        concealed[0] = getName();
+        concealed[1] = getGameName();
+        msg.setConcealedParameters(concealed);
+        msg.setOption("GAME");
+        // Directly call the static send method from Client.
+        Client.sendMessageStatic(msg);
     }
 
     /**
@@ -243,12 +231,9 @@ public abstract class GameObject {
     public KeyAdapter getKeyListener() {
         return new KeyAdapter() {
             @Override
-            public void keyPressed(KeyEvent e) {
-            }
-
+            public void keyPressed(KeyEvent e) {}
             @Override
-            public void keyReleased(KeyEvent e) {
-            }
+            public void keyReleased(KeyEvent e) {}
         };
     }
 
@@ -264,7 +249,6 @@ public abstract class GameObject {
      */
     public static class CodeCommand implements Command {
         private final Runnable code;
-
         /**
          * Constructs a {@code CodeCommand} with the given {@link Runnable}.
          *
@@ -273,7 +257,6 @@ public abstract class GameObject {
         public CodeCommand(Runnable code) {
             this.code = code;
         }
-
         /**
          * Executes the wrapped {@link Runnable} task.
          */
