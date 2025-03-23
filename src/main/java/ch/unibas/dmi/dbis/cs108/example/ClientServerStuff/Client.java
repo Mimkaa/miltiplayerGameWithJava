@@ -264,7 +264,7 @@ public class Client {
             }
             return;
         }
-        if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
+        if ("CREATE".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+", ""))) {
             Object[] params = msg.getParameters();
             if (params != null ) {
                 String serverUuid = params[0].toString();
@@ -281,7 +281,7 @@ public class Client {
             } else {
                 System.out.println("CREATE RESPONSE message does not contain enough parameters.");
             }
-        } else if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType())){
+        } else if ("CHANGENAME".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+", ""))){
             Object[] params = msg.getParameters();
             String objectID = params[0].toString();
             String newObjectName = params[1].toString();
@@ -298,7 +298,7 @@ public class Client {
                 }
             }
             
-        } else if ("LOGIN".equalsIgnoreCase(msg.getMessageType().trim())) {
+        } else if ("LOGIN".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+", ""))) {
             System.out.println("Logging in...");
             System.out.println(msg);
             if (msg.getParameters() == null || msg.getParameters().length < 1) {
@@ -326,7 +326,7 @@ public class Client {
             System.exit(0);
             return;
         }
-        else if ("LOGOUT".equalsIgnoreCase(msg.getMessageType())) {
+        else if ("LOGOUT".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+", ""))) {
             System.out.println("Logging out " + msg.getParameters()[0].toString());
             try {
                 String messagelogString = "DELETE{REQUEST}[" + msg.getParameters()[0].toString() + "]||";
@@ -338,7 +338,7 @@ public class Client {
                 e.printStackTrace();
             }
         }
-        else if("DELETE".equalsIgnoreCase(msg.getMessageType())) {
+        else if("DELETE".equalsIgnoreCase(msg.getMessageType().replaceAll("\\s+", ""))) {
             String targetPlayerId = msg.getParameters()[0].toString();
             for (GameObject go : game.getGameObjects()) {
                 if (go.getName().equals(targetPlayerId)) {

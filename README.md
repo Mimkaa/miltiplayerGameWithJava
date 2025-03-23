@@ -1,5 +1,5 @@
 # Think Outside The Room
-A jump- and run Platformer for exactly four players, filled with puzzles, which require cooperation and coordination.
+A jump- and run Platformer for four players, filled with puzzles, which require cooperation and coordination.
 
 
 ## About the Game
@@ -9,7 +9,7 @@ One player controls movement and throwing, while the other player controls jumpi
 ## Requirements
 - Java 21 
 - Platform: PC, Laptop
-- Players: 4 players (2 players per charcter)
+- Players: 4 players (2 players per character)
 
 ## Organisation
 Team: WISA 
@@ -21,4 +21,6 @@ Members: William Tran, Illia Solohub, Senanur Ates, Aiysha Frutiger
 [Game Concept](docs/gameConcept.md)
 
 [QA Concept](docs/QA_Concept.md)
+
+[Network Protocol](docs/Network-Protocol.pdf)
 
