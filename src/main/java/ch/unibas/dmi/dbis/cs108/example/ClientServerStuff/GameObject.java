@@ -1,10 +1,16 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+
 
 /**
  * The {@code GameObject} class serves as an abstract base for game entities that can manage and
@@ -214,6 +220,15 @@ public abstract class GameObject {
         return "UnknownGame";
     }
 
+     /**
+     * Must be implemented by each subclass to return the values
+     * of the parameters in that subclass's constructor,
+     * in the same order as the constructor signature.
+     *
+     * @return an array of Objects, matching the order of the subclass constructor parameters.
+     */
+    public abstract Object[] getConstructorParamValues();
+
     /**
      * An abstract draw method that must be implemented by subclasses to
      * render this object using the provided {@link Graphics} context.
@@ -236,6 +251,7 @@ public abstract class GameObject {
             public void keyReleased(KeyEvent e) {}
         };
     }
+
 
     /**
      * A command in the Command pattern, representing an action to be executed.

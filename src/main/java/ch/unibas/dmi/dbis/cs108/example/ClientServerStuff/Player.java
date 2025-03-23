@@ -5,76 +5,55 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.Arrays;
 
-
 public class Player extends GameObject {
-    //private final String name;
-    private final float radius;
-    private float x;
-    private float y;
-    private float speed = 5.0f;
 
-    // The "game name" or session ID this player belongs to.
-    //private final String myGameName;
-    
-    // Internal fields for movement input.
-    private float inputX = 0;
-    private float inputY = 0;
-    
-    // For tracking position changes.
+    // 1) Fields that match the constructor parameters exactly:
+    private float x;       // matches "float x" in the constructor
+    private float y;       // matches "float y"
+    private final float radius;  // matches "float radius"
+
+    // 2) Additional fields that are NOT constructor params:
     private float oldX;
     private float oldY;
+    private float speed = 5.0f;  
+    private float inputX = 0;    // for keyboard movement
+    private float inputY = 0;
 
     /**
-     * @param name        The player's name
+     * Main constructor for Player, with param names matching the fields (for reflection).
+     *
+     * @param name        The player's name (sent up to GameObject)
      * @param x           Starting X coordinate
      * @param y           Starting Y coordinate
      * @param radius      Radius for drawing
-     * @param myGameName  The name (or ID) of the current game/session
+     * @param myGameName  The name (or ID) of the current game/session (sent up to GameObject)
      */
     public Player(String name, float x, float y, float radius, String myGameName) {
-        super(name, myGameName); // Call GameObject constructor to initialize name and myGameName.
+        super(name, myGameName); // Call the parent constructor, sets parent fields: this.name, this.myGameName
         this.x = x;
         this.y = y;
         this.radius = radius;
-        this.oldX = x;
+        this.oldX = x;  // track old position initially as the same as starting pos
         this.oldY = y;
-    }
-
-   
-    
-    public float getX() {
-        return x;
-    }
-    
-    public float getY() {
-        return y;
-    }
-
-    public void setName(String newName) {
-        System.out.println(getName() + " is now " + newName);
-        super.name = newName; // GameObject icindeki name degisikliklerini guncelliyoruz
     }
 
     /**
      * Local update logic: update the player's position based on input.
-     * If the position changes, a MOVE message is sent using sendMessage().
+     * If the position changes, send a MOVE message.
      */
     @Override
     protected void myUpdateLocal() {
         // Save the old coordinates.
         oldX = x;
         oldY = y;
-        // Update position based on input.
+
+        // Update position based on input (WASD).
         x += inputX * speed;
         y += inputY * speed;
-        
-        // If the position has changed, send a MOVE message.
-        if ((x != oldX || y != oldY) ) {
-            Message moveMsg = new Message(
-                "MOVE",
-                new Object[]{ x, y },
-                null
-            );
+
+        // If the position changed, send a MOVE message to the server / others.
+        if (x != oldX || y != oldY) {
+            Message moveMsg = new Message("MOVE", new Object[] { x, y }, null);
             sendMessage(moveMsg);
         }
     }
@@ -88,27 +67,53 @@ public class Player extends GameObject {
             Object[] params = msg.getParameters();
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                // Use ternary operators to check if the parameter is already a Number
                 float newX = (params[0] instanceof Number)
-                            ? ((Number) params[0]).floatValue()
-                            : Float.parseFloat(params[0].toString());
+                             ? ((Number) params[0]).floatValue()
+                             : Float.parseFloat(params[0].toString());
                 float newY = (params[1] instanceof Number)
-                            ? ((Number) params[1]).floatValue()
-                            : Float.parseFloat(params[1].toString());
+                             ? ((Number) params[1]).floatValue()
+                             : Float.parseFloat(params[1].toString());
                 synchronized (this) {
                     this.x = newX;
                     this.y = newY;
                 }
-                System.out.println("Processed MOVE for " + getName() +
-                        " in game " + extractGameName(msg) +
-                        ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed MOVE for " + getName()
+                        + " in game " + extractGameName(msg)
+                        + ": new position x=" + newX + ", y=" + newY);
             }
         }
-        // Process additional message types as needed.
+        // Add handling for other message types if needed.
     }
 
     /**
-     * Provides a KeyAdapter that updates the player's input state.
+     * Draws the player as a circle and its name label.
+     */
+    @Override
+    public void draw(Graphics g) {
+        // Draw the player's oval.
+        int drawX = (int) (x - radius);
+        int drawY = (int) (y - radius);
+        int size = (int) (radius * 2);
+        g.fillOval(drawX, drawY, size, size);
+
+        // Draw the player's name above the oval.
+        String nameToDraw = getName(); // the parent's "name" field, inherited
+        int nameWidth = g.getFontMetrics().stringWidth(nameToDraw);
+        int textX = (int) x - (nameWidth / 2);
+        int textY = (int) (y - radius - 5);
+        g.drawString(nameToDraw, textX, textY);
+    }
+
+    /**
+     * An override that sets a new name in the parent field.
+     */
+    public void setName(String newName) {
+        System.out.println(getName() + " is now " + newName);
+        super.name = newName; // Directly modify the 'name' field inherited from GameObject
+    }
+
+    /**
+     * Provides a KeyAdapter that updates the player's input state for WASD movement.
      */
     @Override
     public KeyAdapter getKeyListener() {
@@ -133,15 +138,22 @@ public class Player extends GameObject {
             }
         };
     }
-    
-    /**
-     * Draws the player on the given Graphics context.
-     */
-    @Override
-    public void draw(Graphics g) {
-        // Draw the player's oval.
-        g.fillOval((int)(x - radius), (int)(y - radius), (int)(radius * 2), (int)(radius * 2));
-        // Draw the player's name above the oval.
-        g.drawString(getName(), (int)x - (g.getFontMetrics().stringWidth(getName()) / 2), (int)(y - radius - 5));
+
+    public Object[] getConstructorParamValues() {
+        return new Object[] {
+            getName(),   
+            x,           
+            y,           
+            radius,      
+            getGameName()
+        };
     }
+
+    
+    public float getX() { return x; }
+    public float getY() { return y; }
+    public float getRadius() { return radius; }
+    public float getOldX() { return oldX; }
+    public float getOldY() { return oldY; }
+    public float getSpeed() { return speed; }
 }

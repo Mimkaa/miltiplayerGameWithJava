@@ -281,7 +281,7 @@ public class Server {
     private void handleRequest(Message msg, String senderUsername) {
         switch (msg.getMessageType().replaceAll("\\s+", "").toUpperCase()) {
             case "CREATE":
-                handleCreateRequest(msg);
+                handleCreateRequest(msg, senderUsername);
                 break;
             case "PING":
                 handlePingRequest(senderUsername);
@@ -310,23 +310,31 @@ public class Server {
         }
     }
 
-    private void handleCreateRequest(Message msg) {
+    private void handleCreateRequest(Message msg, String senderUsername) {
         Object[] originalParams = msg.getParameters();
         String serverGeneratedUuid = UUID.randomUUID().toString();
-
+    
+        // 1) Prepend server-generated UUID to the original parameters
         Object[] newParams = new Object[originalParams.length + 1];
         newParams[0] = serverGeneratedUuid;
         System.arraycopy(originalParams, 0, newParams, 1, originalParams.length);
-
+    
+        // 2) Build the CREATE response message
         Message responseMsg = new Message("CREATE", newParams, "RESPONSE");
-        responseMsg.setUUID("");
-
+    
+        // 3) Optionally add a debug printout of the entire message
+        //    If your Message class has a good toString(), you can do:
+        // System.out.println("Constructed CREATE message: " + responseMsg);
+        //
+        // Or if you want to see the exact encoded form, do something like:
+        // System.out.println("Constructed CREATE message: " + MessageCodec.encode(responseMsg));
+    
+        // 4) Actually create the GameObject asynchronously
         Future<GameObject> futureObj = myGameInstance.addGameObjectAsync(
-                originalParams[0].toString(),
-                serverGeneratedUuid,
-                (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
+            originalParams[0].toString(),
+            serverGeneratedUuid,
+            (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
         );
-
         try {
             GameObject newObj = futureObj.get();
             System.out.println("Created new game object with UUID: " + serverGeneratedUuid
@@ -334,8 +342,53 @@ public class Server {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
+    
+        // 5) Broadcast this CREATE message to all known clients
+        //    This ensures everyone sees the newly created object.
+        System.out.println("Broadcasting CREATE to all: " + responseMsg);
         broadcastMessageToAll(responseMsg);
+    
+        // 6) Now, for the new user, also send them CREATE messages for each existing object
+        //    so they can synchronize state. If you only want the new user to receive these,
+        //    you need to look up the *new user’s* InetSocketAddress and send them there.
+        for (GameObject gameObject : myGameInstance.getGameObjects()) {
+            if (!gameObject.getName().equals(senderUsername)) {
+                Object[] constructorParameters = gameObject.getConstructorParamValues();
+                Object[] finalParameters = new Object[constructorParameters.length + 2];
+
+                // 1) Insert the UUID
+                finalParameters[0] = gameObject.getId();
+
+                // 2) Insert the type
+                String objectType = gameObject.getClass().getSimpleName(); 
+                // Or store the type somewhere in the object if your classes vary
+                // e.g., if (gameObject instanceof Player) type="Player"; or a getType() method
+
+                finalParameters[1] = objectType;
+
+                // 3) Copy the old constructor params after the first two slots
+                System.arraycopy(constructorParameters, 0, 
+                                finalParameters, 2, 
+                                constructorParameters.length);
+
+                // Now finalParameters looks like:
+                // [UUID, objectType, param0, param1, param2, ...]
+                Message createResponseMessage = makeResponse(msg, finalParameters);
+    
+                // If you want to send these "existing object" CREATEs
+                // to the *new user* only, do something like:
+                InetSocketAddress newUserAddress = clientsMap.get(senderUsername);
+                if (newUserAddress == null) {
+                    System.err.println("No known address for user: " + senderUsername);
+                    return; 
+                }
+                enqueueMessage(createResponseMessage,
+                               newUserAddress.getAddress(),
+                               newUserAddress.getPort());
+    
+               
+            }
+        }
     }
 
     private void handlePingRequest(String senderUsername) {
@@ -359,7 +412,6 @@ public class Server {
         }
 
         Message responseMsg = new Message("GETOBJECTID", new Object[]{objectID}, "RESPONSE");
-        responseMsg.setUUID("");
         broadcastMessageToAll(responseMsg);
     }
 
@@ -378,7 +430,6 @@ public class Server {
         }
 
         Message responseMsg = new Message("CHANGENAME", new Object[]{objectID, newObjectName}, "RESPONSE");
-        responseMsg.setUUID("");
         broadcastMessageToAll(responseMsg);
     }
 
@@ -402,8 +453,6 @@ public class Server {
         System.out.println("Client " + type + ": " + senderUsername);
 
         Message logoutMessage = new Message(type, msg.getParameters(), "RESPONSE");
-        logoutMessage.setUUID("");
-
         InetSocketAddress clientAddress = clientsMap.get(senderUsername);
         if (clientAddress != null) {
             enqueueMessage(logoutMessage, clientAddress.getAddress(), clientAddress.getPort());
@@ -425,7 +474,6 @@ public class Server {
         }
 
         Message loginMessage = new Message("LOGIN", newParams, "RESPONSE");
-        loginMessage.setUUID("");
 
         InetSocketAddress clientAddr = clientsMap.get(senderUsername);
         if (clientAddr != null) {
@@ -435,7 +483,7 @@ public class Server {
 
     private void handleDeleteRequest(Message msg, String senderUsername) {
         System.out.println("Client deleting: " + senderUsername);
-        Message deleteMessage = new Message("DELETE", msg.getParameters(), "RESPONSE");
+        Message deleteMessage = makeResponse(msg, msg.getParameters());
         broadcastMessageToAll(deleteMessage);
 
         String targetPlayerName = msg.getParameters()[0].toString();

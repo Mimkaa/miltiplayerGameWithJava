@@ -17,6 +17,7 @@ public class Ricardo extends GameObject {
     private float x;
     private float y;
     private Image image;
+    private String imagePath ;
 
     // Rotation in degrees.
     private float rotation = 0.0f;
@@ -36,6 +37,7 @@ public class Ricardo extends GameObject {
         super(name, myGameName);
         this.x = x;
         this.y = y;
+        this.imagePath = imagePath;
         try {
             image = ImageIO.read(new File(imagePath));
         } catch (IOException e) {
@@ -127,4 +129,16 @@ public class Ricardo extends GameObject {
             g.drawString("No image loaded", (int) x, (int) y);
         }
     }
+
+    @Override
+    public Object[] getConstructorParamValues() {
+        // Match the constructor order: (String name, String myGameName, float x, float y, String imagePath)
+        return new Object[] {
+            getName(),       // from GameObject
+            getGameName(),   // from GameObject
+            x,
+            y,
+            imagePath
+        };
+}
 }

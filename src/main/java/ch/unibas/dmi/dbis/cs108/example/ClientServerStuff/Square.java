@@ -67,6 +67,22 @@ public class Square extends GameObject {
     }
 
     /**
+     * Returns an Object[] corresponding to the constructor's parameters
+     * in the exact same order: (name, x, y, radius, myGameName).
+     */
+    @Override
+    public Object[] getConstructorParamValues() {
+        // Match the order: (String name, float x, float y, float radius, String myGameName)
+        return new Object[] {
+            getName(),   // from GameObject (parent)
+            x,
+            y,
+            radius,
+            getGameName() // from GameObject (parent)
+        };
+    }
+
+    /**
      * Global update logic: process an incoming "INFT" message to update the square's radius.
      *
      * @param msg the message to process.

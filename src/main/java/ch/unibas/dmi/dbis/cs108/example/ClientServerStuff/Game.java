@@ -6,6 +6,7 @@ import javax.swing.Timer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -195,8 +196,6 @@ public class Game {
             
             // Add the new game object to the list.
             gameObjects.add(newObject);
-            
-            System.out.println("Added new " + type + ": " + newObject.getName() + " with UUID: " + uuid);
             
             // Update the game panel (if available) on the EDT.
             if (gamePanel != null) {

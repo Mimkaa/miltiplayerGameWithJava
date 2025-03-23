@@ -157,7 +157,7 @@ public class Client {
                             System.out.println("Processed CHAT message");
                         } else {
                             // Non-ACK message logic.
-                            if (msg.getUUID() != null) {
+                            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                                 InetSocketAddress dest = new InetSocketAddress(InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
@@ -241,7 +241,7 @@ public class Client {
         }
         if ("CREATE".equalsIgnoreCase(msg.getMessageType())) {
             Object[] params = msg.getParameters();
-            if (params != null && params.length >= 7) {
+            if (params != null ) {
                 String serverUuid = params[0].toString();
                 String objectType = params[1].toString();
                 Object[] remainingParams = java.util.Arrays.copyOfRange(params, 2, params.length);

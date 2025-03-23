@@ -21,16 +21,46 @@ public class BandageGuy extends GameObject {
     private float inputY;
     private float speed = 5;
 
+    // 1) Keep the image path so you can return it in getConstructorParamValues().
+    private String imagePath;
+
+    /**
+     * Constructor for BandageGuy
+     *
+     * @param name       The object's name
+     * @param myGameName The game or session name
+     * @param x          The starting X coordinate
+     * @param y          The starting Y coordinate
+     * @param imagePath  The path to the image to load
+     */
     public BandageGuy(String name, String myGameName, float x, float y, String imagePath) {
         super(name, myGameName);
         this.posX = x;
         this.posY = y;
+        this.imagePath = imagePath;
+
         try {
             image = ImageIO.read(new File(imagePath));
         } catch (IOException e) {
             System.err.println("Error loading image: " + e.getMessage());
             image = null;
         }
+    }
+
+    /**
+     * Override the abstract method to return constructor parameters
+     * in the same order as the constructor signature:
+     * (String name, String myGameName, float x, float y, String imagePath).
+     */
+    @Override
+    public Object[] getConstructorParamValues() {
+        return new Object[] {
+            getName(),        // from the parent (GameObject)
+            getGameName(),    // from the parent (GameObject)
+            posX,
+            posY,
+            imagePath
+        };
     }
 
     @Override
@@ -61,8 +91,12 @@ public class BandageGuy extends GameObject {
             Object[] params = msg.getParameters();
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = (params[0] instanceof Number) ? ((Number) params[0]).floatValue() : posX;
-                float newY = (params[1] instanceof Number) ? ((Number) params[1]).floatValue() : posY;
+                float newX = (params[0] instanceof Number)
+                             ? ((Number) params[0]).floatValue()
+                             : posX;
+                float newY = (params[1] instanceof Number)
+                             ? ((Number) params[1]).floatValue()
+                             : posY;
                 synchronized (this) {
                     this.posX = newX;
                     this.posY = newY;
