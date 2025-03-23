@@ -6,15 +6,13 @@ import javax.swing.Timer;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.awt.event.KeyListener;
 
-import chat.ChatUIHelper;
+import ch.unibas.dmi.dbis.cs108.example.chat.ChatUIHelper;
 import lombok.Getter;
 
 @Getter

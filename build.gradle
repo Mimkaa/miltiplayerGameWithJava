@@ -11,7 +11,7 @@ javafx {
 
 group 'ch.unibas.dmi.dbis'
 version '0.0.1-ALPHA'
-mainClassName = 'ch.unibas.dmi.dbis.cs108.example.HelloWorld'
+mainClassName = 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
 
 java {
     toolchain {

@@ -1,6 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import chat.ChatManager;
+import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import lombok.Getter;
 
 import java.net.DatagramPacket;
@@ -8,7 +8,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
