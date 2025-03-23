@@ -92,19 +92,10 @@ public class PingManager {
      * @throws IOException if there is an error creating or enqueuing the ping message
      */
     private void sendPing() throws IOException {
-        Message pingMessage = new Message("PING", new Object[] { "Ping" }, "REQUEST");
-
-        // Concealed parameters (default placeholders)
-        String[] concealedPrms = { "something1", "something2"};
-
-        pingMessage.setConcealedParameters(concealedPrms);
-
-        // Override with actual timestamp
-        long timestamp = System.currentTimeMillis();
-        pingMessage.setConcealedParameters(new String[] { String.valueOf(timestamp) });
-
-        outgoingQueue.offer(pingMessage);
-        lastPingTime = timestamp;
+        Message pingMessage = new Message("PING", new Object[] { System.currentTimeMillis() }, "REQUEST");
+        Client.sendMessageStatic(pingMessage);
+        System.out.println(pingMessage);
+        lastPingTime = System.currentTimeMillis();
     }
 
     /**

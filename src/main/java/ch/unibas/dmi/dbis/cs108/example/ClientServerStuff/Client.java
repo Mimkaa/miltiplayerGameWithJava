@@ -122,6 +122,9 @@ public class Client {
 
             game.startPlayersCommandProcessingLoop();
 
+            //pingManager = new PingManager(outgoingQueue, InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT, 300);
+            //pingManager.start();
+
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
             AsyncManager.runLoop(() -> {
                 try {
