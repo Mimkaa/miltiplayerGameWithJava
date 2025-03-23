@@ -305,6 +305,7 @@ public class Server {
             case "DELETE":
                 handleDeleteRequest(msg, senderUsername);
                 break;
+           
             default:
                 System.out.println("Unknown request type: " + msg.getMessageType());
         }
@@ -351,8 +352,14 @@ public class Server {
         // 6) Now, for the new user, also send them CREATE messages for each existing object
         //    so they can synchronize state. If you only want the new user to receive these,
         //    you need to look up the *new user’s* InetSocketAddress and send them there.
-        for (GameObject gameObject : myGameInstance.getGameObjects()) {
-            if (!gameObject.getName().equals(senderUsername)) {
+        for (String username : clientsMap.keySet()) {
+            if (!username.equals(senderUsername)) {
+                GameObject gameObject = myGameInstance.getGameObjects()
+                .stream()
+                .filter(obj -> obj.getName().equals(username))
+                .findFirst()
+                .orElse(null);
+
                 Object[] constructorParameters = gameObject.getConstructorParamValues();
                 Object[] finalParameters = new Object[constructorParameters.length + 2];
 
@@ -417,21 +424,32 @@ public class Server {
 
     private void handleChangeNameRequest(Message msg) {
         Object[] originalParams = msg.getParameters();
-        String objectName = originalParams[0].toString();
-        String newObjectName = originalParams[1].toString();
-
+        String oldName = originalParams[0].toString();
+        String newName = originalParams[1].toString();
+    
+        // 1) Update the game object in 'myGameInstance'
         String objectID = "";
-
         for (GameObject gameObject : myGameInstance.getGameObjects()) {
-            if (gameObject.getName().equals(objectName)) {
+            if (gameObject.getName().equals(oldName)) {
                 objectID = gameObject.getId();
-                gameObject.setName(newObjectName);
+                gameObject.setName(newName);
+                break; // Assuming only one object matches
             }
         }
-
-        Message responseMsg = new Message("CHANGENAME", new Object[]{objectID, newObjectName}, "RESPONSE");
+    
+        // 2) Update the 'clientsMap' key from oldName -> newName
+        //    For example, if you have: private final ConcurrentHashMap<String, InetSocketAddress> clientsMap;
+        InetSocketAddress address = clientsMap.remove(oldName);
+        if (address != null) {
+            // Insert the new key
+            clientsMap.put(newName, address);
+        }
+    
+        // 3) Broadcast the change to everyone
+        Message responseMsg = new Message("CHANGENAME", new Object[]{objectID, newName}, "RESPONSE");
         broadcastMessageToAll(responseMsg);
     }
+    
 
     private void handleUserJoinedRequest(Message msg) {
         String nickname = msg.getParameters()[0].toString();
@@ -489,6 +507,8 @@ public class Server {
         String targetPlayerName = msg.getParameters()[0].toString();
         myGameInstance.getGameObjects().removeIf(go -> go.getName().equals(targetPlayerName));
     }
+
+    
 
     // ================================
     // Main Method

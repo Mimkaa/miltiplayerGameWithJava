@@ -20,7 +20,7 @@ public class ChatPanel extends JPanel {
     private ChatPanel(ChatPanelListener listener) {
         this.listener = listener;
         initUI();
-        System.out.println("ChatPanel created, instance hashCode: " + this.hashCode());
+        //System.out.println("ChatPanel created, instance hashCode: " + this.hashCode());
     }
 
     /**

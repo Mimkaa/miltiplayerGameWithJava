@@ -188,7 +188,13 @@ public class Client {
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
-                        } else {
+                        
+                        } 
+                        else if ("CLIENT".equalsIgnoreCase(msg.getOption()))
+                        {
+                            AsyncManager.run(() -> updateLocalClientState(msg));
+                        }
+                        else {
                             myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
                             // Uncomment below to log reliable sends if needed.
                             // System.out.println("Reliable sent: " + MessageCodec.encode(msg));
@@ -228,6 +234,22 @@ public class Client {
         // Enqueue the message.
         AsyncManager.run(() -> outgoingQueue.offer(msg));
     }
+
+    private void updateLocalClientState(Message msg)
+    {
+        if("CHANGE_USERNAME".equalsIgnoreCase(msg.getMessageType()))
+        {
+            this.username.set(msg.getParameters()[0].toString());
+            System.out.println("Username Changed to: " + msg.getParameters()[0].toString());
+        }
+        if("FAST_LOGIN".equalsIgnoreCase(msg.getMessageType()))
+        {
+            login();
+        }
+        else {
+            System.out.println("Unhandled response type: " + msg.getMessageType());
+        }
+    }
     
     /**
      * Processes messages from the server.
@@ -263,9 +285,16 @@ public class Client {
             List<GameObject> gameObjectList = game.getGameObjects();
             for (GameObject gameObject : gameObjectList) {
                 if (gameObject.getId().equals(objectID)) {
+                    // if it is the object we are constrolling then change also our username
+                    if(gameObject.getName().equals(username.get()))
+                    {
+                        username.set(newObjectName);
+                    }
                     gameObject.setName(newObjectName);
+                    
                 }
             }
+            
         } else if ("LOGIN".equalsIgnoreCase(msg.getMessageType().trim())) {
             System.out.println("Logging in...");
             System.out.println(msg);
@@ -278,7 +307,7 @@ public class Client {
             boolean playerFound = false;
             for (GameObject gameObject : game.getGameObjects()) {
                 if (gameObject.getId().equals(assignedUUID)) {
-                    System.out.println("Found gameObject: " + gameObject);
+                    //System.out.println("Found gameObject: " + gameObject);
                     playerFound = true;
                     SwingUtilities.invokeLater(() -> {
                         game.rebindKeyListeners(gameObject.getName());
@@ -286,7 +315,6 @@ public class Client {
                         game.updateGamePanel();
                         game.updateActiveObject(instance.username.get(), outgoingQueue);
                     });
-                    System.out.println(gameObject.getName());
                 }
             }
         }
@@ -317,9 +345,8 @@ public class Client {
             }
             game.updateGamePanel();
         }
-        else {
-            System.out.println("Unhandled response type: " + msg.getMessageType());
-        }
+        
+        
     }
     
     public void startConsoleReaderLoop() {

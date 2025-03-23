@@ -21,7 +21,7 @@ public class ChatUIHelper {
             // If the passed panel is not a ChatPanel, force using the singleton instance.
             chatPanel = ChatPanel.getInstance(null);
         }
-        System.out.println("Installing ChatPanel instance: " + chatPanel.hashCode());
+        //System.out.println("Installing ChatPanel instance: " + chatPanel.hashCode());
         
         // Create a top panel for the toggle button.
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
