@@ -96,6 +96,43 @@ public class Server {
         outgoingQueue.offer(new OutgoingMessage(msg, address, port));
     }
 
+
+        /**
+     * Returns a modified version of the requested name if that name is already taken.
+     * It checks both the clientsMap (connected users) and the existing GameObjects.
+     * If the requestedName is taken, it appends "_1", "_2", etc., until a free one is found.
+     *
+     * @param requestedName The new name the user is requesting
+     * @return A guaranteed-unique name
+     */
+    private String findUniqueName(String requestedName) {
+        String baseName = requestedName;
+        int counter = 1;
+
+        // As long as the name is taken in either 'clientsMap' or gameObjects, try something else
+        while (isNameTaken(requestedName)) {
+            requestedName = baseName + "_" + counter++;
+        }
+        return requestedName;
+    }
+
+    /**
+     * Helper function to see if a name is already taken by either:
+     *  - Another user in the 'clientsMap', or
+     *  - A game object in 'myGameInstance'.
+     */
+    private boolean isNameTaken(String name) {
+        if (clientsMap.containsKey(name)) {
+            return true;
+        }
+        for (GameObject obj : myGameInstance.getGameObjects()) {
+            if (obj.getName().equalsIgnoreCase(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ================================
     // Server Start Method
     // ================================
@@ -433,9 +470,13 @@ public class Server {
     private void handleChangeNameRequest(Message msg) {
         Object[] originalParams = msg.getParameters();
         String oldName = originalParams[0].toString();
-        String newName = originalParams[1].toString();
+        String requestedName = originalParams[1].toString();
     
-        // 1) Update the game object in 'myGameInstance'
+        // 1) Make sure the newName is actually available. 
+        //    If not, modify requestedName to ensure uniqueness.
+        String newName = findUniqueName(requestedName);
+    
+        // 2) Update the game object in 'myGameInstance'
         String objectID = "";
         for (GameObject gameObject : myGameInstance.getGameObjects()) {
             if (gameObject.getName().equals(oldName)) {
@@ -445,16 +486,18 @@ public class Server {
             }
         }
     
-        // 2) Update the 'clientsMap' key from oldName -> newName
-        //    For example, if you have: private final ConcurrentHashMap<String, InetSocketAddress> clientsMap;
+        // 3) Update the 'clientsMap' key from oldName -> newName
         InetSocketAddress address = clientsMap.remove(oldName);
         if (address != null) {
-            // Insert the new key
             clientsMap.put(newName, address);
         }
     
-        // 3) Broadcast the change to everyone
-        Message responseMsg = new Message("CHANGENAME", new Object[]{objectID, newName}, "RESPONSE");
+        // 4) Broadcast the change to everyone
+        Message responseMsg = new Message(
+            "CHANGENAME", 
+            new Object[]{objectID, newName}, 
+            "RESPONSE"
+        );
         broadcastMessageToAll(responseMsg);
     }
     
