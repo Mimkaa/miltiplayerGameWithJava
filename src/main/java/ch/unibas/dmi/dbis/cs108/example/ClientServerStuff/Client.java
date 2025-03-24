@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Client {
 
     /** The default server address (localhost). */
-    public static final String SERVER_ADDRESS = "localhost";
+    public static final String SERVER_ADDRESS = "25.12.99.19";
     /** The default server port (9876). */
     public static final int SERVER_PORT = 9876;
 
@@ -221,9 +221,20 @@ public class Client {
                             }
                         }
                         if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
-                            // Delegate chat processing to clientChatManager.
+                            // 1) Optionally ACK the incoming CHAT if it has a UUID.
+                            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
+                                // Where does the ACK go? Typically the server’s address/port:
+                                InetSocketAddress serverAddress = new InetSocketAddress(
+                                        InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                ackProcessor.addAck(serverAddress, msg.getUUID());
+                            }
+                        
+                            // 2) Delegate chat processing
                             clientChatManager.processIncomingChatMessage(msg, ackProcessor);
                             System.out.println("Processed CHAT message");
+                        
+                            // 3) Return so we don't fall into the "else" logic
+                            return;
                         } else {
                             // Non-ACK message logic.
                             if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {

@@ -102,7 +102,7 @@ public class Server {
 
     public void start() {
         try {
-            InetAddress ipAddress = InetAddress.getByName("localhost");
+            InetAddress ipAddress = InetAddress.getByName("25.12.99.19");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
@@ -178,9 +178,18 @@ public class Server {
             if (serverChatManager == null) {
                 serverChatManager = new ChatManager.ServerChatManager();
             }
-
+            
+            // If the message has a UUID, we'll add it to AckProcessor so we can 
+            // send an ACK back to the client. 
+            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
+                // Let the server handle sending an ACK back automatically:
+                ackProcessor.addAck(senderSocket, msg.getUUID());
+            }
+        
+            // Broadcast this chat message to all connected clients (unchanged).
             AsyncManager.run(() -> broadcastMessageToAll(msg));
             System.out.println("Processed CHAT message 2");
+            
             return;
         }
 

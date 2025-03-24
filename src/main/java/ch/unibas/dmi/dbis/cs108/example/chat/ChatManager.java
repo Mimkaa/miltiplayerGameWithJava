@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.chat;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AckProcessor;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -60,12 +62,10 @@ public class ChatManager {
         public void sendChatMessage(String text) {
             String usernameString = username.get();
             // Include the username and text as the parameters.
-            Message chatMsg = new Message("CHAT", new Object[]{usernameString, text}, "GAME", new String[]{usernameString, gameName});
+            Message chatMsg = new Message("CHAT", new Object[]{usernameString, text}, "REQUEST");
             // Overwrite the concealed parameters with the fixed values.
-            chatMsg.setConcealedParameters(new String[]{"gameObject", "gameSession"});
-            String encodedMessage = MessageCodec.encode(chatMsg);
-            System.out.println("Encoded chat message: " + encodedMessage);
-            outgoingQueue.offer(MessageCodec.decode(encodedMessage));
+            Client.sendMessageStatic(chatMsg);
+            
         }
 
         /**
