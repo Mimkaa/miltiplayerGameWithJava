@@ -14,6 +14,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
+
 
 @Getter
 /**
@@ -74,8 +76,10 @@ public class Server {
     // a concurrent queue of the games 
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
 
-    // For decoupling commands, we define a map of CommandHandlers.
-    private final Map<String, CommandHandler> commandHandlers = new ConcurrentHashMap<>();
+
+
+    private final CommandRegistry commandRegistry = new CommandRegistry();
+
 
 
     // ================================
@@ -152,6 +156,8 @@ public class Server {
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
+
+            commandRegistry.initCommandHandlers();
 
             reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
             ackProcessor = new AckProcessor(serverSocket);
@@ -333,13 +339,18 @@ public class Server {
     // ================================
 
     private void handleRequest(Message msg, String senderUsername) {
-        String commandType = msg.getMessageType().replaceAll("\\s+", "").toUpperCase();
-        CommandHandler handler = commandHandlers.get(commandType);
+        // Get the raw message type and normalize it.
+        String rawType = msg.getMessageType();
+        String commandType = rawType.replaceAll("\\s+", "").toUpperCase();
+        System.out.println("Raw type: '" + rawType + "' normalized: '" + commandType + "'");
 
+        // Lookup the handler in the registry.
+        CommandHandler handler = commandRegistry.getHandler(commandType);
         if (handler != null) {
+            // Delegate handling to the appropriate CommandHandler.
             handler.handle(this, msg, senderUsername);
         } else {
-            // Unknown command => fallback
+            // Handler not found; print debug message and send default response.
             System.out.println("Unknown request type: " + msg.getMessageType());
             Message defaultResponse = makeResponse(msg, msg.getParameters());
             InetSocketAddress senderAddress = clientsMap.get(senderUsername);
@@ -351,7 +362,8 @@ public class Server {
             }
         }
     }
-    
+
+
 
     private void handleCreateRequest(Message msg, String senderUsername) {
         Object[] originalParams = msg.getParameters();

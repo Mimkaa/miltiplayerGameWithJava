@@ -3,12 +3,9 @@ package ch.unibas.dmi.dbis.cs108.example.command;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandRegistry {
-
-    // In your Server class
     private final ConcurrentHashMap<String, CommandHandler> commandHandlers = new ConcurrentHashMap<>();
 
-    private void initCommandHandlers() {
-        // Each command’s logic is split into its own CommandHandler
+    public void initCommandHandlers() {
         commandHandlers.put("CREATE", new CreateCommandHandler());
         commandHandlers.put("PING", new PingCommandHandler());
         commandHandlers.put("GETOBJECTID", new GetObjectIdCommandHandler());
@@ -20,6 +17,15 @@ public class CommandRegistry {
         commandHandlers.put("DELETE", new DeleteCommandHandler());
         commandHandlers.put("CREATEGAME", new CreateGameCommandHandler());
 
+        System.out.println("Server's commandHandlers: " + commandHandlers.keySet());
+
     }
 
+    public CommandHandler getHandler(String commandType) {
+        return commandHandlers.get(commandType);
+    }
+
+    public ConcurrentHashMap<String, CommandHandler> getCommandHandlers() {
+        return commandHandlers;
+    }
 }
