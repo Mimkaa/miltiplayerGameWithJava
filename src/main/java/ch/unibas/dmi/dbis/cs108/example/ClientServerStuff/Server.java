@@ -10,6 +10,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -359,7 +360,12 @@ public class Server {
             case "CREATEGAME":
                 handleCreateGameRequest(msg, senderUsername);
                 break;
-            
+            case "JOINGAME":
+                handleJoinGameRequest(msg, senderUsername);
+                break;
+            case "SELECTGO":
+                handleSelectGO(msg, senderUsername);
+                break;
             default:
                 System.out.println("Unknown request type: " + msg.getMessageType());
                 // Create a default response message (echoing back the parameters)
@@ -615,6 +621,71 @@ public class Server {
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
         }
+    }
+
+    private void handleJoinGameRequest(Message msg, String senderUsername) {
+        // Retrieve all game sessions.
+        Map<String, Game> allSessions = gameSessionManager.getAllGameSessions();
+        if (allSessions.isEmpty()) {
+            System.out.println("No game sessions available to join.");
+            return;
+        }
+        // For demonstration, pick the first available game session.
+        String gameId = allSessions.keySet().iterator().next();
+        
+        // Build a JOINGAME response message with the game id as the first parameter.
+        Message response = new Message("JOINGAME", new Object[]{gameId}, "RESPONSE", msg.getConcealedParameters());
+        
+        // Look up the sender's address.
+        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+        if (senderAddress != null) {
+            enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
+            System.out.println("Sent JOINGAME response with game id: " + gameId);
+        } else {
+            System.err.println("Sender address not found for user: " + senderUsername);
+        }
+    }
+
+    private void handleSelectGO(Message msg, String senderUsername) {
+        Object[] params = msg.getParameters();
+        if (params == null || params.length < 2) {
+            System.err.println("SELECTGO request requires two parameters: game name and game object name.");
+            return;
+        }
+        String targetGameName = params[0].toString();
+        String targetObjectName = params[1].toString();
+        
+        // Loop through all game sessions to find one with a matching game name.
+        Game targetGame = null;
+        for (Map.Entry<String, Game> entry : gameSessionManager.getAllGameSessions().entrySet()) {
+            Game game = entry.getValue();
+            if (game.getGameName().equalsIgnoreCase(targetGameName)) {
+                targetGame = game;
+                break;
+            }
+        }
+        
+        if (targetGame == null) {
+            System.out.println("No game session found with name: " + targetGameName);
+            return;
+        }
+        
+        // Loop through the game objects in the target game.
+        for (GameObject go : targetGame.getGameObjects()) {
+            if (go.getName().equalsIgnoreCase(targetObjectName)) {
+                // Build a response message containing the game object's UUID.
+                Message response = new Message("SELECTGO", new Object[]{go.getId()}, "RESPONSE", msg.getConcealedParameters());
+                InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+                if (senderAddress != null) {
+                    enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
+                    System.out.println("Sent SELECTGO response: game object UUID: " + go.getId());
+                } else {
+                    System.err.println("Sender address not found for user: " + senderUsername);
+                }
+                return;
+            }
+        }
+        System.out.println("No game object with name \"" + targetObjectName + "\" found in game \"" + targetGameName + "\".");
     }
     
     

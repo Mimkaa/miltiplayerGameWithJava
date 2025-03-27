@@ -78,7 +78,7 @@ public class Player extends GameObject {
                     this.y = newY;
                 }
                 System.out.println("Processed MOVE for " + getName()
-                        + " in game " + extractGameName(msg)
+                        + " in game " + extractGameId(msg)
                         + ": new position x=" + newX + ", y=" + newY);
             }
         }
@@ -145,7 +145,7 @@ public class Player extends GameObject {
             x,           
             y,           
             radius,      
-            getGameName()
+            getGameId()
         };
     }
 

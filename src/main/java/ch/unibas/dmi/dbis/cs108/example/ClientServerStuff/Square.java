@@ -59,7 +59,7 @@ public class Square extends GameObject {
                 "INFT",
                 new Object[]{ radius },
                 null,
-                new String[]{ getName(), getGameName() }
+                new String[]{ getName(), getGameId()}
             );
             sendMessage(inflateMsg);
             oldRadius = radius;
@@ -78,7 +78,7 @@ public class Square extends GameObject {
             x,
             y,
             radius,
-            getGameName() // from GameObject (parent)
+            getId() // from GameObject (parent)
         };
     }
 

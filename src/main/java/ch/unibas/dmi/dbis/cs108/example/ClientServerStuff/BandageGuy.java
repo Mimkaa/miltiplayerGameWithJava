@@ -56,7 +56,7 @@ public class BandageGuy extends GameObject {
     public Object[] getConstructorParamValues() {
         return new Object[] {
             getName(),        // from the parent (GameObject)
-            getGameName(),    // from the parent (GameObject)
+            getGameId(),    // from the parent (GameObject)
             posX,
             posY,
             imagePath
@@ -101,7 +101,7 @@ public class BandageGuy extends GameObject {
                     this.posX = newX;
                     this.posY = newY;
                 }
-                System.out.println("Processed MOVE for " + getName() + " in game " + extractGameName(msg)
+                System.out.println("Processed MOVE for " + getName() + " in game " + extractGameId(msg)
                         + ": new position x=" + newX + ", y=" + newY);
             }
         }

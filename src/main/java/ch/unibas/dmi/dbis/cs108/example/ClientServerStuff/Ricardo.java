@@ -135,7 +135,7 @@ public class Ricardo extends GameObject {
         // Match the constructor order: (String name, String myGameName, float x, float y, String imagePath)
         return new Object[] {
             getName(),       // from GameObject
-            getGameName(),   // from GameObject
+            getGameId(),   // from GameObject
             x,
             y,
             imagePath

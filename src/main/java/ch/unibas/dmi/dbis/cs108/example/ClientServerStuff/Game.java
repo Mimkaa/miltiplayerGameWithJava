@@ -1,4 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
+
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
 
@@ -38,6 +39,7 @@ public class Game {
 
     /**
      * Creates a {@code Game} instance with the specified UUID and user-friendly name.
+     * Also starts the asynchronous command processing loop for the game objects.
      *
      * @param gameId   The UUID of this game session.
      * @param gameName The name/identifier of this game session.
@@ -72,11 +74,13 @@ public class Game {
                 }
             }
         };
+
+        // Start the asynchronous command processing loop for all game objects.
+        startPlayersCommandProcessingLoop();
     }
 
     /**
      * Queues an asynchronous task to process an incoming message.
-     * For normal messages, this method is used.
      *
      * @param msg The {@code Message} to be routed.
      */
@@ -101,7 +105,7 @@ public class Game {
 
     /**
      * Routes the given message to the appropriate {@link GameObject} based on the first
-     * concealed parameter, which is assumed to be the target object's UUID.
+     * concealed parameter (assumed to be the target object's UUID).
      *
      * @param msg The {@code Message} to be routed.
      */
