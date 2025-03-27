@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
+import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import lombok.Getter;
 
@@ -69,7 +71,8 @@ public class Server {
 
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
-    // a concurrent queue of the games 
+    // a concurrent queue of the games
+    private final GameSessionManager gameSessionManager = new GameSessionManager();
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
 
     // ================================
@@ -584,20 +587,19 @@ public class Server {
             return;
         }
         String requestedGameName = params[0].toString();
-    
+        
         // 2. Generate a new UUID for this game session.
         String gameUuid = UUID.randomUUID().toString();
-    
+        
         // 3. Create a new Game instance with both the UUID and friendly name.
-        // If your Game class has been updated to require both values:
         Game newGame = new Game(gameUuid, requestedGameName);
-    
+        
         // 4. Optionally start any game-specific loops or processing.
-        newGame.startPlayersCommandProcessingLoop();
-    
-        // 5. Store the new Game in the gameSessions map.
-        gameSessions.put(gameUuid, newGame);
-    
+        //newGame.startPlayersCommandProcessingLoop();
+        
+        // 5. Store the new Game in the GameSessionManager.
+        gameSessionManager.addGameSession(gameUuid, newGame);
+        
         // 6. Build a response message containing the game UUID and friendly name.
         Message response = new Message("CREATEGAME",
                                        new Object[]{gameUuid, requestedGameName},
@@ -614,6 +616,7 @@ public class Server {
             System.err.println("Sender address not found for user: " + senderUsername);
         }
     }
+    
     
    
     

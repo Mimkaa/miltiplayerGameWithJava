@@ -17,6 +17,17 @@ public class GameSessionManager {
     }
 
     /**
+     * Creates and adds a new game session with a given session ID.
+     *
+     * @param sessionId the unique session ID
+     * @param gameName the name of the created Game.
+     */
+    public void addGameSession(String sessionId, String gameName ) {
+        Game game = new Game(sessionId, gameName);
+        gameSessions.put(sessionId, game);
+    }
+
+    /**
      * Retrieves a game session by its session ID.
      *
      * @param sessionId the session ID
@@ -44,5 +55,10 @@ public class GameSessionManager {
     public int getSessionCount() {
         return gameSessions.size();
     }
+
+    public ConcurrentHashMap<String, Game> getAllGameSessions () {
+        return gameSessions;
+    }
 }
+
 

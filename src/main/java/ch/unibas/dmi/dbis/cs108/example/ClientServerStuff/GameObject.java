@@ -1,23 +1,17 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
-
 /**
  * The {@code GameObject} class serves as an abstract base for game entities that can manage and
  * process incoming messages, schedule local updates, and synchronize state across different
  * game instances or clients.
  * <p>
- * It maintains a unique identifier, a reference to the game session it belongs to, and provides
+ * It maintains a unique identifier, the unique game session ID that it belongs to, and provides
  * an internal queue for incoming messages and commands. Subclasses must implement drawing logic
  * and local/global update methods.
  * </p>
@@ -30,9 +24,9 @@ public abstract class GameObject {
     private String id = UUID.randomUUID().toString();
 
     /**
-     * The name of the game or session that this object belongs to.
+     * The unique identifier of the game/session that this object belongs to.
      */
-    private final String myGameName;
+    private final String myGameId;
 
     /**
      * A display-friendly name for this game object (e.g., player name).
@@ -49,17 +43,15 @@ public abstract class GameObject {
      */
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
 
-    // Removed the instance-specific messageQueue as it is no longer needed.
-
     /**
-     * Constructs a {@code GameObject} with a specified name and game name.
+     * Constructs a {@code GameObject} with a specified display name and game session ID.
      *
-     * @param name       A display name or identifier for this object.
-     * @param myGameName The name of the game or session this object belongs to.
+     * @param name    A display name or identifier for this object.
+     * @param myGameId The unique identifier of the game/session this object belongs to.
      */
-    public GameObject(String name, String myGameName) {
+    public GameObject(String name, String myGameId) {
         this.name = name;
-        this.myGameName = myGameName;
+        this.myGameId = myGameId;
     }
 
     /**
@@ -81,7 +73,7 @@ public abstract class GameObject {
     }
 
     /**
-     * Sets a new display name or identifier for this game object.
+     * Sets a new display name for this game object.
      *
      * @param newName a {@code String} for the object's name.
      */
@@ -90,7 +82,7 @@ public abstract class GameObject {
     }
 
     /**
-     * Returns the display name or identifier for this game object.
+     * Returns the display name of this game object.
      *
      * @return the current name as a {@code String}.
      */
@@ -99,12 +91,31 @@ public abstract class GameObject {
     }
 
     /**
-     * Returns the name of the game/session to which this object belongs.
+     * Returns the unique game session ID to which this object belongs.
      *
-     * @return the game name as a {@code String}.
+     * @return the game session ID as a {@code String}.
      */
-    public String getGameName() {
-        return myGameName;
+    public String getGameId() {
+        return myGameId;
+    }
+
+    /**
+     * Sends a message by attaching this object's unique ID and the game session's unique ID as concealed parameters,
+     * then delegating the sending to the Client's static sendMessage method.
+     *
+     * @param msg the {@link Message} to be sent.
+     */
+    protected void sendMessage(Message msg) {
+        // Attach concealed parameters.
+        String[] concealed = msg.getConcealedParameters();
+        if (concealed == null || concealed.length < 2) {
+            concealed = new String[2];
+        }
+        concealed[0] = getId();
+        concealed[1] = getGameId();  // Use the game session's unique ID.
+        msg.setConcealedParameters(concealed);
+        msg.setOption("GAME");
+        Client.sendMessageStatic(msg);
     }
 
     /**
@@ -119,62 +130,36 @@ public abstract class GameObject {
 
     /**
      * Abstract method for local update logic, to be implemented by subclasses.
-     * This is called by the asynchronous update mechanism.
      */
     protected abstract void myUpdateLocal();
 
     /**
      * Abstract method for handling global updates from incoming messages.
-     * Subclasses should implement logic for processing specific message types.
      *
      * @param msg a {@link Message} containing information to process.
      */
     protected abstract void myUpdateGlobal(Message msg);
 
     /**
-     * Sends a message by attaching this object's name and game name as concealed parameters,
-     * then delegating the sending to the Client's static sendMessage method.
+     * Schedules an operation to add an incoming message to this object's queue.
      *
-     * @param msg the {@link Message} to be sent.
-     */
-    protected void sendMessage(Message msg) {
-        // Attach concealed parameters.
-        String[] concealed = msg.getConcealedParameters();
-        if (concealed == null || concealed.length < 2) {
-            concealed = new String[2];
-        }
-        concealed[0] = getName();
-        concealed[1] = getGameName();
-        msg.setConcealedParameters(concealed);
-        msg.setOption("GAME");
-        // Directly call the static send method from Client.
-        Client.sendMessageStatic(msg);
-    }
-
-    /**
-     * Schedules an operation to add an incoming message to this object's
-     * {@link #incomingMessages} queue. This is done asynchronously.
-     *
-     * @param message the {@link Message} to be added to the queue.
+     * @param message the {@link Message} to be added.
      */
     public void addIncomingMessageAsync(Message message) {
         AsyncManager.run(() -> incomingMessages.offer(message));
     }
 
     /**
-     * Schedules a one-time collector command to poll the {@link #incomingMessages} queue.
-     * This should be called once during initialization, and then re-scheduled after commands
-     * are processed in the game loop.
+     * Schedules a one-time collector command to poll the incomingMessages queue.
      */
     public void collectMessageUpdatesOnce() {
         AsyncManager.run(() -> commandQueue.offer(createIncomingMessageCommand()));
     }
 
     /**
-     * Creates a command that checks for an incoming message in the {@link #incomingMessages} queue.
-     * If a message is found, {@link #myUpdateGlobal(Message)} is invoked to process it.
+     * Creates a command that polls the incomingMessages queue and processes any found message.
      *
-     * @return a {@link Command} instance that performs one poll operation on the message queue.
+     * @return a {@link Command} instance.
      */
     protected Command createIncomingMessageCommand() {
         return new CodeCommand(() -> {
@@ -186,8 +171,7 @@ public abstract class GameObject {
     }
 
     /**
-     * Processes all commands currently in the {@link #commandQueue} without blocking.
-     * After processing, it re-schedules the collector command to be run again asynchronously.
+     * Processes all commands currently in the commandQueue non-blockingly.
      */
     public void processCommandsNonBlocking() {
         Command cmd;
@@ -198,21 +182,19 @@ public abstract class GameObject {
     }
 
     /**
-     * Shuts down the underlying asynchronous mechanism. Should only be called once
-     * when the application is ending.
+     * Shuts down asynchronous execution. Should be called when the application is ending.
      */
     public static void shutdownAsync() {
         AsyncManager.shutdown();
     }
 
     /**
-     * Extracts and returns the game name (the second element) from a message's concealed parameters,
-     * or returns a default value if unavailable.
+     * Extracts the game session ID (the second concealed parameter) from the message.
      *
-     * @param msg the {@link Message} from which to extract game information.
-     * @return the extracted game name, or {@code "UnknownGame"} if not found.
+     * @param msg the {@link Message} from which to extract the game session ID.
+     * @return the game session ID, or "UnknownGame" if not found.
      */
-    protected String extractGameName(Message msg) {
+    protected String extractGameId(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length > 1) {
             return concealed[1];
@@ -220,28 +202,24 @@ public abstract class GameObject {
         return "UnknownGame";
     }
 
-     /**
-     * Must be implemented by each subclass to return the values
-     * of the parameters in that subclass's constructor,
-     * in the same order as the constructor signature.
+    /**
+     * Must be implemented by each subclass to return constructor parameter values.
      *
-     * @return an array of Objects, matching the order of the subclass constructor parameters.
+     * @return an array of Objects.
      */
     public abstract Object[] getConstructorParamValues();
 
     /**
-     * An abstract draw method that must be implemented by subclasses to
-     * render this object using the provided {@link Graphics} context.
+     * Abstract method for drawing this object using the provided Graphics context.
      *
-     * @param g the {@code Graphics} context used for drawing.
+     * @param g the Graphics context.
      */
     public abstract void draw(Graphics g);
 
     /**
-     * Returns a default {@link KeyAdapter} that does nothing on key events.
-     * Subclasses can override this method to provide custom controls.
+     * Returns a default KeyAdapter that does nothing.
      *
-     * @return a no-op {@link KeyAdapter}.
+     * @return a no-op KeyAdapter.
      */
     public KeyAdapter getKeyListener() {
         return new KeyAdapter() {
@@ -252,30 +230,23 @@ public abstract class GameObject {
         };
     }
 
-
     /**
-     * A command in the Command pattern, representing an action to be executed.
+     * Command interface representing an executable action.
      */
     public interface Command {
         void execute();
     }
 
     /**
-     * A {@link Command} implementation that wraps a {@link Runnable} task.
+     * A simple implementation of Command that wraps a Runnable.
      */
     public static class CodeCommand implements Command {
         private final Runnable code;
-        /**
-         * Constructs a {@code CodeCommand} with the given {@link Runnable}.
-         *
-         * @param code a {@code Runnable} representing the action to be executed.
-         */
+
         public CodeCommand(Runnable code) {
             this.code = code;
         }
-        /**
-         * Executes the wrapped {@link Runnable} task.
-         */
+
         public void execute() {
             code.run();
         }
