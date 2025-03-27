@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
 import lombok.Getter;
@@ -63,18 +64,13 @@ public class Client {
     private static final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
 
     /** Game logic object for this client. */
-    private final Game game;
+    private Game game;
 
     /** Console input scanner for reading commands. */
     private final Scanner scanner = new Scanner(System.in);
 
     /** The client's username, stored as an AtomicReference for thread safety. */
     private final AtomicReference<String> username = new AtomicReference<>(UUID.randomUUID().toString());
-
-    /** An optional ID of a specific game object (if needed by the client). */
-    private String idGameObject;
-    /** An optional ID of the game session (if needed by the client). */
-    private String idGame;
 
     /** A reliable UDP sender instance. */
     private ReliableUDPSender myReliableUDPSender;
@@ -90,14 +86,16 @@ public class Client {
     /** The singleton client instance. */
     private static Client instance;
 
+     // We add a MessageHub field to route incoming messages.
+    private final MessageHub messageHub = MessageHub.getInstance();
+
     /**
      * Constructs a new {@code Client} with the given game session name and
      * initializes the associated {@link Game} object.
      *
      * @param gameSessionName the name of the game session
      */
-    public Client(String gameSessionName) {
-        this.game = new Game(gameSessionName);
+    public Client() {
         instance = this;  // Set the singleton instance.
     }
 
@@ -119,7 +117,7 @@ public class Client {
                 username,
                 game.getGameName(),
                 outgoingQueue,
-                getIdGame()
+                game.getGameId()
         );
     }
 
@@ -139,7 +137,7 @@ public class Client {
     public void startGraphicsStuff() {
         SwingUtilities.invokeLater(() -> {
             // Initialize the game UI.
-            game.initUI(username.get(), this);
+            //game.initUI(username.get(), this);
             // Additional UI work (e.g., adding the chat panel) can go here.
         });
 
@@ -182,10 +180,10 @@ public class Client {
             ackProcessor.start();
 
             // IMPORTANT: Initialize chat manager BEFORE starting the UI.
-            initChatManager();
+            //initChatManager();
 
             // Start processing loops for player commands (optional, depends on Game logic).
-            game.startPlayersCommandProcessingLoop();
+            //game.startPlayersCommandProcessingLoop();
 
             // Optionally, we could start ping tracking here (commented out for demonstration).
             // pingManager = new PingManager(outgoingQueue, InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT, 300);
@@ -206,51 +204,28 @@ public class Client {
                 }
             });
 
-            // Consumer Task: Process incoming messages from the queue.
             AsyncManager.runLoop(() -> {
                 try {
                     Message msg = incomingQueue.poll();
                     if (msg != null) {
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-                            // Process the ACK.
+                            // Process the ACK message.
                             if (msg.getParameters() != null && msg.getParameters().length > 0) {
                                 String ackUuid = msg.getParameters()[0].toString();
                                 myReliableUDPSender.acknowledge(ackUuid);
                             } else {
                                 System.out.println("Received ACK with no parameters.");
                             }
-                        }
-                        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
-                            // 1) Optionally ACK the incoming CHAT if it has a UUID.
-                            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
-                                // Where does the ACK go? Typically the server’s address/port:
-                                InetSocketAddress serverAddress = new InetSocketAddress(
-                                        InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
-                                ackProcessor.addAck(serverAddress, msg.getUUID());
-                            }
-                        
-                            // 2) Delegate chat processing
-                            clientChatManager.processIncomingChatMessage(msg, ackProcessor);
-                            System.out.println("Processed CHAT message");
-                        
-                            // 3) Return so we don't fall into the "else" logic
-                            return;
                         } else {
-                            // Non-ACK message logic.
+                            // For non-ACK messages, if the message has a UUID and option is not "GAME",
+                            // add it to the ACK processor.
                             if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                                 InetSocketAddress dest = new InetSocketAddress(
-                                        InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                    InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
-                            String option = msg.getOption();
-                            if ("GAME".equalsIgnoreCase(option)) {
-                                game.addIncomingMessage(msg);
-                            } else if ("RESPONSE".equalsIgnoreCase(option)) {
-                                // Process server responses asynchronously
-                                AsyncManager.run(() -> processServerResponse(msg));
-                            } else {
-                                System.out.println("Unknown message option: " + option);
-                            }
+                            // Now dispatch the message via the MessageHub.
+                            messageHub.dispatch(msg);
                         }
                     }
                 } catch (Exception e) {
@@ -353,7 +328,7 @@ public class Client {
     private void processServerResponse(Message msg) {
         if ("PONG".equalsIgnoreCase(msg.getMessageType())) {
             if (pingManager != null) {
-                game.updatePingIndicator(pingManager.getTimeDifferenceMillis());
+                //game.updatePingIndicator(pingManager.getTimeDifferenceMillis());
             }
             return;
         }
@@ -402,9 +377,9 @@ public class Client {
                 if (gameObject.getId().equals(assignedUUID)) {
                     // Rebind local input handling to the newly confirmed object
                     SwingUtilities.invokeLater(() -> {
-                        game.rebindKeyListeners(gameObject.getName());
+                        //game.rebindKeyListeners(gameObject.getName());
                         instance.username.set(gameObject.getName());
-                        game.updateGamePanel();
+                        //game.updateGamePanel();
                         game.updateActiveObject(instance.username.get(), outgoingQueue);
                     });
                 }
@@ -431,7 +406,27 @@ public class Client {
                     break;
                 }
             }
-            game.updateGamePanel();
+            
+        }
+
+        if ("CREATEGAME".equalsIgnoreCase(msg.getMessageType())) {
+            // Expecting the response parameters to contain the game UUID and name.
+            if (msg.getParameters() != null && msg.getParameters().length >= 2) {
+                String newGameUuid = msg.getParameters()[0].toString();
+                String newGameName = msg.getParameters()[1].toString();
+                // Create a new Game instance with the received UUID and friendly name.
+                Game newGame = new Game(newGameUuid, newGameName);
+                // Optionally start the game loop or reinitialize the UI.
+                newGame.startPlayersCommandProcessingLoop();
+                // Update the client's game reference.
+                this.game = newGame;
+                System.out.println("CREATEGAME response received. New game created: " 
+                                   + newGameName + " with UUID: " + newGameUuid);
+                
+            } else {
+                System.err.println("CREATEGAME response missing required parameters!");
+            }
+            return;
         }
     }
 
@@ -547,18 +542,18 @@ public class Client {
                 userName = suggestedNickname;
             }
 
-            Client client = new Client("GameSession1");
+            Client client = new Client();
             client.setUsername(userName);
             System.out.println("Set client username: " + userName);
 
-            client.initChatManager();
-            client.startGraphicsStuff();
+            //client.initChatManager();
+            //client.startGraphicsStuff();
             client.startConsoleReaderLoop();
 
             new Thread(client::run).start();
             Thread.sleep(1000);
 
-            client.login();
+            //client.login();
         } catch (Exception e) {
             e.printStackTrace();
         }

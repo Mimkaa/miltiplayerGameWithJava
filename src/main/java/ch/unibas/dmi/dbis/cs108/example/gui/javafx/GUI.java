@@ -2,31 +2,28 @@ package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-/**
- * This is an example JavaFX-Application.
- */
 public class GUI extends Application {
 
-    /**
-     * Launching this method will not work on some platforms.
-     * What you should do is to create a separate main class and launch the GUI class from there as is done in {@link Main}
-     */
     public static void main(String[] args) {
         launch(args);
     }
 
     @Override
     public void start(Stage stage) {
-        String javaVersion = System.getProperty("java.version");
-        String javafxVersion = System.getProperty("javafx.version");
-        Label l = new Label("Hello, JavaFX " + javafxVersion + ", running on Java " + javaVersion + ".");
-        Scene scene = new Scene(new StackPane(l), 640, 480);
+        // Retrieve the singleton instance of the central graphical unit.
+        CentralGraphicalUnit cgu = CentralGraphicalUnit.getInstance();
+
+        // Optionally add a custom node (an HBox with a Label and a Button).
+        //cgu.addNode(cgu.createCustomNode());
+
+        // Create a Scene using the central graphical unit's main container.
+        Scene scene = new Scene(cgu.getMainContainer(), 640, 480);
+
+        // Set up the stage.
         stage.setScene(scene);
+        stage.setTitle("Central Graphical Unit Example");
         stage.show();
     }
-
 }

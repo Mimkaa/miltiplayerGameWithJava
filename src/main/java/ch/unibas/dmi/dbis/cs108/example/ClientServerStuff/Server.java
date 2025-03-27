@@ -69,6 +69,9 @@ public class Server {
 
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
+    // a concurrent queue of the games 
+    private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
+
     // ================================
     // Outgoing Message Inner Class
     // ================================
@@ -148,8 +151,8 @@ public class Server {
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
 
-            myGameInstance = new Game("GameSession1");
-            myGameInstance.startPlayersCommandProcessingLoop();
+            //myGameInstance = new Game("GameSession1");
+            //myGameInstance.startPlayersCommandProcessingLoop();
 
             // Send messages from outgoing queue
             AsyncManager.runLoop(() -> {
@@ -350,11 +353,25 @@ public class Server {
             case "DELETE":
                 handleDeleteRequest(msg, senderUsername);
                 break;
-           
+            case "CREATEGAME":
+                handleCreateGameRequest(msg, senderUsername);
+                break;
+            
             default:
                 System.out.println("Unknown request type: " + msg.getMessageType());
+                // Create a default response message (echoing back the parameters)
+                Message defaultResponse = makeResponse(msg, msg.getParameters());
+                // Get the sender's address from the clientsMap
+                InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+                if (senderAddress != null) {
+                    enqueueMessage(defaultResponse, senderAddress.getAddress(), senderAddress.getPort());
+                    System.out.println("Sent default response to " + senderUsername);
+                } else {
+                    System.err.println("Sender address not found for user: " + senderUsername);
+                }
         }
     }
+    
 
     private void handleCreateRequest(Message msg, String senderUsername) {
         Object[] originalParams = msg.getParameters();
@@ -559,6 +576,46 @@ public class Server {
         myGameInstance.getGameObjects().removeIf(go -> go.getName().equals(targetPlayerName));
     }
 
+    private void handleCreateGameRequest(Message msg, String senderUsername) {
+        // 1. Extract the game friendly name from the request.
+        Object[] params = msg.getParameters();
+        if (params == null || params.length < 1) {
+            System.err.println("CREATEGAME request missing game name parameter.");
+            return;
+        }
+        String requestedGameName = params[0].toString();
+    
+        // 2. Generate a new UUID for this game session.
+        String gameUuid = UUID.randomUUID().toString();
+    
+        // 3. Create a new Game instance with both the UUID and friendly name.
+        // If your Game class has been updated to require both values:
+        Game newGame = new Game(gameUuid, requestedGameName);
+    
+        // 4. Optionally start any game-specific loops or processing.
+        newGame.startPlayersCommandProcessingLoop();
+    
+        // 5. Store the new Game in the gameSessions map.
+        gameSessions.put(gameUuid, newGame);
+    
+        // 6. Build a response message containing the game UUID and friendly name.
+        Message response = new Message("CREATEGAME",
+                                       new Object[]{gameUuid, requestedGameName},
+                                       "RESPONSE",
+                                       msg.getConcealedParameters());
+        
+        // 7. Look up the sender's address and enqueue the response.
+        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+        if (senderAddress != null) {
+            enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
+            System.out.println("Created new game session '" + requestedGameName 
+                               + "' with UUID: " + gameUuid);
+        } else {
+            System.err.println("Sender address not found for user: " + senderUsername);
+        }
+    }
+    
+   
     
 
     // ================================
