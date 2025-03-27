@@ -159,6 +159,10 @@ public class Server {
 
             commandRegistry.initCommandHandlers();
 
+            // Initialize the game instance so commands can work properly.
+            myGameInstance = new Game("DefaultSessionID", "DefaultGameName");
+            myGameInstance.startPlayersCommandProcessingLoop();
+
             reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
