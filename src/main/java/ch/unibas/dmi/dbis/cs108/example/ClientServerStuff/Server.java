@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
+import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 import lombok.Getter;
 
 import java.net.DatagramPacket;
@@ -8,6 +9,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -72,6 +74,10 @@ public class Server {
     // a concurrent queue of the games 
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
 
+    // For decoupling commands, we define a map of CommandHandlers.
+    private final Map<String, CommandHandler> commandHandlers = new ConcurrentHashMap<>();
+
+
     // ================================
     // Outgoing Message Inner Class
     // ================================
@@ -95,7 +101,7 @@ public class Server {
         return response;
     }
 
-    private void enqueueMessage(Message msg, InetAddress address, int port) {
+    public void enqueueMessage(Message msg, InetAddress address, int port) {
         outgoingQueue.offer(new OutgoingMessage(msg, address, port));
     }
 
@@ -108,7 +114,7 @@ public class Server {
      * @param requestedName The new name the user is requesting
      * @return A guaranteed-unique name
      */
-    private String findUniqueName(String requestedName) {
+        public String findUniqueName(String requestedName) {
         String baseName = requestedName;
         int counter = 1;
 
@@ -327,48 +333,22 @@ public class Server {
     // ================================
 
     private void handleRequest(Message msg, String senderUsername) {
-        switch (msg.getMessageType().replaceAll("\\s+", "").toUpperCase()) {
-            case "CREATE":
-                handleCreateRequest(msg, senderUsername);
-                break;
-            case "PING":
-                handlePingRequest(senderUsername);
-                break;
-            case "GETOBJECTID":
-                handleGetObjectIdRequest(msg);
-                break;
-            case "CHANGENAME":
-                handleChangeNameRequest(msg);
-                break;
-            case "USERJOINED":
-                handleUserJoinedRequest(msg);
-                break;
-            case "LOGOUT":
-            case "EXIT":
-                handleLogoutOrExitRequest(msg, senderUsername);
-                break;
-            case "LOGIN":
-                handleLoginRequest(msg, senderUsername);
-                break;
-            case "DELETE":
-                handleDeleteRequest(msg, senderUsername);
-                break;
-            case "CREATEGAME":
-                handleCreateGameRequest(msg, senderUsername);
-                break;
-            
-            default:
-                System.out.println("Unknown request type: " + msg.getMessageType());
-                // Create a default response message (echoing back the parameters)
-                Message defaultResponse = makeResponse(msg, msg.getParameters());
-                // Get the sender's address from the clientsMap
-                InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-                if (senderAddress != null) {
-                    enqueueMessage(defaultResponse, senderAddress.getAddress(), senderAddress.getPort());
-                    System.out.println("Sent default response to " + senderUsername);
-                } else {
-                    System.err.println("Sender address not found for user: " + senderUsername);
-                }
+        String commandType = msg.getMessageType().replaceAll("\\s+", "").toUpperCase();
+        CommandHandler handler = commandHandlers.get(commandType);
+
+        if (handler != null) {
+            handler.handle(this, msg, senderUsername);
+        } else {
+            // Unknown command => fallback
+            System.out.println("Unknown request type: " + msg.getMessageType());
+            Message defaultResponse = makeResponse(msg, msg.getParameters());
+            InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+            if (senderAddress != null) {
+                enqueueMessage(defaultResponse, senderAddress.getAddress(), senderAddress.getPort());
+                System.out.println("Sent default response to " + senderUsername);
+            } else {
+                System.err.println("Sender address not found for user: " + senderUsername);
+            }
         }
     }
     
