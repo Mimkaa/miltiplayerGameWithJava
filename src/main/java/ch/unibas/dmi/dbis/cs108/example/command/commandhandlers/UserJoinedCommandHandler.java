@@ -1,8 +1,9 @@
-package ch.unibas.dmi.dbis.cs108.example.command;
+package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
+import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 import java.net.InetSocketAddress;
 
