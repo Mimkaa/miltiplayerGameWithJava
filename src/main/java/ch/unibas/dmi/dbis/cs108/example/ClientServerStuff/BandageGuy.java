@@ -1,78 +1,80 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.io.File;
-import java.io.IOException;
+
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
+import javafx.scene.paint.Color;
+
 import java.util.Arrays;
-import javax.imageio.ImageIO;
 
 public class BandageGuy extends GameObject {
 
-    private float posX;
-    private float posY;
-    private Image image;
-    private float previousX;
-    private float previousY;
-    private float inputX;
-    private float inputY;
-    private float speed = 5;
+    // Position and movement fields.
+    private double posX;
+    private double posY;
+    private double previousX;
+    private double previousY;
+    private double inputX = 0;
+    private double inputY = 0;
+    private double speed = 5.0;
 
-    // 1) Keep the image path so you can return it in getConstructorParamValues().
-    private String imagePath;
+    // Image fields.
+    private Image image;
+    private String imagePath; // Save the image path for later retrieval via getConstructorParamValues().
 
     /**
-     * Constructor for BandageGuy
+     * Constructs a BandageGuy game object.
      *
-     * @param name       The object's name
-     * @param myGameName The game or session name
-     * @param x          The starting X coordinate
-     * @param y          The starting Y coordinate
-     * @param imagePath  The path to the image to load
+     * @param name      The object's name.
+     * @param myGameId  The unique game session ID.
+     * @param x         The starting X coordinate.
+     * @param y         The starting Y coordinate.
+     * @param imagePath The file system path to the image.
      */
-    public BandageGuy(String name, String myGameName, float x, float y, String imagePath) {
-        super(name, myGameName);
+    public BandageGuy(String name, String myGameId, double x, double y, String imagePath) {
+        super(name, myGameId);
         this.posX = x;
         this.posY = y;
+        this.previousX = x;
+        this.previousY = y;
         this.imagePath = imagePath;
-
         try {
-            image = ImageIO.read(new File(imagePath));
-        } catch (IOException e) {
+            // In JavaFX, to load an image from a file, prepend "file:" to the file path.
+            image = new Image("file:" + imagePath);
+        } catch (Exception e) {
             System.err.println("Error loading image: " + e.getMessage());
             image = null;
         }
     }
 
     /**
-     * Override the abstract method to return constructor parameters
-     * in the same order as the constructor signature:
-     * (String name, String myGameName, float x, float y, String imagePath).
+     * Returns the constructor parameter values in the order:
+     * (String name, String myGameId, double x, double y, String imagePath).
      */
     @Override
     public Object[] getConstructorParamValues() {
-        return new Object[] {
-            getName(),        // from the parent (GameObject)
-            getGameId(),    // from the parent (GameObject)
-            posX,
-            posY,
-            imagePath
-        };
+        return new Object[] { getName(), getGameId(), posX, posY, imagePath };
     }
 
+    /**
+     * Draws the BandageGuy on the given JavaFX GraphicsContext.
+     *
+     * @param gc The GraphicsContext used for drawing.
+     */
     @Override
-    public void draw(Graphics g) {
-        Graphics2D g2d = (Graphics2D) g;
+    public void draw(GraphicsContext gc) {
         if (image != null) {
-            g2d.drawImage(image, (int) posX, (int) posY, null);
+            gc.drawImage(image, posX, posY);
         } else {
-            g.drawString("No image loaded", (int) posX, (int) posY);
+            gc.setFill(Color.BLACK);
+            gc.fillText("No image loaded", posX, posY);
         }
     }
 
+    /**
+     * Local update logic: update position based on input and send a "MOVE" message if changed.
+     */
     @Override
     protected void myUpdateLocal() {
         posX += inputX * speed;
@@ -85,66 +87,34 @@ public class BandageGuy extends GameObject {
         previousY = posY;
     }
 
+    /**
+     * Global update logic: process an incoming "MOVE" message to update position.
+     *
+     * @param msg The incoming message.
+     */
     @Override
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = (params[0] instanceof Number)
-                             ? ((Number) params[0]).floatValue()
-                             : posX;
-                float newY = (params[1] instanceof Number)
-                             ? ((Number) params[1]).floatValue()
-                             : posY;
+                double newX = (params[0] instanceof Number)
+                              ? ((Number) params[0]).doubleValue()
+                              : Double.parseDouble(params[0].toString());
+                double newY = (params[1] instanceof Number)
+                              ? ((Number) params[1]).doubleValue()
+                              : Double.parseDouble(params[1].toString());
                 synchronized (this) {
                     this.posX = newX;
                     this.posY = newY;
                 }
-                System.out.println("Processed MOVE for " + getName() + " in game " + extractGameId(msg)
-                        + ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed MOVE for " + getName() +
+                                   " in game " + extractGameId(msg) +
+                                   ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
-
-    @Override
-    public KeyAdapter getKeyListener() {
-        return new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_W:
-                        inputY = -1;
-                        break;
-                    case KeyEvent.VK_S:
-                        inputY = 1;
-                        break;
-                    case KeyEvent.VK_A:
-                        inputX = -1;
-                        break;
-                    case KeyEvent.VK_D:
-                        inputX = 1;
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            @Override
-            public void keyReleased(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_W:
-                    case KeyEvent.VK_S:
-                        inputY = 0;
-                        break;
-                    case KeyEvent.VK_A:
-                    case KeyEvent.VK_D:
-                        inputX = 0;
-                        break;
-                    default:
-                        break;
-                }
-            }
-        };
-    }
+    
+    // Note: Key event handling is typically done by setting event handlers on the Scene or Node in JavaFX,
+    // so we remove the AWT KeyAdapter implementation.
 }

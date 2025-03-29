@@ -69,9 +69,7 @@ public class GamePanel extends JPanel {
     protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        for (GameObject obj : gameObjects) {
-            obj.draw(g);
-        }
+       
 
         Font originalFont = g.getFont();
         Font bigFont = originalFont.deriveFont(Font.BOLD, originalFont.getSize() * 2.0f);

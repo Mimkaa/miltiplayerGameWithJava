@@ -130,30 +130,7 @@ public class Client {
         return this.clientChatManager.getChatPanel();
     }
 
-    /**
-     * Launches the graphics/UI tasks, including initializing the {@link Game} UI
-     * and periodically updating the active game object in a background thread.
-     */
-    public void startGraphicsStuff() {
-        SwingUtilities.invokeLater(() -> {
-            // Initialize the game UI.
-            //game.initUI(username.get(), this);
-            // Additional UI work (e.g., adding the chat panel) can go here.
-        });
-
-        // Continuously update the active object in the background.
-        AsyncManager.run(() -> {
-            try {
-                while (true) {
-                    // Always use the current username for the active object.
-                    game.updateActiveObject(username.get(), outgoingQueue);
-                    Thread.sleep(16);  // ~60 FPS update rate
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
-    }
+   
 
     /**
      * Main entry point for the client's networking logic, including:
@@ -380,7 +357,7 @@ public class Client {
                         //game.rebindKeyListeners(gameObject.getName());
                         instance.username.set(gameObject.getName());
                         //game.updateGamePanel();
-                        game.updateActiveObject(instance.username.get(), outgoingQueue);
+                        
                     });
                 }
             }

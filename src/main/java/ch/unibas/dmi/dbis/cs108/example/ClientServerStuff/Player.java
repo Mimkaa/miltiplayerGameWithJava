@@ -1,45 +1,49 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import java.awt.Graphics;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import java.util.Arrays;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 
 public class Player extends GameObject {
 
-    // 1) Fields that match the constructor parameters exactly:
-    private float x;       // matches "float x" in the constructor
-    private float y;       // matches "float y"
-    private final float radius;  // matches "float radius"
+    // Fields corresponding to constructor parameters.
+    private float x;       
+    private float y;       
+    private final float radius;  
 
-    // 2) Additional fields that are NOT constructor params:
+    // Additional fields.
     private float oldX;
     private float oldY;
     private float speed = 5.0f;  
-    private float inputX = 0;    // for keyboard movement
+    private float inputX = 0;    
     private float inputY = 0;
 
     /**
-     * Main constructor for Player, with param names matching the fields (for reflection).
+     * Main constructor for Player.
      *
-     * @param name        The player's name (sent up to GameObject)
-     * @param x           Starting X coordinate
-     * @param y           Starting Y coordinate
-     * @param radius      Radius for drawing
-     * @param myGameName  The name (or ID) of the current game/session (sent up to GameObject)
+     * @param name       The player's name.
+     * @param x          Starting X coordinate.
+     * @param y          Starting Y coordinate.
+     * @param radius     Radius for drawing.
+     * @param myGameId   The unique ID of the game session.
      */
-    public Player(String name, float x, float y, float radius, String myGameName) {
-        super(name, myGameName); // Call the parent constructor, sets parent fields: this.name, this.myGameName
+    public Player(String name, float x, float y, float radius, String myGameId) {
+        super(name, myGameId);
         this.x = x;
         this.y = y;
         this.radius = radius;
-        this.oldX = x;  // track old position initially as the same as starting pos
+        this.oldX = x;
         this.oldY = y;
     }
 
     /**
      * Local update logic: update the player's position based on input.
-     * If the position changes, send a MOVE message.
+     * If the position changes, sends a MOVE message.
      */
     @Override
     protected void myUpdateLocal() {
@@ -47,16 +51,42 @@ public class Player extends GameObject {
         oldX = x;
         oldY = y;
 
-        // Update position based on input (WASD).
+        // Update using inputX and inputY (if you update these externally).
         x += inputX * speed;
         y += inputY * speed;
 
-        // If the position changed, send a MOVE message to the server / others.
+        // Also update based on the global KeyboardState.
+        updateFromKeyboard();
+
+        // Now, if the position has changed, send a MOVE message.
         if (x != oldX || y != oldY) {
-            Message moveMsg = new Message("MOVE", new Object[] { x, y }, null);
+            Message moveMsg = new Message("MOVE", new Object[]{x, y}, null);
             sendMessage(moveMsg);
         }
     }
+
+    /**
+     * Checks the global keyboard state and updates the player's position.
+     */
+    private void updateFromKeyboard() {
+        // Only process keyboard input if this player's ID matches the selected one.
+        if (!this.getId().equals(GameContext.getSelectedGameObjectId())) {
+            return;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.W)) {
+            y -= speed;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.S)) {
+            y += speed;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.A)) {
+            x -= speed;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.D)) {
+            x += speed;
+        }
+    }
+
 
     /**
      * Global update logic: process an incoming MOVE message to update the player's state.
@@ -68,92 +98,47 @@ public class Player extends GameObject {
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
                 float newX = (params[0] instanceof Number)
-                             ? ((Number) params[0]).floatValue()
-                             : Float.parseFloat(params[0].toString());
+                        ? ((Number) params[0]).floatValue()
+                        : Float.parseFloat(params[0].toString());
                 float newY = (params[1] instanceof Number)
-                             ? ((Number) params[1]).floatValue()
-                             : Float.parseFloat(params[1].toString());
+                        ? ((Number) params[1]).floatValue()
+                        : Float.parseFloat(params[1].toString());
                 synchronized (this) {
                     this.x = newX;
                     this.y = newY;
                 }
-                System.out.println("Processed MOVE for " + getName()
+                System.out.println("Processed MOVE for " + getName() 
                         + " in game " + extractGameId(msg)
                         + ": new position x=" + newX + ", y=" + newY);
             }
         }
-        // Add handling for other message types if needed.
     }
 
     /**
-     * Draws the player as a circle and its name label.
+     * Draws the player on a JavaFX GraphicsContext.
+     * The player is drawn as a filled oval with the player's name centered above it.
+     *
+     * @param gc the JavaFX GraphicsContext used for drawing.
      */
     @Override
-    public void draw(Graphics g) {
-        // Draw the player's oval.
-        int drawX = (int) (x - radius);
-        int drawY = (int) (y - radius);
-        int size = (int) (radius * 2);
-        g.fillOval(drawX, drawY, size, size);
+    public void draw(GraphicsContext gc) {
+        // Set a specific color for the player.
+        gc.setFill(Color.BLUE);
+        gc.fillOval(x - radius, y - radius, radius * 2, radius * 2);
 
-        // Draw the player's name above the oval.
-        String nameToDraw = getName(); // the parent's "name" field, inherited
-        int nameWidth = g.getFontMetrics().stringWidth(nameToDraw);
-        int textX = (int) x - (nameWidth / 2);
-        int textY = (int) (y - radius - 5);
-        g.drawString(nameToDraw, textX, textY);
+        // Set a different color for the text.
+        gc.setFill(Color.BLACK);
+        Text text = new Text(getName());
+        text.setFont(gc.getFont());
+        double textWidth = text.getLayoutBounds().getWidth();
+        gc.fillText(getName(), x - textWidth / 2, y - radius - 5);
     }
 
     /**
-     * An override that sets a new name in the parent field.
-     */
-    public void setName(String newName) {
-        System.out.println(getName() + " is now " + newName);
-        super.name = newName; // Directly modify the 'name' field inherited from GameObject
-    }
-
-    /**
-     * Provides a KeyAdapter that updates the player's input state for WASD movement.
+     * Returns an array of constructor parameter values in the same order as the Player constructor.
      */
     @Override
-    public KeyAdapter getKeyListener() {
-        return new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_W: inputY = -1; break;
-                    case KeyEvent.VK_S: inputY = 1; break;
-                    case KeyEvent.VK_A: inputX = -1; break;
-                    case KeyEvent.VK_D: inputX = 1; break;
-                }
-            }
-            @Override
-            public void keyReleased(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_W:
-                    case KeyEvent.VK_S: inputY = 0; break;
-                    case KeyEvent.VK_A:
-                    case KeyEvent.VK_D: inputX = 0; break;
-                }
-            }
-        };
-    }
-
     public Object[] getConstructorParamValues() {
-        return new Object[] {
-            getName(),   
-            x,           
-            y,           
-            radius,      
-            getGameId()
-        };
+        return new Object[] { getName(), x, y, radius, getGameId() };
     }
-
-    
-    public float getX() { return x; }
-    public float getY() { return y; }
-    public float getRadius() { return radius; }
-    public float getOldX() { return oldX; }
-    public float getOldY() { return oldY; }
-    public float getSpeed() { return speed; }
 }

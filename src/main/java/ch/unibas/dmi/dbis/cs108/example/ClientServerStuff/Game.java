@@ -1,5 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
-
+import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
 
@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+
 
 /**
  * The {@code Game} class manages a collection of {@link GameObject}s within a given
@@ -130,13 +131,14 @@ public class Game {
      * @param objectName    The name of the game object to update.
      * @param outgoingQueue The queue to be used for sending messages from this object.
      */
-    public void updateActiveObject(String objectName, ConcurrentLinkedQueue<Message> outgoingQueue) {
+    public void updateAllObjects() {
+        // maybe would need to optimize later
         AsyncManager.run(() -> {
+            if (gameObjects.isEmpty()) {
+                return;
+            }
             for (GameObject go : gameObjects) {
-                if (go.getName().equals(objectName)) {
-                    go.updateAsync();
-                    break;
-                }
+                go.updateAsync();
             }
         });
     }
@@ -186,5 +188,21 @@ public class Game {
     public void shutdown() {
         AsyncManager.shutdown();
         System.out.println("Game [" + gameName + "] (ID: " + gameId + ") async manager stopped.");
+    }
+
+    /**
+     * Draws all game objects onto the provided JavaFX GraphicsContext.
+     *
+     * @param gc The GraphicsContext used for drawing.
+     */
+    /**
+     * New draw method that loops through the game objects and calls their draw method.
+     *
+     * @param gc the GraphicsContext used for drawing.
+     */
+    public void draw(GraphicsContext gc) {
+        for (GameObject go : gameObjects) {
+            go.draw(gc);
+        }
     }
 }

@@ -1,10 +1,11 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import java.util.Arrays;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
 
 public class Square extends GameObject {
     private float x;
@@ -20,32 +21,14 @@ public class Square extends GameObject {
      * @param x          The starting X coordinate.
      * @param y          The starting Y coordinate.
      * @param radius     The initial radius (half the side length).
-     * @param myGameName The game (or session) name.
+     * @param myGameId   The unique identifier of the game session.
      */
-    public Square(String name, float x, float y, float radius, String myGameName) {
-        super(name, myGameName);
+    public Square(String name, float x, float y, float radius, String myGameId) {
+        super(name, myGameId);
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.oldRadius = radius;
-    }
-
-    /**
-     * Returns a KeyAdapter that listens for the space key. When the space key is pressed,
-     * the square's radius is increased (inflated). The message sending is handled in myUpdateLocal().
-     */
-    @Override
-    public KeyAdapter getKeyListener() {
-        return new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                    // Inflate the square.
-                    radius += inflationRate;
-                    
-                }
-            }
-        };
     }
 
     /**
@@ -54,32 +37,11 @@ public class Square extends GameObject {
     @Override
     protected void myUpdateLocal() {
         if (radius != oldRadius) {
-            // Create an "INFT" message with the new radius.
-            Message inflateMsg = new Message(
-                "INFT",
-                new Object[]{ radius },
-                null,
-                new String[]{ getName(), getGameId()}
-            );
+            Message inflateMsg = new Message("INFT", new Object[]{ radius }, null,
+                                              new String[]{ getName(), getGameId() });
             sendMessage(inflateMsg);
             oldRadius = radius;
         }
-    }
-
-    /**
-     * Returns an Object[] corresponding to the constructor's parameters
-     * in the exact same order: (name, x, y, radius, myGameName).
-     */
-    @Override
-    public Object[] getConstructorParamValues() {
-        // Match the order: (String name, float x, float y, float radius, String myGameName)
-        return new Object[] {
-            getName(),   // from GameObject (parent)
-            x,
-            y,
-            radius,
-            getId() // from GameObject (parent)
-        };
     }
 
     /**
@@ -91,35 +53,45 @@ public class Square extends GameObject {
     protected void myUpdateGlobal(Message msg) {
         if ("INFT".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
-           
             System.out.println("INFT message parameters: " + Arrays.toString(params));
             if (params != null && params.length > 0) {
                 float newRadius = (params[0] instanceof Number)
                                   ? ((Number) params[0]).floatValue()
-                                  : radius;
+                                  : Float.parseFloat(params[0].toString());
                 this.radius = newRadius;
-                System.out.println("Processed INFT for " + getName() +
-                                   ", new radius: " + newRadius);
+                System.out.println("Processed INFT for " + getName() + ", new radius: " + newRadius);
             }
         }
     }
 
     /**
-     * Draws the square on the given Graphics context.
-     * The square is drawn in red with its name centered above it.
+     * Draws the square using JavaFX's GraphicsContext.
+     * The square is drawn in red and its name is centered above it in black.
      *
-     * @param g the Graphics context.
+     * @param gc the GraphicsContext used for drawing.
      */
     @Override
-    public void draw(Graphics g) {
-        // Draw the square in red.
-        g.setColor(Color.RED);
-        int side = (int)(radius * 2);
-        g.fillRect((int)(x - radius), (int)(y - radius), side, side);
-        
+    public void draw(GraphicsContext gc) {
+        // Set fill color to red and draw the square.
+        gc.setFill(Color.RED);
+        double side = radius * 2;
+        gc.fillRect(x - radius, y - radius, side, side);
+
         // Draw the object's name in black above the square.
-        g.setColor(Color.BLACK);
-        int textWidth = g.getFontMetrics().stringWidth(getName());
-        g.drawString(getName(), (int)x - textWidth / 2, (int)(y - radius - 5));
+        gc.setFill(Color.BLACK);
+        // Use a temporary Text node to measure text width.
+        Text text = new Text(getName());
+        text.setFont(gc.getFont());
+        double textWidth = text.getLayoutBounds().getWidth();
+        gc.fillText(getName(), x - textWidth / 2, y - radius - 5);
+    }
+
+    /**
+     * Returns an array of constructor parameter values in the order:
+     * (name, x, y, radius, myGameId).
+     */
+    @Override
+    public Object[] getConstructorParamValues() {
+        return new Object[] { getName(), x, y, radius, getGameId() };
     }
 }

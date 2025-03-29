@@ -1,10 +1,12 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+
+import javafx.scene.canvas.GraphicsContext;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.awt.Graphics;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 
 /**
  * The {@code GameObject} class serves as an abstract base for game entities that can manage and
@@ -12,8 +14,8 @@ import java.awt.event.KeyEvent;
  * game instances or clients.
  * <p>
  * It maintains a unique identifier, the unique game session ID that it belongs to, and provides
- * an internal queue for incoming messages and commands. Subclasses must implement drawing logic
- * and local/global update methods.
+ * an internal queue for incoming messages and commands. Subclasses must implement update and
+ * drawing logic.
  * </p>
  */
 public abstract class GameObject {
@@ -46,7 +48,7 @@ public abstract class GameObject {
     /**
      * Constructs a {@code GameObject} with a specified display name and game session ID.
      *
-     * @param name    A display name or identifier for this object.
+     * @param name     A display name or identifier for this object.
      * @param myGameId The unique identifier of the game/session this object belongs to.
      */
     public GameObject(String name, String myGameId) {
@@ -112,7 +114,7 @@ public abstract class GameObject {
             concealed = new String[2];
         }
         concealed[0] = getId();
-        concealed[1] = getGameId();  // Use the game session's unique ID.
+        concealed[1] = getGameId();
         msg.setConcealedParameters(concealed);
         msg.setOption("GAME");
         Client.sendMessageStatic(msg);
@@ -210,25 +212,11 @@ public abstract class GameObject {
     public abstract Object[] getConstructorParamValues();
 
     /**
-     * Abstract method for drawing this object using the provided Graphics context.
+     * Abstract method for drawing this object using the provided JavaFX GraphicsContext.
      *
-     * @param g the Graphics context.
+     * @param gc the GraphicsContext used for drawing.
      */
-    public abstract void draw(Graphics g);
-
-    /**
-     * Returns a default KeyAdapter that does nothing.
-     *
-     * @return a no-op KeyAdapter.
-     */
-    public KeyAdapter getKeyListener() {
-        return new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {}
-            @Override
-            public void keyReleased(KeyEvent e) {}
-        };
-    }
+    public abstract void draw(GraphicsContext gc);
 
     /**
      * Command interface representing an executable action.
