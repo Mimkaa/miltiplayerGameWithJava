@@ -8,9 +8,20 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 import java.net.InetSocketAddress;
 
 /**
- * LOGIN: confirm the login and respond with the object's ID.
+ * Handles the "LOGIN" command, confirming the login by looking up a
+ * game object's ID matching the provided name and returning it to the user.
  */
 public class LoginCommandHandler implements CommandHandler {
+
+    /**
+     * Finds the {@link GameObject} with the specified name and responds with
+     * the object's ID in a "LOGIN" response. If no object is found, the
+     * parameters remain empty.
+     *
+     * @param server         the server holding the game instance and user mapping
+     * @param msg            the "LOGIN" command
+     * @param senderUsername the username of the client logging in
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
         if (server.getMyGameInstance() == null) {

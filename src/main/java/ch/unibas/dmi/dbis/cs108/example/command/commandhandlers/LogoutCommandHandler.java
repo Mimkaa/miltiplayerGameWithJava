@@ -7,29 +7,39 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 import java.net.InetSocketAddress;
 
 /**
- * LOGOUT: remove user, respond, etc.
+ * Handles the "LOGOUT" command, removing the user from the {@code clientsMap}
+ * and sending a response message confirming the logout.
  */
 public class LogoutCommandHandler implements CommandHandler {
 
+    /**
+     * Required no-arg constructor for reflection-based discovery.
+     */
     public LogoutCommandHandler() {
-        // Ein no-arg Konstruktor ist wichtig für Reflection.
+        // ...
     }
 
+    /**
+     * Sends a "LOGOUT" response to the user and removes them from the server's
+     * {@code clientsMap}, effectively terminating their session.
+     *
+     * @param server         the server handling the logout
+     * @param msg            the "LOGOUT" command
+     * @param senderUsername the username of the client who is logging out
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
-        String commandType = "LOGOUT";  // Fest verdrahtet, da es sich um Logout handelt
+        String commandType = "LOGOUT";
         System.out.println("Client " + commandType + ": " + senderUsername);
 
-        // Sende ein "LOGOUT" RESPONSE
         Message logoutMessage = new Message(commandType, msg.getParameters(), "RESPONSE");
         InetSocketAddress clientAddress = server.getClientsMap().get(senderUsername);
         if (clientAddress != null) {
             server.enqueueMessage(logoutMessage, clientAddress.getAddress(), clientAddress.getPort());
         }
 
-        // Entferne den User aus dem Map
+        // Remove the user from the map
         server.getClientsMap().remove(senderUsername);
         System.out.println("Removed user: " + senderUsername);
     }
-
 }

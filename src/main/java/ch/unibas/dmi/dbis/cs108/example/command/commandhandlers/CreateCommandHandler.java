@@ -8,7 +8,21 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 import java.util.UUID;
 import java.util.concurrent.Future;
 
+/**
+ * Handles the "CREATE" command, which spawns a new {@link GameObject} in the
+ * active {@code myGameInstance}, assigns it a server-generated UUID, and
+ * broadcasts the new object to all connected clients.
+ */
 public class CreateCommandHandler implements CommandHandler {
+
+    /**
+     * Generates a unique object UUID, creates the corresponding {@link GameObject}
+     * asynchronously, and broadcasts a "CREATE" response to all clients.
+     *
+     * @param server         the server instance for accessing game state and broadcasting
+     * @param msg            the incoming "CREATE" command message
+     * @param senderUsername the username of the client sending this command
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
         Object[] originalParams = msg.getParameters();
@@ -39,10 +53,6 @@ public class CreateCommandHandler implements CommandHandler {
         // 4) Broadcast to all
         server.broadcastMessageToAll(responseMsg);
 
-        // 5) If you need to do extra logic (e.g., send existing objects to the new user),
-        //    you can do that here. Possibly you move that from your old handleCreateRequest
-        //    method.
+        // 5) Optionally: additional logic, e.g., sending existing objects to the new user
     }
-
-
 }

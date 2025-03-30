@@ -6,9 +6,20 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 /**
- * GETOBJECTID: respond with the ID of a game object with the given name.
+ * Handles the "GETOBJECTID" command, which returns the unique ID of a
+ * specific game object (by name) in the current {@code myGameInstance}.
  */
 public class GetObjectIdCommandHandler implements CommandHandler {
+
+    /**
+     * Searches the game instance for an object matching the requested name,
+     * then broadcasts its ID as a "GETOBJECTID" response. If no instance exists,
+     * logs an error.
+     *
+     * @param server         the server that holds the game instance
+     * @param msg            the incoming "GETOBJECTID" command
+     * @param senderUsername the username of the client requesting the ID
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
         if (server.getMyGameInstance() == null) {

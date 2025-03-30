@@ -9,9 +9,21 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 
 /**
- * CREATEGAME: create a new Game session, store it in gameSessions, and respond.
+ * Handles the "CREATEGAME" command, allowing a user to create a new
+ * {@link Game} session, store it in {@code gameSessions}, and respond
+ * with the new session's UUID and friendly name.
  */
 public class CreateGameCommandHandler implements CommandHandler {
+
+    /**
+     * Creates a new {@link Game} instance (if a name parameter is present),
+     * starts the session loop, and sends a response containing the game UUID
+     * and requested name back to the initiating client.
+     *
+     * @param server         the server instance to access and store game sessions
+     * @param msg            the "CREATEGAME" command
+     * @param senderUsername the username of the client who requested the new game
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
         Object[] params = msg.getParameters();
@@ -47,4 +59,3 @@ public class CreateGameCommandHandler implements CommandHandler {
         }
     }
 }
-

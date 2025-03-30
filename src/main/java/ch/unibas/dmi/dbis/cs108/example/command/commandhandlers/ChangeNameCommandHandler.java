@@ -8,9 +8,21 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 import java.net.InetSocketAddress;
 
 /**
- * CHANGENAME: rename a game object (and update clientsMap).
+ * Handles the "CHANGENAME" command, which renames a game object and updates
+ * the internal {@code clientsMap} if necessary. Afterwards, it broadcasts
+ * the change to all connected clients.
  */
 public class ChangeNameCommandHandler implements CommandHandler {
+
+    /**
+     * Renames an existing game object (if found) to a unique name,
+     * updates the {@code clientsMap}, and broadcasts the updated
+     * name information to all users.
+     *
+     * @param server         the server instance providing access to game state, etc.
+     * @param msg            the incoming "CHANGENAME" request
+     * @param senderUsername the username of the client sending this command
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
         Object[] originalParams = msg.getParameters();
@@ -32,13 +44,13 @@ public class ChangeNameCommandHandler implements CommandHandler {
             }
         }
 
-        // Update the clientsMap key
+        // Update the clientsMap key (oldName -> newName)
         InetSocketAddress address = server.getClientsMap().remove(oldName);
         if (address != null) {
             server.getClientsMap().put(newName, address);
         }
 
-        // Broadcast the change
+        // Broadcast the name change
         Message responseMsg = new Message(
                 "CHANGENAME",
                 new Object[]{objectID, newName},

@@ -10,23 +10,39 @@ import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 
 /**
- * If you want special logic for messages that have msg.getOption() == "GAME"
+ * Handles messages with {@code msg.getOption() == "GAME"}, allowing
+ * best-effort broadcast to other clients. This is useful for
+ * real-time game updates that don't require guaranteed delivery.
  */
 public class GameMessageHandler implements MessageHandler {
 
+    /**
+     * Required no-arg constructor for reflection-based discovery.
+     */
     public GameMessageHandler() {
+        // ...
     }
 
+    /**
+     * Adds the message to the main game's queue, then triggers a best-effort
+     * broadcast to all other clients.
+     *
+     * @param server       the server instance
+     * @param msg          the "GAME" option message
+     * @param senderSocket the network address of the sending client
+     */
     @Override
     public void handle(Server server, Message msg, InetSocketAddress senderSocket) {
-        // Falls du "GAME" in alten processMessage abgefragt hast
-        // Hier kannst du z.B. in die myGameInstance was legen
         server.getMyGameInstance().addIncomingMessage(msg);
 
-        // Evtl. "bestEffort" broadcasting:
+        // Possibly do non-reliable broadcast
         AsyncManager.run(() -> broadcastBestEffort(server, msg, senderSocket));
     }
 
+    /**
+     * Sends the given {@link Message} to all clients except the sender, without
+     * using the reliable sending mechanism.
+     */
     private void broadcastBestEffort(Server server, Message msg, InetSocketAddress senderSocket) {
         for (InetSocketAddress target : server.getClientsMap().values()) {
             if (!target.equals(senderSocket)) {
