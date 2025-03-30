@@ -1,21 +1,26 @@
 package ch.unibas.dmi.dbis.cs108.example;
 
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import org.junit.jupiter.api.*;
 
 import java.lang.reflect.Field;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.UUID;
 
 /**
  * The {@code ServerCommandTests} class sends various command-oriented
  * {@link Message} objects to the running {@link Server} and prints
- * them for inspection. These tests confirm that the server starts,
- * accepts UDP packets, and logs each command. They do not assert
- * server-side responses but serve as an integration-level check
- * for message dispatch.
+ * them for inspection. This includes original commands like CREATE,
+ * PING, etc., as well as newly added commands like CREATEGO, DELETEGO,
+ * JOINGAME, and SELECTGO.
+ * <p>
+ * The test only demonstrates sending the commands; it does not do
+ * extensive assertion of server responses. Logs are displayed
+ * so you can confirm the server processes each message.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ServerCommandTests {
@@ -33,14 +38,12 @@ public class ServerCommandTests {
      * Sets up the client socket, obtains the server address,
      * and starts the {@link Server} singleton. Waits briefly
      * for the server to initialize fully.
-     *
-     * @throws Exception if socket creation or server start fails
      */
     @BeforeAll
     static void setup() throws Exception {
         clientSocket = new DatagramSocket();
         serverAddress = InetAddress.getByName("localhost");
-        Server.getInstance().start(); // Starts the server, which in turn initializes CommandRegistry
+        Server.getInstance().start();
         Thread.sleep(1000); // Allow the server some time to finish starting up
     }
 
@@ -90,33 +93,22 @@ public class ServerCommandTests {
         System.out.println("Type    : " + getFieldValue(msg, "type"));
 
         System.out.println("Parameters:");
+        Object[] params;
         try {
-            Object[] params = msg.getParameters();
-            if (params != null && params.length > 0) {
-                for (Object param : params) {
-                    System.out.println("  - " + param);
-                }
-            } else {
-                System.out.println("  (none)");
-            }
+            params = msg.getParameters();
         } catch (NoSuchMethodError e) {
-            // Fallback to reflection if getParameters() doesn't exist
-            Object paramsObj = getFieldValue(msg, "parameters");
-            if (paramsObj instanceof Object[]) {
-                Object[] params = (Object[]) paramsObj;
-                if (params != null && params.length > 0) {
-                    for (Object param : params) {
-                        System.out.println("  - " + param);
-                    }
-                } else {
-                    System.out.println("  (none)");
-                }
-            } else {
-                System.out.println("  (none)");
+            // fallback to reflection
+            params = (Object[]) getFieldValue(msg, "parameters");
+        }
+        if (params != null && params.length > 0) {
+            for (Object p : params) {
+                System.out.println("  - " + p);
             }
+        } else {
+            System.out.println("  (none)");
         }
 
-        System.out.println("Context   :");
+        System.out.println("Context:");
         try {
             Field contextField = msg.getClass().getDeclaredField("context");
             contextField.setAccessible(true);
@@ -128,20 +120,18 @@ public class ServerCommandTests {
             } else {
                 System.out.println("  (none)");
             }
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+        } catch (Exception e) {
             System.out.println("  (not available)");
         }
 
-        System.out.println("Encoded   : " + encoded);
+        System.out.println("Encoded : " + encoded);
         System.out.println("====================\n");
     }
 
-    /**
-     * Sends a "CREATE" command request to the server, instructing it
-     * to create a new game object named "TestPlayer" with position data, etc.
-     *
-     * @throws Exception if sending fails
-     */
+    // ================================
+    // Original 10 Tests
+    // ================================
+
     @Test
     @Order(1)
     void testCreateCommand() throws Exception {
@@ -154,12 +144,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Sends a "PING" command request, expecting the server to respond
-     * with "PONG" (though this test does not explicitly assert the response).
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(2)
     void testPingCommand() throws Exception {
@@ -172,11 +156,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Requests the UUID of a game object named "TestPlayer" using "GETOBJECTID".
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(3)
     void testGetObjectIdCommand() throws Exception {
@@ -189,12 +168,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Tests renaming a game object from "TestPlayer" to "NewTestPlayer"
-     * via the "CHANGENAME" command.
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(4)
     void testChangeNameCommand() throws Exception {
@@ -207,11 +180,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Tests simulating a user joining via "USERJOINED".
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(5)
     void testUserJoinedCommand() throws Exception {
@@ -224,12 +192,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Sends a "LOGOUT" command for "testUser", telling the server
-     * to remove or log out that user.
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(6)
     void testLogoutCommand() throws Exception {
@@ -242,12 +204,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Sends a "DELETE" command for "testUser", instructing the server
-     * to remove a game object or reference to that user.
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(7)
     void testDeleteCommand() throws Exception {
@@ -260,12 +216,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Sends an "EXIT" command for "testUser", fully terminating
-     * the client session.
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(8)
     void testExitCommand() throws Exception {
@@ -278,12 +228,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Tests the "LOGIN" command, asking the server to confirm login
-     * and respond with an object's ID if relevant.
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(9)
     void testLoginCommand() throws Exception {
@@ -296,12 +240,6 @@ public class ServerCommandTests {
         sendMessageAndPrint(msg);
     }
 
-    /**
-     * Tests "CREATEGAME", which instructs the server to create a new
-     * game session named "MyNewGameSession".
-     *
-     * @throws Exception if sending fails
-     */
     @Test
     @Order(10)
     void testCreateGameCommand() throws Exception {
@@ -310,6 +248,75 @@ public class ServerCommandTests {
                 new Object[]{"MyNewGameSession"},
                 "REQUEST",
                 new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
+        sendMessageAndPrint(msg);
+    }
+
+    // ================================
+    // New Tests for CREATEGO, DELETEGO, JOINGAME, SELECTGO
+    // ================================
+
+    /**
+     * Tests creating a game object within a specified session
+     * using the "CREATEGO" command.
+     */
+    @Test
+    @Order(11)
+    void testCreateGoCommand() throws Exception {
+        // e.g., param 0 = session ID, param 1 = object type
+        Message msg = new Message(
+                "CREATEGO",
+                new Object[]{"sessionXYZ", "Player", 100.0f, 200.0f, "SomeOtherParam"},
+                "REQUEST",
+                new String[]{"session1", "gameXYZ", "testUser", UUID.randomUUID().toString()}
+        );
+        sendMessageAndPrint(msg);
+    }
+
+    /**
+     * Tests deleting a game object from a session using "DELETEGO".
+     */
+    @Test
+    @Order(12)
+    void testDeleteGoCommand() throws Exception {
+        // param 0 = session ID, param 1 = object ID
+        Message msg = new Message(
+                "DELETEGO",
+                new Object[]{"sessionXYZ", "someUUID"},
+                "REQUEST",
+                new String[]{"session1", "gameXYZ", "testUser", UUID.randomUUID().toString()}
+        );
+        sendMessageAndPrint(msg);
+    }
+
+    /**
+     * Tests joining a game by name using "JOINGAME".
+     */
+    @Test
+    @Order(13)
+    void testJoinGameCommand() throws Exception {
+        Message msg = new Message(
+                "JOINGAME",
+                new Object[]{"MyExistingGameName"},
+                "REQUEST",
+                new String[]{"session1", "gameXYZ", "testUser", UUID.randomUUID().toString()}
+        );
+        sendMessageAndPrint(msg);
+    }
+
+    /**
+     * Tests selecting a specific game object by name in a session
+     * using "SELECTGO".
+     */
+    @Test
+    @Order(14)
+    void testSelectGoCommand() throws Exception {
+        // param 0 = session ID, param 1 = object name
+        Message msg = new Message(
+                "SELECTGO",
+                new Object[]{"sessionXYZ", "PlayerName123"},
+                "REQUEST",
+                new String[]{"session1", "gameXYZ", "testUser", UUID.randomUUID().toString()}
         );
         sendMessageAndPrint(msg);
     }

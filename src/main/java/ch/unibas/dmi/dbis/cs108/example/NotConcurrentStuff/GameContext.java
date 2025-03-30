@@ -31,7 +31,7 @@ public class GameContext {
     private final GameSessionManager gameSessionManager;
     private final Client client;
     private MessageHogger testHogger;
-    
+
     // Make the current game ID and the selected game object's ID static.
     private static final AtomicReference<String> currentGameId = new AtomicReference<>();
     private static final AtomicReference<String> selectedGameObjectId = new AtomicReference<>();
@@ -54,9 +54,9 @@ public class GameContext {
                     String receivedGameName = receivedMessage.getParameters()[1].toString();
                     gameSessionManager.addGameSession(receivedId, receivedGameName);
                     // Update the current game id.
-                    currentGameId.set(receivedId);
+                    //currentGameId.set(receivedId);
                     System.out.println("Game created with id: " + receivedId);
-                    
+
                     // Update the ComboBox with the new game name.
                     Platform.runLater(() -> {
                         Node node = uiManager.getComponent("gameSelect");
@@ -197,7 +197,7 @@ public class GameContext {
     public Client getClient() {
         return client;
     }
-    
+
     /**
      * Starts the client operations and the game loop.
      */
@@ -222,7 +222,7 @@ public class GameContext {
             StackPane.setMargin(gameSelect, new Insets(10, 10, 0, 10));
             CentralGraphicalUnit.getInstance().addNode(gameSelect);
             uiManager.registerComponent("gameSelect", gameSelect);
-            
+
             // --- Overlay Input Field ---
             TextField overlayInputField = new TextField();
             overlayInputField.setPromptText("Enter text here...");
@@ -231,7 +231,7 @@ public class GameContext {
             overlayInputField.setTranslateY(40);
             CentralGraphicalUnit.getInstance().addNode(overlayInputField);
             uiManager.registerComponent("overlayInputField", overlayInputField);
-            
+
             // --- First Overlay Button: Create Game Button ---
             Button createGameButton = new Button("Create Game Button");
             StackPane.setAlignment(createGameButton, Pos.TOP_CENTER);
@@ -247,7 +247,7 @@ public class GameContext {
                 Message createGameMessage = new Message("CREATEGAME", new Object[]{gameName}, "REQUEST");
                 Client.sendMessageStatic(createGameMessage);
             });
-            
+
             // --- Second Overlay Button: Join Game Button ---
             Button joinGameButton = new Button("Join Game Button");
             StackPane.setAlignment(joinGameButton, Pos.TOP_CENTER);
@@ -257,7 +257,7 @@ public class GameContext {
             joinGameButton.setOnAction(e -> {
                 if (uiManager.getComponent("gameSelect") instanceof ComboBox) {
                     String selectedGameName = ((ComboBox<String>) uiManager.getComponent("gameSelect"))
-                                                    .getSelectionModel().getSelectedItem();
+                            .getSelectionModel().getSelectedItem();
                     if (selectedGameName == null || selectedGameName.trim().isEmpty()) {
                         System.out.println("Please select a game from the combo box.");
                         return;
@@ -269,7 +269,7 @@ public class GameContext {
                     System.out.println("Game selector not found.");
                 }
             });
-            
+
             // --- Third Overlay Button: Create Object Button ---
             Button createObjectButton = new Button("Create Object Button");
             // Position this button below the join game button.
@@ -285,7 +285,7 @@ public class GameContext {
                     System.out.println("No current game session to create an object in.");
                     return;
                 }
-                
+
                 // Get the name from the overlay input field (registered as "overlayInputField").
                 Node node = uiManager.getComponent("overlayInputField");
                 if (!(node instanceof TextField)) {
@@ -308,17 +308,17 @@ public class GameContext {
                 //  - position and radius details,
                 //  - and sessionId again at the end for the game ID.
                 Message createObjectMsg = new Message(
-                    "CREATEGO", 
-                    new Object[]{ 
-                        sessionId,      // or some new UUID if needed 
-                        objectType, 
-                        playerName, 
-                        200.0f, 
-                        100.0f, 
-                        25.0f, 
-                        sessionId 
-                    },
-                    "REQUEST"
+                        "CREATEGO",
+                        new Object[]{
+                                sessionId,      // or some new UUID if needed
+                                objectType,
+                                playerName,
+                                200.0f,
+                                100.0f,
+                                25.0f,
+                                sessionId
+                        },
+                        "REQUEST"
                 );
 
                 // Send the message via the static client method.
@@ -327,7 +327,7 @@ public class GameContext {
                 System.out.println("Sent CREATEGO message for new game object with name: " + playerName);
             });
 
-                    // --- Fourth Overlay Button: Select Object Button ---
+            // --- Fourth Overlay Button: Select Object Button ---
             Button selectObjectButton = new Button("Select Object Button");
             StackPane.setAlignment(selectObjectButton, Pos.TOP_CENTER);
             selectObjectButton.setTranslateY(200);
@@ -356,7 +356,7 @@ public class GameContext {
                     System.out.println("Overlay input field not found.");
                 }
             });
-            
+
             System.out.println("Overlay ComboBox, input field, and three buttons added to UI.");
         });
 
@@ -379,12 +379,12 @@ public class GameContext {
         client.startConsoleReaderLoop();
         // register the clinet on the server
         Message registrationMsg = new Message(
-            "REGISTER",            
-            new Object[] {},             
-            "REQUEST"
+                "REGISTER",
+                new Object[] {},
+                "REQUEST"
         );
         Client.sendMessageStatic(registrationMsg);
-        
+
     }
 
     /**
@@ -418,7 +418,7 @@ public class GameContext {
             return;
         }
         // Update all game objects if there is at least one.
-        game.updateAllObjects();
+        //game.updateAllObjects();
     }
 
     /**
@@ -427,22 +427,29 @@ public class GameContext {
      * @param gc The GraphicsContext to draw on.
      */
     private void draw(GraphicsContext gc) {
-        // Set and fill the background with white.
+        // If there’s no chosen game, do nothing:
+        String gameId = currentGameId.get();
+        if (gameId == null || gameId.isEmpty()) {
+            // No game chosen, so skip drawing (do not even clear the canvas).
+            return;
+        }
+
+        // If you *do* want to clear the background, do it here:
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-        
-        String gameId = currentGameId.get();
-        if (gameId == null) {
-            return;
-        }
+
+        // Retrieve the game
         Game game = gameSessionManager.getGameSession(gameId);
         if (game == null) {
+            // The game ID was set but doesn't exist in the manager.
+            // This is unusual, but handle gracefully by returning:
             return;
         }
-        
-        // Draw all game objects.
+
+        // Otherwise, draw the game
         game.draw(gc);
     }
+
 
     public static void main(String[] args) {
         // Create the game context.
