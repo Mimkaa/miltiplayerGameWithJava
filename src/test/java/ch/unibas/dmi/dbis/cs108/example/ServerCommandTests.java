@@ -20,8 +20,8 @@ public class ServerCommandTests {
     static void setup() throws Exception {
         clientSocket = new DatagramSocket();
         serverAddress = InetAddress.getByName("localhost");
-        Server.getInstance().start();
-        Thread.sleep(1000); // Wait for server to boot
+        Server.getInstance().start(); // <-- Startet den Server, der die CommandRegistry initiiert
+        Thread.sleep(1000); // Warte kurz, bis der Server hochgefahren ist
     }
 
     @AfterAll
@@ -29,7 +29,7 @@ public class ServerCommandTests {
         clientSocket.close();
     }
 
-    // Helper method to extract a field value via reflection.
+    // Hilfsmethode, um per Reflection auf ein privates Feld zuzugreifen.
     private Object getFieldValue(Object obj, String fieldName) {
         try {
             Field field = obj.getClass().getDeclaredField(fieldName);
@@ -41,13 +41,13 @@ public class ServerCommandTests {
     }
 
     private void sendMessageAndPrint(Message msg) throws Exception {
-        // Encode and send the message.
+        // 1) Nachricht encodieren und senden
         String encoded = MessageCodec.encode(msg);
         byte[] data = encoded.getBytes();
         DatagramPacket packet = new DatagramPacket(data, data.length, serverAddress, SERVER_PORT);
         clientSocket.send(packet);
 
-        // Print a formatted output for better readability.
+        // 2) Konsolenausgabe zur besseren Lesbarkeit
         System.out.println("\n=== Sent Message ===");
         System.out.println("Command : " + getFieldValue(msg, "command"));
         System.out.println("Type    : " + getFieldValue(msg, "type"));
@@ -63,7 +63,7 @@ public class ServerCommandTests {
                 System.out.println("  (none)");
             }
         } catch (NoSuchMethodError e) {
-            // Fallback to reflection if getParameters() is not available.
+            // Falls getParameters() nicht existiert, nutzen wir Reflection.
             Object paramsObj = getFieldValue(msg, "parameters");
             if (paramsObj instanceof Object[]) {
                 Object[] params = (Object[]) paramsObj;
@@ -102,100 +102,120 @@ public class ServerCommandTests {
     @Test
     @Order(1)
     void testCreateCommand() throws Exception {
-        Message msg = new Message("CREATE",
+        Message msg = new Message(
+                "CREATE",
                 new Object[]{"Player", "TestPlayer", 100.0f, 200.0f, 25.0f, "TestGame"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(2)
     void testPingCommand() throws Exception {
-        Message msg = new Message("PING",
+        Message msg = new Message(
+                "PING",
                 new Object[]{},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(3)
     void testGetObjectIdCommand() throws Exception {
-        Message msg = new Message("GETOBJECTID",
+        Message msg = new Message(
+                "GETOBJECTID",
                 new Object[]{"TestPlayer"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(4)
     void testChangeNameCommand() throws Exception {
-        Message msg = new Message("CHANGENAME",
+        Message msg = new Message(
+                "CHANGENAME",
                 new Object[]{"TestPlayer", "NewTestPlayer"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(5)
     void testUserJoinedCommand() throws Exception {
-        Message msg = new Message("USERJOINED",
+        Message msg = new Message(
+                "USERJOINED",
                 new Object[]{"testUser"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(6)
     void testLogoutCommand() throws Exception {
-        Message msg = new Message("LOGOUT",
+        Message msg = new Message(
+                "LOGOUT",
                 new Object[]{"testUser"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(7)
     void testDeleteCommand() throws Exception {
-        Message msg = new Message("DELETE",
+        Message msg = new Message(
+                "DELETE",
                 new Object[]{"testUser"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(8)
     void testExitCommand() throws Exception {
-        Message msg = new Message("EXIT",
+        Message msg = new Message(
+                "EXIT",
                 new Object[]{"testUser"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(9)
     void testLoginCommand() throws Exception {
-        Message msg = new Message("LOGIN",
+        Message msg = new Message(
+                "LOGIN",
                 new Object[]{"NewTestPlayer"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 
     @Test
     @Order(10)
     void testCreateGameCommand() throws Exception {
-        Message msg = new Message("CREATEGAME",
+        Message msg = new Message(
+                "CREATEGAME",
                 new Object[]{"MyNewGameSession"},
                 "REQUEST",
-                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()});
+                new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
+        );
         sendMessageAndPrint(msg);
     }
 }

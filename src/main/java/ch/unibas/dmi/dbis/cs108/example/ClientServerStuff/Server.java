@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
+import ch.unibas.dmi.dbis.cs108.example.message.MessageHandler;
 import lombok.Getter;
 
 import java.net.DatagramPacket;
@@ -15,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
+import ch.unibas.dmi.dbis.cs108.example.message.MessageRegistry;
+import lombok.Setter;
 
 
 @Getter
@@ -57,28 +60,47 @@ public class Server {
     // Server Properties
     // ================================
 
+    /** The default UDP port on which this server listens for incoming messages. */
     public static final int SERVER_PORT = 9876;
 
+    /** Provides the server-side chat manager used for handling chat messages. */
+    @Setter
     private ChatManager.ServerChatManager serverChatManager;
 
+    /**
+     * Maps each connected user's username to the corresponding remote socket address
+     * (IP + port).
+     */
     private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
 
+    /** The underlying DatagramSocket used to receive and send UDP packets. */
     private DatagramSocket serverSocket;
 
+    /** Responsible for sending messages over a "reliable" UDP mechanism. */
     private ReliableUDPSender reliableSender;
 
+    /** Processes incoming ACK messages and notifies the ReliableUDPSender. */
     private AckProcessor ackProcessor;
 
+    /** The primary/default game instance for this server. */
     private Game myGameInstance;
 
+    /**
+     * A queue for outgoing messages that should be sent asynchronously to clients.
+     * Processed by a background loop in {@link #start()}.
+     */
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
-    // a concurrent queue of the games 
+    /** Holds multiple active games by ID (UUID, etc.). */
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
 
 
-
+    /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
+
+    /** Handles high-level message types (e.g., "ACK", "CHAT", "REQUEST") via reflection. */
+    private final MessageRegistry messageRegistry = new MessageRegistry();
+
 
 
 
@@ -86,11 +108,22 @@ public class Server {
     // Outgoing Message Inner Class
     // ================================
 
+    /**
+     * Represents a message to be sent to a particular network address.
+     * Used internally by the {@code outgoingQueue}.
+     */
     private static class OutgoingMessage {
         Message msg;
         InetAddress address;
         int port;
 
+        /**
+         * Constructs a new {@code OutgoingMessage}.
+         *
+         * @param msg     the message object to be sent
+         * @param address the destination IP address
+         * @param port    the destination UDP port
+         */
         public OutgoingMessage(Message msg, InetAddress address, int port) {
             this.msg = msg;
             this.address = address;
@@ -98,6 +131,14 @@ public class Server {
         }
     }
 
+    /**
+     * Creates a new {@link Message} based on an original message, converting it
+     * to a {@code RESPONSE} and replacing its parameters with {@code newParams}.
+     *
+     * @param original  the original request/message
+     * @param newParams the new parameters for the response
+     * @return a new {@code Message} marked as a {@code RESPONSE}
+     */
     public static Message makeResponse(Message original, Object[] newParams) {
         String type = original.getMessageType();
         String[] concealed = original.getConcealedParameters();
@@ -150,6 +191,11 @@ public class Server {
     // Server Start Method
     // ================================
 
+    /**
+     * Initializes and starts this UDP server. Binds to {@link #SERVER_PORT},
+     * launches background threads for sending and receiving packets, and registers
+     * command and message handlers via reflection.
+     */
     public void start() {
         try {
             InetAddress ipAddress = InetAddress.getByName("localhost");
@@ -158,6 +204,7 @@ public class Server {
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
 
             commandRegistry.initCommandHandlers();
+            messageRegistry.initMessageHandlers();
 
             // Initialize the game instance so commands can work properly.
             myGameInstance = new Game("DefaultSessionID", "DefaultGameName");
@@ -221,75 +268,93 @@ public class Server {
     // Message Processing
     // ================================
 
+    /**
+     * Processes an incoming {@link Message} from a specified sender address.
+     * <p>
+     * The method first normalizes the message type (e.g., "ACK", "CHAT", "REQUEST", etc.)
+     * and optionally registers or verifies the user if the message includes concealed
+     * parameters (e.g., username). It then attempts to find an appropriate
+     * {@link MessageHandler} in the {@link MessageRegistry} based on the uppercase message type.
+     * <ul>
+     *   <li>If a matching handler exists, the server delegates processing by invoking
+     *       {@code handler.handle(this, msg, senderSocket)}.</li>
+     *   <li>If no matching handler is found, the method logs a message indicating that
+     *       no handler is available for the given message type.</li>
+     * </ul>
+     *
+     * @param msg          the {@link Message} object from the client
+     * @param senderSocket the network socket (IP + port) of the message sender
+     */
     private void processMessage(Message msg, InetSocketAddress senderSocket) {
-        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-            String ackUuid = msg.getParameters()[0].toString();
-            reliableSender.acknowledge(ackUuid);
-            System.out.println("Processed ACK message for UUID " + msg.getUUID());
-            return;
-        }
+        // 1) Normalisiere MessageType (z.B. "ACK", "CHAT", "REQUEST", ...)
+        String msgType = msg.getMessageType().toUpperCase();
 
-        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("Processed CHAT message 1 ");
-            if (serverChatManager == null) {
-                serverChatManager = new ChatManager.ServerChatManager();
-            }
-            
-            // If the message has a UUID, we'll add it to AckProcessor so we can 
-            // send an ACK back to the client. 
-            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
-                // Let the server handle sending an ACK back automatically:
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-            }
-        
-            // Broadcast this chat message to all connected clients (unchanged).
-            AsyncManager.run(() -> broadcastMessageToAll(msg));
-            System.out.println("Processed CHAT message 2");
-            
-            return;
-        }
+        // 2) Bei "concealed" Parametern: user registrieren o.ä.?
+        //    (Falls du das nicht mehr hier, sondern in einem Handler willst,
+        //     kannst du es in z.B. "UserRegistrationMessageHandler" verschieben.)
+        registerUserIfNeeded(msg, senderSocket);
 
+        // 3) Pass an den entsprechenden Handler
+        MessageHandler handler = messageRegistry.getHandler(msgType);
+        if (handler != null) {
+            handler.handle(this, msg, senderSocket);
+        } else {
+            System.out.println("No MessageHandler for type: " + msgType
+                    + ", ignoring or fallback logic...");
+        }
+    }
+
+    /**
+     * Registers a user based on concealed parameters (e.g., username),
+     * detecting name collisions if a user with that name is already registered.
+     * <p>
+     * If a collision is detected, an alternative nickname is suggested.
+     *
+     * @param msg          the incoming {@link Message} that may contain concealed parameters
+     * @param senderSocket the network socket of the sender
+     */
+    private void registerUserIfNeeded(Message msg, InetSocketAddress senderSocket) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
             String username = concealed[concealed.length - 1];
 
+            // Kollision?
             if (clientsMap.containsKey(username)) {
                 InetSocketAddress existingSocket = clientsMap.get(username);
                 if (!existingSocket.equals(senderSocket)) {
+                    // Falls wir ACK brauchen
                     if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
                         ackProcessor.addAck(senderSocket, msg.getUUID());
                     }
+                    // gerenrate nick suggestion
                     String suggestedNickname = Nickname_Generator.generateNickname();
                     Message collisionResponse = new Message("NAME_TAKEN", new Object[]{suggestedNickname}, "RESPONSE");
                     collisionResponse.setUUID("");
                     enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
-                    return;
                 }
             } else {
+                // new registration
                 clientsMap.put(username, senderSocket);
-            }
+                System.out.println("Registered user: " + username + " at " + senderSocket
+                        + ". Total clients: " + clientsMap.size());
 
-            System.out.println("Registered user: " + username + " at " + senderSocket
-                    + ". Total clients: " + clientsMap.size());
-
-            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+                // if we want to logg ack
+                if (msg.getUUID() != null
+                        && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                    ackProcessor.addAck(senderSocket, msg.getUUID());
+                    System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+                }
             }
-
-            if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                myGameInstance.addIncomingMessage(msg);
-                processMessageBestEffort(msg, senderSocket);
-            } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
-                AsyncManager.run(() -> handleRequest(msg, username));
-            } else {
-                broadcastMessageToOthers(msg, username);
-            }
-        } else {
-            System.out.println("Concealed parameters missing or too short.");
         }
     }
 
+    /**
+     * Sends the given {@link Message} to all connected clients except the sender.
+     * This is done in a "best effort" manner, i.e., without the reliable UDP layer.
+     *
+     * @param msg          the message to broadcast
+     * @param senderSocket the socket of the original sender (excluded from broadcast)
+     */
     private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
         try {
             for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
@@ -308,6 +373,11 @@ public class Server {
         }
     }
 
+    /**
+     * Broadcasts a given message to <strong>all</strong> connected clients using the reliable queue.
+     *
+     * @param msg the message to broadcast
+     */
     public void broadcastMessageToAll(Message msg) {
         for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
@@ -322,6 +392,14 @@ public class Server {
         }
     }
 
+    /**
+     * Broadcasts a message to all connected clients <em>except</em> the one
+     * specified by {@code excludedUsername}. Useful for scenarios where
+     * the original sender does not need to receive its own message.
+     *
+     * @param msg             the message to broadcast
+     * @param excludedUsername the username to exclude from receiving the message
+     */
     public void broadcastMessageToOthers(Message msg, String excludedUsername) {
         for (ConcurrentHashMap.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
@@ -342,6 +420,15 @@ public class Server {
     // Request Handling
     // ================================
 
+    /**
+     * Handles a request-type message by looking up the appropriate {@link CommandHandler}
+     * from {@link #commandRegistry} and delegating the logic.
+     * <p>
+     * If no matching handler is found, sends a default response message to the sender.
+     *
+     * @param msg           the request message
+     * @param senderUsername the username of the client who sent this request
+     */
     private void handleRequest(Message msg, String senderUsername) {
         // Get the raw message type and normalize it.
         String rawType = msg.getMessageType();
@@ -368,251 +455,6 @@ public class Server {
     }
 
 
-
-    private void handleCreateRequest(Message msg, String senderUsername) {
-        Object[] originalParams = msg.getParameters();
-        String serverGeneratedUuid = UUID.randomUUID().toString();
-    
-        // 1) Prepend server-generated UUID to the original parameters
-        Object[] newParams = new Object[originalParams.length + 1];
-        newParams[0] = serverGeneratedUuid;
-        System.arraycopy(originalParams, 0, newParams, 1, originalParams.length);
-    
-        // 2) Build the CREATE response message
-        Message responseMsg = new Message("CREATE", newParams, "RESPONSE");
-    
-        // 3) Optionally add a debug printout of the entire message
-        //    If your Message class has a good toString(), you can do:
-        // System.out.println("Constructed CREATE message: " + responseMsg);
-        //
-        // Or if you want to see the exact encoded form, do something like:
-        // System.out.println("Constructed CREATE message: " + MessageCodec.encode(responseMsg));
-    
-        // 4) Actually create the GameObject asynchronously
-        Future<GameObject> futureObj = myGameInstance.addGameObjectAsync(
-            originalParams[0].toString(),
-            serverGeneratedUuid,
-            (Object[]) java.util.Arrays.copyOfRange(originalParams, 1, originalParams.length)
-        );
-        try {
-            GameObject newObj = futureObj.get();
-            System.out.println("Created new game object with UUID: " + serverGeneratedUuid
-                    + " and name: " + newObj.getName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    
-        // 5) Broadcast this CREATE message to all known clients
-        //    This ensures everyone sees the newly created object.
-        System.out.println("Broadcasting CREATE to all: " + responseMsg);
-        broadcastMessageToAll(responseMsg);
-    
-        // 6) Now, for the new user, also send them CREATE messages for each existing object
-        //    so they can synchronize state. If you only want the new user to receive these,
-        //    you need to look up the *new user’s* InetSocketAddress and send them there.
-        for (String username : clientsMap.keySet()) {
-            if (!username.equals(senderUsername)) {
-                GameObject gameObject = myGameInstance.getGameObjects()
-                .stream()
-                .filter(obj -> obj.getName().equals(username))
-                .findFirst()
-                .orElse(null);
-
-                Object[] constructorParameters = gameObject.getConstructorParamValues();
-                Object[] finalParameters = new Object[constructorParameters.length + 2];
-
-                // 1) Insert the UUID
-                finalParameters[0] = gameObject.getId();
-
-                // 2) Insert the type
-                String objectType = gameObject.getClass().getSimpleName(); 
-                // Or store the type somewhere in the object if your classes vary
-                // e.g., if (gameObject instanceof Player) type="Player"; or a getType() method
-
-                finalParameters[1] = objectType;
-
-                // 3) Copy the old constructor params after the first two slots
-                System.arraycopy(constructorParameters, 0, 
-                                finalParameters, 2, 
-                                constructorParameters.length);
-
-                // Now finalParameters looks like:
-                // [UUID, objectType, param0, param1, param2, ...]
-                Message createResponseMessage = makeResponse(msg, finalParameters);
-    
-                // If you want to send these "existing object" CREATEs
-                // to the *new user* only, do something like:
-                InetSocketAddress newUserAddress = clientsMap.get(senderUsername);
-                if (newUserAddress == null) {
-                    System.err.println("No known address for user: " + senderUsername);
-                    return; 
-                }
-                enqueueMessage(createResponseMessage,
-                               newUserAddress.getAddress(),
-                               newUserAddress.getPort());
-    
-               
-            }
-        }
-    }
-
-    private void handlePingRequest(String senderUsername) {
-        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-        if (senderAddress != null) {
-            Message responseMsg = new Message("PONG", new Object[]{}, "RESPONSE");
-            enqueueMessage(responseMsg, senderAddress.getAddress(), senderAddress.getPort());
-            System.out.println("Enqueued PONG response to " + senderUsername);
-        }
-    }
-
-    private void handleGetObjectIdRequest(Message msg) {
-        Object[] originalParams = msg.getParameters();
-        String objectName = originalParams[0].toString();
-        String objectID = "";
-
-        for (GameObject gameObject : myGameInstance.getGameObjects()) {
-            if (gameObject.getName().equals(objectName)) {
-                objectID = gameObject.getId();
-            }
-        }
-
-        Message responseMsg = new Message("GETOBJECTID", new Object[]{objectID}, "RESPONSE");
-        broadcastMessageToAll(responseMsg);
-    }
-
-    private void handleChangeNameRequest(Message msg) {
-        Object[] originalParams = msg.getParameters();
-        String oldName = originalParams[0].toString();
-        String requestedName = originalParams[1].toString();
-    
-        // 1) Make sure the newName is actually available. 
-        //    If not, modify requestedName to ensure uniqueness.
-        String newName = findUniqueName(requestedName);
-    
-        // 2) Update the game object in 'myGameInstance'
-        String objectID = "";
-        for (GameObject gameObject : myGameInstance.getGameObjects()) {
-            if (gameObject.getName().equals(oldName)) {
-                objectID = gameObject.getId();
-                gameObject.setName(newName);
-                break; // Assuming only one object matches
-            }
-        }
-    
-        // 3) Update the 'clientsMap' key from oldName -> newName
-        InetSocketAddress address = clientsMap.remove(oldName);
-        if (address != null) {
-            clientsMap.put(newName, address);
-        }
-    
-        // 4) Broadcast the change to everyone
-        Message responseMsg = new Message(
-            "CHANGENAME", 
-            new Object[]{objectID, newName}, 
-            "RESPONSE"
-        );
-        broadcastMessageToAll(responseMsg);
-    }
-    
-
-    private void handleUserJoinedRequest(Message msg) {
-        String nickname = msg.getParameters()[0].toString();
-        boolean hasRepetition = clientsMap.containsKey(nickname);
-
-        if (hasRepetition) {
-            String suggestedNickname = Nickname_Generator.generateNickname();
-            Message responseMsg = new Message("USERJOINED", new Object[]{suggestedNickname}, "RESPONSE");
-
-            InetSocketAddress clientAddress = clientsMap.get(nickname);
-            if (clientAddress != null) {
-                enqueueMessage(responseMsg, clientAddress.getAddress(), clientAddress.getPort());
-            }
-        }
-    }
-
-    private void handleLogoutOrExitRequest(Message msg, String senderUsername) {
-        String type = msg.getMessageType().replaceAll("\\s+", "").toUpperCase();
-        System.out.println("Client " + type + ": " + senderUsername);
-
-        Message logoutMessage = new Message(type, msg.getParameters(), "RESPONSE");
-        InetSocketAddress clientAddress = clientsMap.get(senderUsername);
-        if (clientAddress != null) {
-            enqueueMessage(logoutMessage, clientAddress.getAddress(), clientAddress.getPort());
-        }
-
-        clientsMap.remove(senderUsername);
-        System.out.println("Removed user: " + senderUsername);
-    }
-
-    private void handleLoginRequest(Message msg, String senderUsername) {
-        String firstParam = msg.getParameters()[0].toString();
-        Object[] newParams = new Object[1];
-
-        for (GameObject gameObject : myGameInstance.getGameObjects()) {
-            if (firstParam.equals(gameObject.getName())) {
-                newParams[0] = gameObject.getId();
-                break;
-            }
-        }
-
-        Message loginMessage = new Message("LOGIN", newParams, "RESPONSE");
-
-        InetSocketAddress clientAddr = clientsMap.get(senderUsername);
-        if (clientAddr != null) {
-            enqueueMessage(loginMessage, clientAddr.getAddress(), clientAddr.getPort());
-        }
-    }
-
-    private void handleDeleteRequest(Message msg, String senderUsername) {
-        System.out.println("Client deleting: " + senderUsername);
-        Message deleteMessage = makeResponse(msg, msg.getParameters());
-        broadcastMessageToAll(deleteMessage);
-
-        String targetPlayerName = msg.getParameters()[0].toString();
-        myGameInstance.getGameObjects().removeIf(go -> go.getName().equals(targetPlayerName));
-    }
-
-    private void handleCreateGameRequest(Message msg, String senderUsername) {
-        // 1. Extract the game friendly name from the request.
-        Object[] params = msg.getParameters();
-        if (params == null || params.length < 1) {
-            System.err.println("CREATEGAME request missing game name parameter.");
-            return;
-        }
-        String requestedGameName = params[0].toString();
-    
-        // 2. Generate a new UUID for this game session.
-        String gameUuid = UUID.randomUUID().toString();
-    
-        // 3. Create a new Game instance with both the UUID and friendly name.
-        // If your Game class has been updated to require both values:
-        Game newGame = new Game(gameUuid, requestedGameName);
-    
-        // 4. Optionally start any game-specific loops or processing.
-        newGame.startPlayersCommandProcessingLoop();
-    
-        // 5. Store the new Game in the gameSessions map.
-        gameSessions.put(gameUuid, newGame);
-    
-        // 6. Build a response message containing the game UUID and friendly name.
-        Message response = new Message("CREATEGAME",
-                                       new Object[]{gameUuid, requestedGameName},
-                                       "RESPONSE",
-                                       msg.getConcealedParameters());
-        
-        // 7. Look up the sender's address and enqueue the response.
-        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-        if (senderAddress != null) {
-            enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
-            System.out.println("Created new game session '" + requestedGameName 
-                               + "' with UUID: " + gameUuid);
-        } else {
-            System.err.println("Sender address not found for user: " + senderUsername);
-        }
-    }
-    
-   
-    
 
     // ================================
     // Main Method
