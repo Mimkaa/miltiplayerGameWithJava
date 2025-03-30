@@ -277,22 +277,54 @@ public class GameContext {
             createObjectButton.setTranslateY(160);
             CentralGraphicalUnit.getInstance().addNode(createObjectButton);
             uiManager.registerComponent("createObjectButton", createObjectButton);
+
             createObjectButton.setOnAction(e -> {
-                
                 // Retrieve the current game session ID.
                 String sessionId = GameContext.getCurrentGameId();
                 if (sessionId == null || sessionId.isEmpty()) {
                     System.out.println("No current game session to create an object in.");
                     return;
                 }
+                
+                // Get the name from the overlay input field (registered as "overlayInputField").
+                Node node = uiManager.getComponent("overlayInputField");
+                if (!(node instanceof TextField)) {
+                    System.out.println("Overlay input field not found or is not a TextField.");
+                    return;
+                }
+                String playerName = ((TextField) node).getText().trim();
+                if (playerName.isEmpty()) {
+                    System.out.println("Please enter a name for the player in the input field.");
+                    return;
+                }
+
                 // Define the object type, for example "Player". Change as needed.
                 String objectType = "Player";
-                // Create the CREATEGO message with the new object ID, the session ID, and object type.
-                Message createObjectMsg = new Message("CREATEGO", 
-                new Object[]{ sessionId, objectType, "Bob", 200.0f, 100.0f, 25.0f, sessionId },
-                "REQUEST");
+
+                // Create the CREATEGO message. In this example we provide:
+                //  - the sessionId (again) as the first argument,
+                //  - objectType as the second argument,
+                //  - playerName (retrieved from the input field),
+                //  - position and radius details,
+                //  - and sessionId again at the end for the game ID.
+                Message createObjectMsg = new Message(
+                    "CREATEGO", 
+                    new Object[]{ 
+                        sessionId,      // or some new UUID if needed 
+                        objectType, 
+                        playerName, 
+                        200.0f, 
+                        100.0f, 
+                        25.0f, 
+                        sessionId 
+                    },
+                    "REQUEST"
+                );
+
+                // Send the message via the static client method.
                 Client.sendMessageStatic(createObjectMsg);
-                //System.out.println("Sent CREATEGO message for new game object: " + newObjectId);
+
+                System.out.println("Sent CREATEGO message for new game object with name: " + playerName);
             });
 
                     // --- Fourth Overlay Button: Select Object Button ---
@@ -345,7 +377,13 @@ public class GameContext {
         client.setUsername(userName);
         new Thread(client::run).start();
         client.startConsoleReaderLoop();
-
+        // register the clinet on the server
+        Message registrationMsg = new Message(
+            "REGISTER",            
+            new Object[] {},             
+            "REQUEST"
+        );
+        Client.sendMessageStatic(registrationMsg);
         
     }
 

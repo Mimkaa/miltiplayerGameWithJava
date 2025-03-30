@@ -526,7 +526,7 @@ public class Server {
         Message response = new Message("CREATEGAME", new Object[]{gameUuid, requestedGameName}, "RESPONSE", msg.getConcealedParameters());
         InetSocketAddress senderAddress = clientsMap.get(senderUsername);
         if (senderAddress != null) {
-            enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
+            broadcastMessageToAll(response);
             System.out.println("Created new game session '" + requestedGameName + "' with UUID: " + gameUuid);
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
@@ -534,22 +534,70 @@ public class Server {
     }
 
     private void handleJoinGameRequest(Message msg, String senderUsername) {
-        Map<String, Game> allSessions = gameSessionManager.getAllGameSessions();
-        if (allSessions.isEmpty()) {
-            System.out.println("No game sessions available to join.");
+        Object[] params = msg.getParameters();
+        
+        // 1) Validate we got the game name as a parameter
+        if (params == null || params.length < 1) {
+            System.err.println("JOINGAME request missing the game name to join.");
             return;
         }
-        // For demonstration, pick the first available game session.
-        String gameId = allSessions.keySet().iterator().next();
-        Message response = new Message("JOINGAME", new Object[]{gameId}, "RESPONSE", msg.getConcealedParameters());
+        
+        // 2) Extract the requested name of the game from the parameters
+        String requestedGameName = params[0].toString();
+        
+        // 3) Search your GameSessionManager to find a Game with that name
+        Game foundGame = null;
+        for (Map.Entry<String, Game> entry : gameSessionManager.getAllGameSessions().entrySet()) {
+            Game candidate = entry.getValue();
+            // Compare ignoring case or exactly — your choice
+            if (candidate.getGameName().equalsIgnoreCase(requestedGameName)) {
+                foundGame = candidate;
+                break;
+            }
+        }
+        
+        // 4) If no game was found, send back an error or create a new one
+        if (foundGame == null) {
+            System.err.println("No game session found with name: " + requestedGameName);
+            
+            // Option A: Return an error response to the client
+            Message errorResponse = new Message(
+                "JOINGAME_ERROR",
+                new Object[]{"No game found with name: " + requestedGameName},
+                "RESPONSE",
+                msg.getConcealedParameters()
+            );
+            InetSocketAddress senderAddress = clientsMap.get(senderUsername);
+            if (senderAddress != null) {
+                enqueueMessage(errorResponse, senderAddress.getAddress(), senderAddress.getPort());
+            }
+            return;
+            
+            // Option B (Alternative): Create a new Game if not found
+            // ...
+        }
+        
+        // 5) At this point, `foundGame` is the correct session. Grab its ID
+        String foundGameId = foundGame.getGameId();
+        System.out.println("User " + senderUsername 
+                           + " joined game session with name: " + requestedGameName 
+                           + " (ID: " + foundGameId + ")");
+        
+        // 6) Send back a success response containing the found game’s ID
+        Message response = new Message(
+            "JOINGAME",
+            new Object[]{foundGameId},
+            "RESPONSE",
+            msg.getConcealedParameters()
+        );
         InetSocketAddress senderAddress = clientsMap.get(senderUsername);
         if (senderAddress != null) {
             enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
-            System.out.println("Sent JOINGAME response with game id: " + gameId);
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
         }
     }
+    
 
     /**
      * Handles a SELECTGO request by expecting two parameters:
