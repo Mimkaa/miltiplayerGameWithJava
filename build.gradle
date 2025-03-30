@@ -28,6 +28,11 @@ repositories {
 dependencies {
     // JavaFX dependency for controls; other modules are handled by the plugin.
     implementation 'org.openjfx:javafx-controls:19.0.2.1'
+
+    // reflections for zero configuration classpath analysis
+    implementation 'org.reflections:reflections:0.10.2'
+
+    implementation 'ch.qos.logback:logback-classic:1.4.6'
     
     // JUnit dependencies for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'

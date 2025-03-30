@@ -4,6 +4,8 @@ import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
+import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
+import ch.unibas.dmi.dbis.cs108.example.message.MessageHandler;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -12,10 +14,16 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Map;
+import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
+import ch.unibas.dmi.dbis.cs108.example.message.MessageRegistry;
+import lombok.Setter;
+
 
 @Getter
 /**
@@ -34,6 +42,12 @@ public class Server {
     private static class SingletonHelper {
         private static final Server INSTANCE = new Server();
     }
+
+    /**
+     * Returns the singleton instance of the {@code Server}.
+     *
+     * @return the singleton {@code Server} instance
+     */
     public static Server getInstance() {
         return SingletonHelper.INSTANCE;
     }
@@ -41,26 +55,76 @@ public class Server {
     // ================================
     // Server Properties
     // ================================
+
+    /** The default UDP port on which this server listens for incoming messages. */
     public static final int SERVER_PORT = 9876;
+
+    /** Provides the server-side chat manager used for handling chat messages. */
+    @Setter
     private ChatManager.ServerChatManager serverChatManager;
+
+    /**
+     * Maps each connected user's username to the corresponding remote socket address
+     * (IP + port).
+     */
     private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
+
+    /** The underlying DatagramSocket used to receive and send UDP packets. */
     private DatagramSocket serverSocket;
+
+    /** Responsible for sending messages over a "reliable" UDP mechanism. */
     private ReliableUDPSender reliableSender;
+
+    /** Processes incoming ACK messages and notifies the ReliableUDPSender. */
     private AckProcessor ackProcessor;
     // The game session(s) are managed via GameSessionManager.
     private final GameSessionManager gameSessionManager = new GameSessionManager();
     // Install the MessageHub as a singleton.
     private final MessageHub messageHub = MessageHub.getInstance();
     // Outgoing messages queue.
+
+    /** The primary/default game instance for this server. */
+    private Game myGameInstance;
+
+    /**
+     * A queue for outgoing messages that should be sent asynchronously to clients.
+     * Processed by a background loop in {@link #start()}.
+     */
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
+
+    /** Holds multiple active games by ID (UUID, etc.). */
+    private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
+
+
+    /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
+    private final CommandRegistry commandRegistry = new CommandRegistry();
+
+    /** Handles high-level message types (e.g., "ACK", "CHAT", "REQUEST") via reflection. */
+    private final MessageRegistry messageRegistry = new MessageRegistry();
+
+
+
 
     // ================================
     // Outgoing Message Inner Class
     // ================================
+
+    /**
+     * Represents a message to be sent to a particular network address.
+     * Used internally by the {@code outgoingQueue}.
+     */
     private static class OutgoingMessage {
         Message msg;
         InetAddress address;
         int port;
+
+        /**
+         * Constructs a new {@code OutgoingMessage}.
+         *
+         * @param msg     the message object to be sent
+         * @param address the destination IP address
+         * @param port    the destination UDP port
+         */
         public OutgoingMessage(Message msg, InetAddress address, int port) {
             this.msg = msg;
             this.address = address;
@@ -68,17 +132,34 @@ public class Server {
         }
     }
 
+    /**
+     * Creates a new {@link Message} based on an original message, converting it
+     * to a {@code RESPONSE} and replacing its parameters with {@code newParams}.
+     *
+     * @param original  the original request/message
+     * @param newParams the new parameters for the response
+     * @return a new {@code Message} marked as a {@code RESPONSE}
+     */
     public static Message makeResponse(Message original, Object[] newParams) {
         String type = original.getMessageType();
         String[] concealed = original.getConcealedParameters();
         return new Message(type, newParams, "RESPONSE", concealed);
     }
 
-    private void enqueueMessage(Message msg, InetAddress address, int port) {
+    public void enqueueMessage(Message msg, InetAddress address, int port) {
         outgoingQueue.offer(new OutgoingMessage(msg, address, port));
     }
 
-    private String findUniqueName(String requestedName) {
+
+        /**
+     * Returns a modified version of the requested name if that name is already taken.
+     * It checks both the clientsMap (connected users) and the existing GameObjects.
+     * If the requestedName is taken, it appends "_1", "_2", etc., until a free one is found.
+     *
+     * @param requestedName The new name the user is requesting
+     * @return A guaranteed-unique name
+     */
+        public String findUniqueName(String requestedName) {
         String baseName = requestedName;
         int counter = 1;
         while (isNameTaken(requestedName)) {
@@ -87,6 +168,11 @@ public class Server {
         return requestedName;
     }
 
+    /**
+     * Helper function to see if a name is already taken by either:
+     *  - Another user in the 'clientsMap', or
+     *  - A game object in 'myGameInstance'.
+     */
     private boolean isNameTaken(String name) {
         if (clientsMap.containsKey(name)) {
             return true;
@@ -98,12 +184,25 @@ public class Server {
     // ================================
     // Server Start Method
     // ================================
+
+    /**
+     * Initializes and starts this UDP server. Binds to {@link #SERVER_PORT},
+     * launches background threads for sending and receiving packets, and registers
+     * command and message handlers via reflection.
+     */
     public void start() {
         try {
-            InetAddress ipAddress = InetAddress.getByName("25.12.99.19");
+            InetAddress ipAddress = InetAddress.getByName("localhost");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
+
+            commandRegistry.initCommandHandlers();
+            messageRegistry.initMessageHandlers();
+
+            // Initialize the game instance so commands can work properly.
+            myGameInstance = new Game("DefaultSessionID", "DefaultGameName");
+            myGameInstance.startPlayersCommandProcessingLoop();
 
             reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
             ackProcessor = new AckProcessor(serverSocket);
@@ -163,61 +262,94 @@ public class Server {
     // ================================
     // Message Processing
     // ================================
-    private void processMessage(Message msg, InetSocketAddress senderSocket) {
-        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-            String ackUuid = msg.getParameters()[0].toString();
-            reliableSender.acknowledge(ackUuid);
-            System.out.println("Processed ACK message for UUID " + msg.getUUID());
-            return;
-        }
-        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("Processed CHAT message 1 ");
-            if (serverChatManager == null) {
-                serverChatManager = new ChatManager.ServerChatManager();
-            }
-            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-            }
-            AsyncManager.run(() -> broadcastMessageToAll(msg));
-            System.out.println("Processed CHAT message 2");
-            return;
-        }
 
+    /**
+     * Processes an incoming {@link Message} from a specified sender address.
+     * <p>
+     * The method first normalizes the message type (e.g., "ACK", "CHAT", "REQUEST", etc.)
+     * and optionally registers or verifies the user if the message includes concealed
+     * parameters (e.g., username). It then attempts to find an appropriate
+     * {@link MessageHandler} in the {@link MessageRegistry} based on the uppercase message type.
+     * <ul>
+     *   <li>If a matching handler exists, the server delegates processing by invoking
+     *       {@code handler.handle(this, msg, senderSocket)}.</li>
+     *   <li>If no matching handler is found, the method logs a message indicating that
+     *       no handler is available for the given message type.</li>
+     * </ul>
+     *
+     * @param msg          the {@link Message} object from the client
+     * @param senderSocket the network socket (IP + port) of the message sender
+     */
+    private void processMessage(Message msg, InetSocketAddress senderSocket) {
+        // 1) Normalisiere MessageType (z.B. "ACK", "CHAT", "REQUEST", ...)
+        String msgType = msg.getMessageType().toUpperCase();
+
+        // 2) Bei "concealed" Parametern: user registrieren o.ä.?
+        //    (Falls du das nicht mehr hier, sondern in einem Handler willst,
+        //     kannst du es in z.B. "UserRegistrationMessageHandler" verschieben.)
+        registerUserIfNeeded(msg, senderSocket);
+
+        // 3) Pass an den entsprechenden Handler
+        MessageHandler handler = messageRegistry.getHandler(msgType);
+        if (handler != null) {
+            handler.handle(this, msg, senderSocket);
+        } else {
+            System.out.println("No MessageHandler for type: " + msgType
+                    + ", ignoring or fallback logic...");
+        }
+    }
+
+    /**
+     * Registers a user based on concealed parameters (e.g., username),
+     * detecting name collisions if a user with that name is already registered.
+     * <p>
+     * If a collision is detected, an alternative nickname is suggested.
+     *
+     * @param msg          the incoming {@link Message} that may contain concealed parameters
+     * @param senderSocket the network socket of the sender
+     */
+    private void registerUserIfNeeded(Message msg, InetSocketAddress senderSocket) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
             String username = concealed[concealed.length - 1];
+
+            // Kollision?
             if (clientsMap.containsKey(username)) {
                 InetSocketAddress existingSocket = clientsMap.get(username);
                 if (!existingSocket.equals(senderSocket)) {
+                    // Falls wir ACK brauchen
                     if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
                         ackProcessor.addAck(senderSocket, msg.getUUID());
                     }
+                    // gerenrate nick suggestion
                     String suggestedNickname = Nickname_Generator.generateNickname();
                     Message collisionResponse = new Message("NAME_TAKEN", new Object[]{suggestedNickname}, "RESPONSE");
                     collisionResponse.setUUID("");
                     enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
-                    return;
                 }
             } else {
+                // new registration
                 clientsMap.put(username, senderSocket);
+                System.out.println("Registered user: " + username + " at " + senderSocket
+                        + ". Total clients: " + clientsMap.size());
+
+                // if we want to logg ack
+                if (msg.getUUID() != null
+                        && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                    ackProcessor.addAck(senderSocket, msg.getUUID());
+                    System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+                }
             }
-            System.out.println("Registered user: " + username + " at " + senderSocket + ". Total clients: " + clientsMap.size());
-            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
-            }
-            if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                processMessageBestEffort(msg, senderSocket);
-            } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
-                AsyncManager.run(() -> handleRequest(msg, username));
-            } else {
-                broadcastMessageToOthers(msg, username);
-            }
-        } else {
-            System.out.println("Concealed parameters missing or too short.");
         }
     }
 
+    /**
+     * Sends the given {@link Message} to all connected clients except the sender.
+     * This is done in a "best effort" manner, i.e., without the reliable UDP layer.
+     *
+     * @param msg          the message to broadcast
+     * @param senderSocket the socket of the original sender (excluded from broadcast)
+     */
     private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
         try {
             for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
@@ -236,6 +368,11 @@ public class Server {
         }
     }
 
+    /**
+     * Broadcasts a given message to <strong>all</strong> connected clients using the reliable queue.
+     *
+     * @param msg the message to broadcast
+     */
     public void broadcastMessageToAll(Message msg) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
@@ -249,6 +386,14 @@ public class Server {
         }
     }
 
+    /**
+     * Broadcasts a message to all connected clients <em>except</em> the one
+     * specified by {@code excludedUsername}. Useful for scenarios where
+     * the original sender does not need to receive its own message.
+     *
+     * @param msg             the message to broadcast
+     * @param excludedUsername the username to exclude from receiving the message
+     */
     public void broadcastMessageToOthers(Message msg, String excludedUsername) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
             String clientUsername = entry.getKey();
@@ -267,377 +412,42 @@ public class Server {
     // ================================
     // Request Handling
     // ================================
-    private void handleRequest(Message msg, String senderUsername) {
-        switch (msg.getMessageType().replaceAll("\\s+", "").toUpperCase()) {
-            case "CREATEGO":
-                handleCreateGORequest(msg, senderUsername);
-                break;
-            case "PING":
-                handlePingRequest(senderUsername);
-                break;
-           
-            case "CHANGENAME":
-                handleChangeNameRequest(msg);
-                break;
-            case "USERJOINED":
-                handleUserJoinedRequest(msg);
-                break;
-            case "LOGOUT":
-            case "EXIT":
-                handleLogoutOrExitRequest(msg, senderUsername);
-                break;
-            case "DELETEGO":
-                handleDeleteRequest(msg, senderUsername);
-                break;
-            case "CREATEGAME":
-                handleCreateGameRequest(msg, senderUsername);
-                break;
-            case "JOINGAME":
-                handleJoinGameRequest(msg, senderUsername);
-                break;
-            case "SELECTGO":
-                handleSelectGO(msg, senderUsername);
-                break;
-            default:
-                System.out.println("Unknown request type: " + msg.getMessageType());
-                Message defaultResponse = makeResponse(msg, msg.getParameters());
-                InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-                if (senderAddress != null) {
-                    enqueueMessage(defaultResponse, senderAddress.getAddress(), senderAddress.getPort());
-                    System.out.println("Sent default response to " + senderUsername);
-                } else {
-                    System.err.println("Sender address not found for user: " + senderUsername);
-                }
-        }
-    }
 
     /**
-     * Handles a CREATEGO request by creating a new game object in a specified game session.
-     * Expects parameters:
-     *   - Parameter 0: The game session ID.
-     *   - Parameter 1: The object type.
-     *   - Remaining parameters: Other constructor arguments.
+     * Handles a request-type message by looking up the appropriate {@link CommandHandler}
+     * from {@link #commandRegistry} and delegating the logic.
+     * <p>
+     * If no matching handler is found, sends a default response message to the sender.
+     *
+     * @param msg           the request message
+     * @param senderUsername the username of the client who sent this request
      */
-    private void handleCreateGORequest(Message msg, String senderUsername) {
-        Object[] originalParams = msg.getParameters();
-        if (originalParams == null || originalParams.length < 2) {
-            System.err.println("CREATEGO request requires at least two parameters: game session ID and object type.");
-            return;
-        }
-        // originalParams[0]: game session ID, originalParams[1]: object type, remaining are constructor parameters
-    
-        // Generate a new UUID for the game object.
-        String serverGeneratedUuid = UUID.randomUUID().toString();
-        
-        // Build a new parameter array with one extra element.
-        Object[] newParams = new Object[originalParams.length + 1];
-        // Insert the generated UUID as the first parameter.
-        newParams[0] = serverGeneratedUuid;
-        // Copy all original parameters into newParams starting at index 1.
-        System.arraycopy(originalParams, 0, newParams, 1, originalParams.length);
-        
-        // Build the CREATEGO response message using the new parameter array.
-        Message responseMsg = new Message("CREATEGO", newParams, "RESPONSE", msg.getConcealedParameters());
-        
-        // The newParams array is now structured as:
-        // [0] generated UUID, [1] game session ID, [2] object type, [3...] additional constructor parameters.
-        // Extract constructor parameters starting from index 3.
-        Object[] constructorParams = new Object[0];
-        if (newParams.length > 3) {
-            constructorParams = java.util.Arrays.copyOfRange(newParams, 3, newParams.length);
-        }
-        
-        // Retrieve the target game session from the manager using the game session ID (newParams[1]).
-        String gameSessionId = newParams[1].toString();
-        Game targetGame = gameSessionManager.getGameSession(gameSessionId);
-        if (targetGame == null) {
-            System.err.println("No game session found with ID: " + gameSessionId);
-            return;
-        }
-        
-        // Asynchronously create the game object using the factory.
-        Future<GameObject> futureObj = targetGame.addGameObjectAsync(newParams[2].toString(), serverGeneratedUuid, constructorParams);
-        try {
-            GameObject newObj = futureObj.get();
-            System.out.println("Created new game object with UUID: " + serverGeneratedUuid
-                    + " and name: " + newObj.getName() + " in game session: " + gameSessionId);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
-        // Broadcast the CREATEGO response message to all clients.
-        System.out.println("Broadcasting CREATEGO to all: " + responseMsg);
-        broadcastMessageToAll(responseMsg);
-        
-        // Optionally, for the new user, send existing objects from this session.
-        InetSocketAddress newUserAddress = clientsMap.get(senderUsername);
-        if (newUserAddress != null) {
-            for (GameObject gameObject : targetGame.getGameObjects()) {
-                if (gameObject.getId().equals(serverGeneratedUuid)) continue;
-                Object[] constructorParameters = gameObject.getConstructorParamValues();
-                Object[] finalParameters = new Object[constructorParameters.length + 2];
-                finalParameters[0] = gameObject.getId();
-                String objType = gameObject.getClass().getSimpleName();
-                finalParameters[1] = objType;
-                System.arraycopy(constructorParameters, 0, finalParameters, 2, constructorParameters.length);
-                Message createResponseMessage = makeResponse(msg, finalParameters);
-                enqueueMessage(createResponseMessage, newUserAddress.getAddress(), newUserAddress.getPort());
-            }
+    private void handleRequest(Message msg, String senderUsername) {
+        // Get the raw message type and normalize it.
+        String rawType = msg.getMessageType();
+        String commandType = rawType.replaceAll("\\s+", "").toUpperCase();
+        System.out.println("Raw type: '" + rawType + "' normalized: '" + commandType + "'");
+
+        // Lookup the handler in the registry.
+        CommandHandler handler = commandRegistry.getHandler(commandType);
+        if (handler != null) {
+            // Delegate handling to the appropriate CommandHandler.
+            handler.handle(this, msg, senderUsername);
         } else {
-            System.err.println("No known address for user: " + senderUsername);
-        }
-        
-        // After handling CREATEGO, print all game sessions (IDs and names) for debugging.
-        System.out.println("Current game sessions:");
-        gameSessionManager.getAllGameSessions().forEach((id, gameSession) -> {
-            System.out.println("  Game Session ID: " + id + " | Name: " + gameSession.getGameName());
-        });
-    }
-    
-
-    private void handlePingRequest(String senderUsername) {
-        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-        if (senderAddress != null) {
-            Message responseMsg = new Message("PONG", new Object[]{}, "RESPONSE");
-            enqueueMessage(responseMsg, senderAddress.getAddress(), senderAddress.getPort());
-            System.out.println("Enqueued PONG response to " + senderUsername);
-        }
-    }
-
-   
-
-    private void handleChangeNameRequest(Message msg) {
-        Object[] originalParams = msg.getParameters();
-        if (originalParams == null || originalParams.length < 3) {
-            System.err.println("CHANGENAME request missing parameters. Expected: [gameSessionId, objectUUID, newName]");
-            return;
-        }
-        
-        // Parameter 0: game session ID
-        String gameSessionId = originalParams[0].toString();
-        // Parameter 1: game object's UUID
-        String objectId = originalParams[1].toString();
-        // Parameter 2: requested new name
-        String requestedName = originalParams[2].toString();
-        
-        // Retrieve the game session from the manager.
-        Game game = gameSessionManager.getGameSession(gameSessionId);
-        if (game == null) {
-            System.err.println("No game session found with id: " + gameSessionId);
-            return;
-        }
-        
-        // Determine a unique new name.
-        String newName = findUniqueName(requestedName);
-        
-        // Find the game object by its UUID and update its name.
-        String foundId = "";
-        for (GameObject gameObject : game.getGameObjects()) {
-            if (gameObject.getId().equals(objectId)) {
-                foundId = gameObject.getId();
-                gameObject.setName(newName);
-                break;
-            }
-        }
-        
-        if (foundId.isEmpty()) {
-            System.err.println("No game object found with UUID: " + objectId);
-            return;
-        }
-        
-        // Build a response message that includes all of the original parameters.
-        // We update the third parameter (index 2) to the new name.
-        Object[] responseParams = java.util.Arrays.copyOf(originalParams, originalParams.length);
-        responseParams[2] = newName;
-        
-        Message responseMsg = new Message("CHANGENAME", responseParams, "RESPONSE");
-        broadcastMessageToAll(responseMsg);
-    }
-    
-
-    private void handleUserJoinedRequest(Message msg) {
-        String nickname = msg.getParameters()[0].toString();
-        boolean hasRepetition = clientsMap.containsKey(nickname);
-        if (hasRepetition) {
-            String suggestedNickname = Nickname_Generator.generateNickname();
-            Message responseMsg = new Message("USERJOINED", new Object[]{suggestedNickname}, "RESPONSE");
-            InetSocketAddress clientAddress = clientsMap.get(nickname);
-            if (clientAddress != null) {
-                enqueueMessage(responseMsg, clientAddress.getAddress(), clientAddress.getPort());
-            }
-        }
-    }
-
-    private void handleLogoutOrExitRequest(Message msg, String senderUsername) {
-        String type = msg.getMessageType().replaceAll("\\s+", "").toUpperCase();
-        System.out.println("Client " + type + ": " + senderUsername);
-        Message logoutMessage = new Message(type, msg.getParameters(), "RESPONSE");
-        InetSocketAddress clientAddress = clientsMap.get(senderUsername);
-        if (clientAddress != null) {
-            enqueueMessage(logoutMessage, clientAddress.getAddress(), clientAddress.getPort());
-        }
-        clientsMap.remove(senderUsername);
-        System.out.println("Removed user: " + senderUsername);
-    }
-
-    
-
-    private void handleDeleteRequest(Message msg, String senderUsername) {
-        // Expecting parameters: [gameSessionId, objectId]
-        Object[] originalParams = msg.getParameters();
-        if (originalParams == null || originalParams.length < 2) {
-            System.err.println("DELETE request missing required parameters. Expected: [gameSessionId, objectId]");
-            return;
-        }
-        
-        String sessionId = originalParams[0].toString();
-        String objectId = originalParams[1].toString();
-        
-        // Retrieve the game session from the manager.
-        Game game = gameSessionManager.getGameSession(sessionId);
-        if (game == null) {
-            System.out.println("No game session found with id: " + sessionId);
-            return;
-        }
-        
-        // Remove the game object with the matching UUID.
-        boolean removed = game.getGameObjects().removeIf(go -> go.getId().equals(objectId));
-        if (removed) {
-            System.out.println("Deleted game object with id: " + objectId + " from session " + sessionId);
-        } else {
-            System.out.println("No game object with id " + objectId + " found in session " + sessionId);
-        }
-        
-        // Build a response message containing all original parameters.
-        Message responseMsg = new Message("DELETEGO", originalParams, "RESPONSE");
-        broadcastMessageToAll(responseMsg);
-    }
-
-    private void handleCreateGameRequest(Message msg, String senderUsername) {
-        Object[] params = msg.getParameters();
-        if (params == null || params.length < 1) {
-            System.err.println("CREATEGAME request missing game name parameter.");
-            return;
-        }
-        String requestedGameName = params[0].toString();
-        String gameUuid = UUID.randomUUID().toString();
-        Game newGame = new Game(gameUuid, requestedGameName);
-        gameSessionManager.addGameSession(gameUuid, newGame);
-        Message response = new Message("CREATEGAME", new Object[]{gameUuid, requestedGameName}, "RESPONSE", msg.getConcealedParameters());
-        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-        if (senderAddress != null) {
-            broadcastMessageToAll(response);
-            System.out.println("Created new game session '" + requestedGameName + "' with UUID: " + gameUuid);
-        } else {
-            System.err.println("Sender address not found for user: " + senderUsername);
-        }
-    }
-
-    private void handleJoinGameRequest(Message msg, String senderUsername) {
-        Object[] params = msg.getParameters();
-        
-        // 1) Validate we got the game name as a parameter
-        if (params == null || params.length < 1) {
-            System.err.println("JOINGAME request missing the game name to join.");
-            return;
-        }
-        
-        // 2) Extract the requested name of the game from the parameters
-        String requestedGameName = params[0].toString();
-        
-        // 3) Search your GameSessionManager to find a Game with that name
-        Game foundGame = null;
-        for (Map.Entry<String, Game> entry : gameSessionManager.getAllGameSessions().entrySet()) {
-            Game candidate = entry.getValue();
-            // Compare ignoring case or exactly — your choice
-            if (candidate.getGameName().equalsIgnoreCase(requestedGameName)) {
-                foundGame = candidate;
-                break;
-            }
-        }
-        
-        // 4) If no game was found, send back an error or create a new one
-        if (foundGame == null) {
-            System.err.println("No game session found with name: " + requestedGameName);
-            
-            // Option A: Return an error response to the client
-            Message errorResponse = new Message(
-                "JOINGAME_ERROR",
-                new Object[]{"No game found with name: " + requestedGameName},
-                "RESPONSE",
-                msg.getConcealedParameters()
-            );
+            // Handler not found; print debug message and send default response.
+            System.out.println("Unknown request type: " + msg.getMessageType());
+            Message defaultResponse = makeResponse(msg, msg.getParameters());
             InetSocketAddress senderAddress = clientsMap.get(senderUsername);
             if (senderAddress != null) {
-                enqueueMessage(errorResponse, senderAddress.getAddress(), senderAddress.getPort());
+                enqueueMessage(defaultResponse, senderAddress.getAddress(), senderAddress.getPort());
+                System.out.println("Sent default response to " + senderUsername);
+            } else {
+                System.err.println("Sender address not found for user: " + senderUsername);
             }
-            return;
-            
-            // Option B (Alternative): Create a new Game if not found
-            // ...
-        }
-        
-        // 5) At this point, `foundGame` is the correct session. Grab its ID
-        String foundGameId = foundGame.getGameId();
-        System.out.println("User " + senderUsername 
-                           + " joined game session with name: " + requestedGameName 
-                           + " (ID: " + foundGameId + ")");
-        
-        // 6) Send back a success response containing the found game’s ID
-        Message response = new Message(
-            "JOINGAME",
-            new Object[]{foundGameId},
-            "RESPONSE",
-            msg.getConcealedParameters()
-        );
-        InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-        if (senderAddress != null) {
-            enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
-        } else {
-            System.err.println("Sender address not found for user: " + senderUsername);
         }
     }
-    
 
-    /**
-     * Handles a SELECTGO request by expecting two parameters:
-     *   - Parameter 0: The game session ID.
-     *   - Parameter 1: The game object name.
-     * It retrieves the game session by ID and then searches its game objects for a matching name.
-     * If found, it responds with the game object's UUID.
-     */
-    private void handleSelectGO(Message msg, String senderUsername) {
-        Object[] params = msg.getParameters();
-        if (params == null || params.length < 2) {
-            System.err.println("SELECTGO request requires two parameters: game session ID and game object name.");
-            return;
-        }
-        String targetGameId = params[0].toString();
-        String targetObjectName = params[1].toString();
-        
-        // Retrieve the game session directly by its ID.
-        Game targetGame = gameSessionManager.getGameSession(targetGameId);
-        if (targetGame == null) {
-            System.out.println("No game session found with ID: " + targetGameId);
-            return;
-        }
-        
-        // Loop through the game objects in the target game.
-        for (GameObject go : targetGame.getGameObjects()) {
-            if (go.getName().equalsIgnoreCase(targetObjectName)) {
-                Message response = new Message("SELECTGO", new Object[]{go.getId()}, "RESPONSE", msg.getConcealedParameters());
-                InetSocketAddress senderAddress = clientsMap.get(senderUsername);
-                if (senderAddress != null) {
-                    enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
-                    System.out.println("Sent SELECTGO response: game object UUID: " + go.getId());
-                } else {
-                    System.err.println("Sender address not found for user: " + senderUsername);
-                }
-                return;
-            }
-        }
-        System.out.println("No game object with name \"" + targetObjectName + "\" found in game with ID \"" + targetGameId + "\".");
-    }
+
 
     // ================================
     // Main Method

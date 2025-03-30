@@ -1,9 +1,14 @@
 package ch.unibas.dmi.dbis.cs108.example;
 
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import java.lang.Thread;
 
 import java.util.Scanner;
+import java.util.UUID;
 
 /**
  * Main entry point for starting Server and Client instances individually or simultaneously.
@@ -11,40 +16,28 @@ import java.util.Scanner;
 public class ThinkOutsideTheRoom {
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Choose mode to run:");
-        System.out.println("1. Server");
-        System.out.println("2. Client");
-        System.out.println("3. Server & Client");
-        System.out.print("Your choice: ");
 
-        String choice = scanner.nextLine();
 
-        switch (choice) {
-            case "1":
-                System.out.println("Starting server...");
-                Server.main(args);
+
+        GameContext neContect = new GameContext();
+        neContect.start();
+
+        Thread senderThread = new Thread(() -> {
+        while (true) {
+            neContect.sendCreateGametoClient("GameSession1");
+            try {
+                Thread.sleep(1000); // Sleep for 1000 milliseconds (1 second)
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 break;
+            }
 
-            case "2":
-                System.out.println("Starting client...");
-                Client.main(args);
-                break;
-
-            case "3":
-                System.out.println("Starting server and client simultaneously...");
-                new Thread(() -> Server.main(args)).start();
-
-                // Kleine Verzögerung, damit der Server sicher zuerst startet
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ignored) {}
-
-                Client.main(args);
-                break;
-
-            default:
-                System.out.println("Invalid choice. Exiting.");
+            neContect.printAllGameSessions();
         }
+        });
+        senderThread.start();
+
+
     }
+
 }
