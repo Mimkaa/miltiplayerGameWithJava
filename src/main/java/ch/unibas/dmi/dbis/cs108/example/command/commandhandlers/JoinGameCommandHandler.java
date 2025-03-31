@@ -29,6 +29,7 @@ public class JoinGameCommandHandler implements CommandHandler {
         // Search the gameSessionManager for a game with this name
         Game foundGame = null;
         for (Map.Entry<String, Game> entry : server.getGameSessionManager().getAllGameSessions().entrySet()) {
+
             Game candidate = entry.getValue();
             if (candidate.getGameName().equalsIgnoreCase(requestedGameName)) {
                 foundGame = candidate;
@@ -38,6 +39,11 @@ public class JoinGameCommandHandler implements CommandHandler {
 
         if (foundGame == null) {
             System.err.println("No game session found with name: " + requestedGameName);
+            System.out.println("Serverref: " + server);
+            System.out.println("gameSessionManager : " + server.getGameSessionManager());
+            for (Map.Entry<String, Game> entry : server.getGameSessionManager().getAllGameSessions().entrySet()) {
+                System.out.println("Games: " + entry.getKey());
+            }
             // Option A: respond with an error
             Message errorResponse = new Message(
                     "JOINGAME_ERROR",

@@ -21,29 +21,23 @@ public class SelectGoCommandHandler implements CommandHandler {
     public void handle(Server server, Message msg, String senderUsername) {
         Object[] params = msg.getParameters();
         if (params == null || params.length < 2) {
-            System.err.println("SELECTGO request requires [gameSessionId, objectName].");
+            System.err.println("SELECTGO request requires two parameters: game session ID and game object name.");
             return;
         }
         String targetGameId = params[0].toString();
         String targetObjectName = params[1].toString();
 
-        // Retrieve the game session
+        // Retrieve the game session directly by its ID.
         Game targetGame = server.getGameSessionManager().getGameSession(targetGameId);
         if (targetGame == null) {
             System.out.println("No game session found with ID: " + targetGameId);
             return;
         }
 
-        // Find an object matching the name
+        // Loop through the game objects in the target game.
         for (GameObject go : targetGame.getGameObjects()) {
             if (go.getName().equalsIgnoreCase(targetObjectName)) {
-                // Found it -> respond with the object's ID
-                Message response = new Message(
-                        "SELECTGO",
-                        new Object[]{go.getId()},
-                        "RESPONSE",
-                        msg.getConcealedParameters()
-                );
+                Message response = new Message("SELECTGO", new Object[]{go.getId()}, "RESPONSE", msg.getConcealedParameters());
                 InetSocketAddress senderAddress = server.getClientsMap().get(senderUsername);
                 if (senderAddress != null) {
                     server.enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
@@ -54,7 +48,7 @@ public class SelectGoCommandHandler implements CommandHandler {
                 return;
             }
         }
-        System.out.println("No game object named \"" + targetObjectName
-                + "\" found in session ID \"" + targetGameId + "\".");
+        System.out.println("No game object with name \"" + targetObjectName + "\" found in game with ID \"" + targetGameId + "\".");
     }
 }
+

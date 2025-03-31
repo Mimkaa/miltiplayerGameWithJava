@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import java.util.Arrays;
@@ -9,18 +8,23 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
+/**
+ * The {@code Player} class demonstrates a simple moveable game object that
+ * sends position updates ("MOVE" messages) when it moves, and receives
+ * position updates from other instances via {@link #myUpdateGlobal(Message)}.
+ */
 public class Player extends GameObject {
 
-    // Fields corresponding to constructor parameters.
-    private float x;       
-    private float y;       
-    private final float radius;  
+    // Fields corresponding to constructor parameters:
+    private float x;
+    private float y;
+    private final float radius;
 
-    // Additional fields.
+    // Additional fields:
     private float oldX;
     private float oldY;
-    private float speed = 5.0f;  
-    private float inputX = 0;    
+    private float speed = 5.0f;
+    private float inputX = 0;
     private float inputY = 0;
 
     /**
@@ -42,23 +46,36 @@ public class Player extends GameObject {
     }
 
     /**
-     * Local update logic: update the player's position based on input.
-     * If the position changes, sends a MOVE message.
+     * Local update logic: checks input (keyboard + any local inputX/inputY),
+     * updates position, and if position changed, sends a MOVE message.
      */
     @Override
-    protected void myUpdateLocal() {
-        // Save the old coordinates.
+    public void myUpdateLocal() {
+        // Save old coordinates:
         oldX = x;
         oldY = y;
 
-        // Update using inputX and inputY (if you update these externally).
+        // Movement from "inputX"/"inputY" if you’re using them for local control:
         x += inputX * speed;
         y += inputY * speed;
 
-        // Also update based on the global KeyboardState.
-        updateFromKeyboard();
+        // Also handle direct keyboard input (WASD), but only if this is the selected object:
+        if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
+            if (KeyboardState.isKeyPressed(KeyCode.W)) {
+                y -= speed;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.S)) {
+                y += speed;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.A)) {
+                x -= speed;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.D)) {
+                x += speed;
+            }
+        }
 
-        // Now, if the position has changed, send a MOVE message.
+        // If the position changed, send a MOVE message so others get updated:
         if (x != oldX || y != oldY) {
             Message moveMsg = new Message("MOVE", new Object[]{x, y}, null);
             sendMessage(moveMsg);
@@ -66,30 +83,7 @@ public class Player extends GameObject {
     }
 
     /**
-     * Checks the global keyboard state and updates the player's position.
-     */
-    private void updateFromKeyboard() {
-        // Only process keyboard input if this player's ID matches the selected one.
-        if (!this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            return;
-        }
-        if (KeyboardState.isKeyPressed(KeyCode.W)) {
-            y -= speed;
-        }
-        if (KeyboardState.isKeyPressed(KeyCode.S)) {
-            y += speed;
-        }
-        if (KeyboardState.isKeyPressed(KeyCode.A)) {
-            x -= speed;
-        }
-        if (KeyboardState.isKeyPressed(KeyCode.D)) {
-            x += speed;
-        }
-    }
-
-
-    /**
-     * Global update logic: process an incoming MOVE message to update the player's state.
+     * Global update logic: processes incoming MOVE messages to sync this player's position.
      */
     @Override
     protected void myUpdateGlobal(Message msg) {
@@ -97,17 +91,13 @@ public class Player extends GameObject {
             Object[] params = msg.getParameters();
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = (params[0] instanceof Number)
-                        ? ((Number) params[0]).floatValue()
-                        : Float.parseFloat(params[0].toString());
-                float newY = (params[1] instanceof Number)
-                        ? ((Number) params[1]).floatValue()
-                        : Float.parseFloat(params[1].toString());
+                float newX = asFloat(params[0]);
+                float newY = asFloat(params[1]);
                 synchronized (this) {
                     this.x = newX;
                     this.y = newY;
                 }
-                System.out.println("Processed MOVE for " + getName() 
+                System.out.println("Processed MOVE for " + getName()
                         + " in game " + extractGameId(msg)
                         + ": new position x=" + newX + ", y=" + newY);
             }
@@ -115,18 +105,24 @@ public class Player extends GameObject {
     }
 
     /**
-     * Draws the player on a JavaFX GraphicsContext.
-     * The player is drawn as a filled oval with the player's name centered above it.
-     *
-     * @param gc the JavaFX GraphicsContext used for drawing.
+     * Utility to safely convert an Object param to float.
+     */
+    private float asFloat(Object param) {
+        if (param instanceof Number) {
+            return ((Number)param).floatValue();
+        } else {
+            return Float.parseFloat(param.toString());
+        }
+    }
+
+    /**
+     * Draws the player as a blue circle, and labels with the player's name.
      */
     @Override
     public void draw(GraphicsContext gc) {
-        // Set a specific color for the player.
         gc.setFill(Color.BLUE);
         gc.fillOval(x - radius, y - radius, radius * 2, radius * 2);
 
-        // Set a different color for the text.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         text.setFont(gc.getFont());
@@ -135,10 +131,11 @@ public class Player extends GameObject {
     }
 
     /**
-     * Returns an array of constructor parameter values in the same order as the Player constructor.
+     * Returns constructor params in the same order as your Player(...) constructor.
      */
     @Override
     public Object[] getConstructorParamValues() {
         return new Object[] { getName(), x, y, radius, getGameId() };
     }
 }
+

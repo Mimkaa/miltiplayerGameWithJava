@@ -76,7 +76,7 @@ public class BandageGuy extends GameObject {
      * Local update logic: update position based on input and send a "MOVE" message if changed.
      */
     @Override
-    protected void myUpdateLocal() {
+    public void myUpdateLocal() {
         posX += inputX * speed;
         posY += inputY * speed;
         if (previousX != posX || previousY != posY) {
@@ -99,22 +99,23 @@ public class BandageGuy extends GameObject {
             System.out.println("MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
                 double newX = (params[0] instanceof Number)
-                              ? ((Number) params[0]).doubleValue()
-                              : Double.parseDouble(params[0].toString());
+                        ? ((Number) params[0]).doubleValue()
+                        : Double.parseDouble(params[0].toString());
                 double newY = (params[1] instanceof Number)
-                              ? ((Number) params[1]).doubleValue()
-                              : Double.parseDouble(params[1].toString());
+                        ? ((Number) params[1]).doubleValue()
+                        : Double.parseDouble(params[1].toString());
                 synchronized (this) {
                     this.posX = newX;
                     this.posY = newY;
                 }
                 System.out.println("Processed MOVE for " + getName() +
-                                   " in game " + extractGameId(msg) +
-                                   ": new position x=" + newX + ", y=" + newY);
+                        " in game " + extractGameId(msg) +
+                        ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
-    
+
     // Note: Key event handling is typically done by setting event handlers on the Scene or Node in JavaFX,
     // so we remove the AWT KeyAdapter implementation.
 }
+

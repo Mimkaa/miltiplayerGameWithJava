@@ -35,10 +35,10 @@ public class Square extends GameObject {
      * Local update logic: detect changes to the square's radius and send an "INFT" message if it has changed.
      */
     @Override
-    protected void myUpdateLocal() {
+    public void myUpdateLocal() {
         if (radius != oldRadius) {
             Message inflateMsg = new Message("INFT", new Object[]{ radius }, null,
-                                              new String[]{ getName(), getGameId() });
+                    new String[]{ getName(), getGameId() });
             sendMessage(inflateMsg);
             oldRadius = radius;
         }
@@ -56,8 +56,8 @@ public class Square extends GameObject {
             System.out.println("INFT message parameters: " + Arrays.toString(params));
             if (params != null && params.length > 0) {
                 float newRadius = (params[0] instanceof Number)
-                                  ? ((Number) params[0]).floatValue()
-                                  : Float.parseFloat(params[0].toString());
+                        ? ((Number) params[0]).floatValue()
+                        : Float.parseFloat(params[0].toString());
                 this.radius = newRadius;
                 System.out.println("Processed INFT for " + getName() + ", new radius: " + newRadius);
             }
@@ -95,3 +95,4 @@ public class Square extends GameObject {
         return new Object[] { getName(), x, y, radius, getGameId() };
     }
 }
+

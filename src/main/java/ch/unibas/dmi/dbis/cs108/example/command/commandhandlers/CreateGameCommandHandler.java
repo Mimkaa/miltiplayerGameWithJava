@@ -26,6 +26,7 @@ public class CreateGameCommandHandler implements CommandHandler {
      */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
+
         Object[] params = msg.getParameters();
         if (params == null || params.length < 1) {
             System.err.println("CREATEGAME request missing game name parameter.");
@@ -33,27 +34,13 @@ public class CreateGameCommandHandler implements CommandHandler {
         }
         String requestedGameName = params[0].toString();
         String gameUuid = UUID.randomUUID().toString();
-
-        // Create and start the new game session
         Game newGame = new Game(gameUuid, requestedGameName);
-        newGame.startPlayersCommandProcessingLoop();
-
-        // Store in server’s gameSessions map
-        server.getGameSessions().put(gameUuid, newGame);
-
-        // Build a response message
-        Message response = new Message(
-                "CREATEGAME",
-                new Object[]{gameUuid, requestedGameName},
-                "RESPONSE",
-                msg.getConcealedParameters()
-        );
-
+        server.getGameSessionManager().addGameSession(gameUuid, newGame);
+        Message response = new Message("CREATEGAME", new Object[]{gameUuid, requestedGameName}, "RESPONSE", msg.getConcealedParameters());
         InetSocketAddress senderAddress = server.getClientsMap().get(senderUsername);
         if (senderAddress != null) {
-            server.enqueueMessage(response, senderAddress.getAddress(), senderAddress.getPort());
-            System.out.println("Created new game session '" + requestedGameName
-                    + "' with UUID: " + gameUuid);
+            server.broadcastMessageToAll(response);
+            System.out.println("Created new game session '" + requestedGameName + "' with UUID: " + gameUuid);
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
         }

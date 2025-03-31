@@ -10,6 +10,8 @@ import java.net.InetSocketAddress;
 import java.util.UUID;
 import java.util.concurrent.Future;
 
+import static ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server.makeResponse;
+
 /**
  * CREATEGO: Creates a new game object within a specified game session, assigning
  * a server-generated UUID and broadcasting the creation to all clients.
@@ -29,79 +31,77 @@ public class CreateGoCommandHandler implements CommandHandler {
     public void handle(Server server, Message msg, String senderUsername) {
         Object[] originalParams = msg.getParameters();
         if (originalParams == null || originalParams.length < 2) {
-            System.err.println("CREATEGO request requires at least two parameters: gameSessionId and objectType.");
+            System.err.println("CREATEGO request requires at least two parameters: game session ID and object type.");
             return;
         }
+        // originalParams[0]: game session ID, originalParams[1]: object type, remaining are constructor parameters
 
-        // Generate a new UUID for the game object
+        // Generate a new UUID for the game object.
         String serverGeneratedUuid = UUID.randomUUID().toString();
 
-        // Build a new parameter array with an extra slot for the UUID
+        // Build a new parameter array with one extra element.
         Object[] newParams = new Object[originalParams.length + 1];
+        // Insert the generated UUID as the first parameter.
         newParams[0] = serverGeneratedUuid;
+        // Copy all original parameters into newParams starting at index 1.
         System.arraycopy(originalParams, 0, newParams, 1, originalParams.length);
 
-        // Response message
+        // Build the CREATEGO response message using the new parameter array.
         Message responseMsg = new Message("CREATEGO", newParams, "RESPONSE", msg.getConcealedParameters());
 
-        // E.g., newParams: [uuid, gameSessionId, objectType, ...constructorParams...]
-        String gameSessionId = newParams[1].toString();
-        String objectType = newParams[2].toString();
-
-        // Extract the object’s constructor parameters, if any
+        // The newParams array is now structured as:
+        // [0] generated UUID, [1] game session ID, [2] object type, [3...] additional constructor parameters.
+        // Extract constructor parameters starting from index 3.
         Object[] constructorParams = new Object[0];
         if (newParams.length > 3) {
             constructorParams = java.util.Arrays.copyOfRange(newParams, 3, newParams.length);
         }
 
-        // Find the target game session
-        // (Assuming your server has a gameSessionManager or something similar)
+        // Retrieve the target game session from the manager using the game session ID (newParams[1]).
+        String gameSessionId = newParams[1].toString();
         Game targetGame = server.getGameSessionManager().getGameSession(gameSessionId);
         if (targetGame == null) {
             System.err.println("No game session found with ID: " + gameSessionId);
             return;
         }
 
-        // Asynchronously create the game object in that session
-        Future<GameObject> futureObj = targetGame.addGameObjectAsync(objectType, serverGeneratedUuid, constructorParams);
+        // Asynchronously create the game object using the factory.
+        Future<GameObject> futureObj = targetGame.addGameObjectAsync(newParams[2].toString(), serverGeneratedUuid, constructorParams);
         try {
             GameObject newObj = futureObj.get();
             System.out.println("Created new game object with UUID: " + serverGeneratedUuid
-                    + " and name: " + newObj.getName()
-                    + " in game session: " + gameSessionId);
+                    + " and name: " + newObj.getName() + " in game session: " + gameSessionId);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // Broadcast the CREATEGO to everyone
+        // Broadcast the CREATEGO response message to all clients.
+        System.out.println("Broadcasting CREATEGO to all: " + responseMsg);
         server.broadcastMessageToAll(responseMsg);
 
-        // Optionally, send existing objects in this session to the new user
+        // Optionally, for the new user, send existing objects from this session.
         InetSocketAddress newUserAddress = server.getClientsMap().get(senderUsername);
         if (newUserAddress != null) {
             for (GameObject gameObject : targetGame.getGameObjects()) {
-                if (gameObject.getId().equals(serverGeneratedUuid)) {
-                    // skip the newly created one, if desired
-                    continue;
-                }
+                if (gameObject.getId().equals(serverGeneratedUuid)) continue;
                 Object[] constructorParameters = gameObject.getConstructorParamValues();
                 Object[] finalParameters = new Object[constructorParameters.length + 2];
                 finalParameters[0] = gameObject.getId();
-                finalParameters[1] = gameObject.getClass().getSimpleName();
+                String objType = gameObject.getClass().getSimpleName();
+                finalParameters[1] = objType;
                 System.arraycopy(constructorParameters, 0, finalParameters, 2, constructorParameters.length);
-
-                Message createResponseMessage = Server.makeResponse(msg, finalParameters);
-                server.enqueueMessage(createResponseMessage,
-                        newUserAddress.getAddress(), newUserAddress.getPort());
+                Message createResponseMessage = makeResponse(msg, finalParameters);
+                server.enqueueMessage(createResponseMessage, newUserAddress.getAddress(), newUserAddress.getPort());
             }
         } else {
             System.err.println("No known address for user: " + senderUsername);
         }
 
-        // Debug: print all game sessions
+        // After handling CREATEGO, print all game sessions (IDs and names) for debugging.
         System.out.println("Current game sessions:");
-        server.getGameSessionManager().getAllGameSessions().forEach((id, g) -> {
-            System.out.println("  ID: " + id + " | Name: " + g.getGameName());
+        server.getGameSessionManager().getAllGameSessions().forEach((id, gameSession) -> {
+            System.out.println("  Game Session ID: " + id + " | Name: " + gameSession.getGameName());
         });
+
     }
 }

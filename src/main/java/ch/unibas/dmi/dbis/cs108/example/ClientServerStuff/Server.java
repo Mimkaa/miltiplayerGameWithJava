@@ -5,7 +5,7 @@ import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
-import ch.unibas.dmi.dbis.cs108.example.message.MessageHandler;
+
 import lombok.Getter;
 
 import java.io.IOException;
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
-import ch.unibas.dmi.dbis.cs108.example.message.MessageRegistry;
+
 import lombok.Setter;
 
 
@@ -67,6 +67,7 @@ public class Server {
      * Maps each connected user's username to the corresponding remote socket address
      * (IP + port).
      */
+    @Getter
     private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
 
     /** The underlying DatagramSocket used to receive and send UDP packets. */
@@ -99,8 +100,6 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
-    /** Handles high-level message types (e.g., "ACK", "CHAT", "REQUEST") via reflection. */
-    private final MessageRegistry messageRegistry = new MessageRegistry();
 
 
 
@@ -198,7 +197,6 @@ public class Server {
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
 
             commandRegistry.initCommandHandlers();
-            messageRegistry.initMessageHandlers();
 
             // Initialize the game instance so commands can work properly.
             myGameInstance = new Game("DefaultSessionID", "DefaultGameName");
@@ -269,7 +267,6 @@ public class Server {
      * The method first normalizes the message type (e.g., "ACK", "CHAT", "REQUEST", etc.)
      * and optionally registers or verifies the user if the message includes concealed
      * parameters (e.g., username). It then attempts to find an appropriate
-     * {@link MessageHandler} in the {@link MessageRegistry} based on the uppercase message type.
      * <ul>
      *   <li>If a matching handler exists, the server delegates processing by invoking
      *       {@code handler.handle(this, msg, senderSocket)}.</li>
@@ -281,24 +278,60 @@ public class Server {
      * @param senderSocket the network socket (IP + port) of the message sender
      */
     private void processMessage(Message msg, InetSocketAddress senderSocket) {
-        // 1) Normalisiere MessageType (z.B. "ACK", "CHAT", "REQUEST", ...)
-        String msgType = msg.getMessageType().toUpperCase();
+        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+            String ackUuid = msg.getParameters()[0].toString();
+            reliableSender.acknowledge(ackUuid);
+            System.out.println("Processed ACK message for UUID " + msg.getUUID());
+            return;
+        }
+        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
+            System.out.println("Processed CHAT message 1 ");
+            if (serverChatManager == null) {
+                serverChatManager = new ChatManager.ServerChatManager();
+            }
+            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
+                ackProcessor.addAck(senderSocket, msg.getUUID());
+            }
+            AsyncManager.run(() -> broadcastMessageToAll(msg));
+            System.out.println("Processed CHAT message 2");
+            return;
+        }
 
-        // 2) Bei "concealed" Parametern: user registrieren o.ä.?
-        //    (Falls du das nicht mehr hier, sondern in einem Handler willst,
-        //     kannst du es in z.B. "UserRegistrationMessageHandler" verschieben.)
-        registerUserIfNeeded(msg, senderSocket);
-
-        // 3) Pass an den entsprechenden Handler
-        MessageHandler handler = messageRegistry.getHandler(msgType);
-        if (handler != null) {
-            handler.handle(this, msg, senderSocket);
+        String[] concealed = msg.getConcealedParameters();
+        if (concealed != null && concealed.length >= 2) {
+            String username = concealed[concealed.length - 1];
+            if (clientsMap.containsKey(username)) {
+                InetSocketAddress existingSocket = clientsMap.get(username);
+                if (!existingSocket.equals(senderSocket)) {
+                    if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
+                        ackProcessor.addAck(senderSocket, msg.getUUID());
+                    }
+                    String suggestedNickname = Nickname_Generator.generateNickname();
+                    Message collisionResponse = new Message("NAME_TAKEN", new Object[]{suggestedNickname}, "RESPONSE");
+                    collisionResponse.setUUID("");
+                    enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
+                    return;
+                }
+            } else {
+                clientsMap.put(username, senderSocket);
+                synchronizeNewClient(username, senderSocket);
+            }
+            System.out.println("Registered user: " + username + " at " + senderSocket + ". Total clients: " + clientsMap.size());
+            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                ackProcessor.addAck(senderSocket, msg.getUUID());
+                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
+            }
+            if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                processMessageBestEffort(msg, senderSocket);
+            } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
+                AsyncManager.run(() -> handleRequest(msg, username));
+            } else {
+                broadcastMessageToOthers(msg, username);
+            }
         } else {
-            System.out.println("No MessageHandler for type: " + msgType
-                    + ", ignoring or fallback logic...");
+            System.out.println("Concealed parameters missing or too short.");
         }
     }
-
     /**
      * Registers a user based on concealed parameters (e.g., username),
      * detecting name collisions if a user with that name is already registered.
@@ -446,6 +479,50 @@ public class Server {
             }
         }
     }
+
+    private void synchronizeNewClient(String username, InetSocketAddress clientSocket) {
+        // 1) For each existing game in the GameSessionManager:
+        for (Map.Entry<String, Game> entry : gameSessionManager.getAllGameSessions().entrySet()) {
+            String gameId = entry.getKey();
+            Game game = entry.getValue();
+
+            // a) Send a CREATEGAME message, so the client knows this game ID + name.
+            //    The client can treat this exactly like if the server had just created the game.
+            Message createGameMsg = new Message(
+                    "CREATEGAME",
+                    new Object[]{ gameId, game.getGameName() },
+                    "RESPONSE"
+            );
+            enqueueMessage(createGameMsg, clientSocket.getAddress(), clientSocket.getPort());
+
+            // b) For each GameObject in that game, send a CREATEGO message with all constructor params.
+            for (GameObject go : game.getGameObjects()) {
+                // The CREATEGO parameters:
+                //    0 -> gameObject UUID
+                //    1 -> game session ID
+                //    2 -> object type (from the class or however you identify it)
+                //    3... -> constructor parameters
+                String objectUuid = go.getId();
+                String objectType = go.getClass().getSimpleName();
+
+                // The constructor parameters are exactly what that object's getConstructorParamValues() returns.
+                Object[] constructorParams = go.getConstructorParamValues();
+
+                // Build a combined param array:
+                //    [ 0: objectUuid, 1: gameId, 2: objectType, 3..: constructorParams ]
+                Object[] createGoParams = new Object[3 + constructorParams.length];
+                createGoParams[0] = objectUuid;
+                createGoParams[1] = gameId;
+                createGoParams[2] = objectType;
+                System.arraycopy(constructorParams, 0, createGoParams, 3, constructorParams.length);
+
+                Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
+                enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
+            }
+        }
+    }
+
+
 
 
 

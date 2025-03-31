@@ -48,7 +48,7 @@ public class Ricardo extends GameObject {
      * Local update logic: if the rotation has changed, send a ROTATE message.
      */
     @Override
-    protected void myUpdateLocal() {
+    public void myUpdateLocal() {
         if (rotation != oldRotation) {
             Message rotateMsg = new Message("ROTATE", new Object[]{rotation}, null);
             sendMessage(rotateMsg);
@@ -68,8 +68,8 @@ public class Ricardo extends GameObject {
             System.out.println("ROTATE message parameters: " + Arrays.toString(params));
             if (params.length >= 1) {
                 double newRotation = (params[0] instanceof Number)
-                                     ? ((Number) params[0]).doubleValue()
-                                     : rotation;
+                        ? ((Number) params[0]).doubleValue()
+                        : rotation;
                 synchronized (this) {
                     this.rotation = newRotation;
                 }
