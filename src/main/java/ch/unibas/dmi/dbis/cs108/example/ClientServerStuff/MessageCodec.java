@@ -143,6 +143,26 @@ public class MessageCodec {
     }
 
     /**
+     * Decodes a comma-separated list of typed parameters (e.g., "I:10, F:1.23, S:hello")
+     * into an array of Objects.
+     *
+     * @param encodedParameters the string representing the encoded parameters
+     * @return an array of decoded Objects
+     */
+    public static Object[] decodeParameters(String encodedParameters) {
+        if (encodedParameters == null || encodedParameters.trim().isEmpty()) {
+            return new Object[0];
+        }
+        String[] tokens = encodedParameters.split(",\\s*");
+        Object[] parameters = new Object[tokens.length];
+        for (int i = 0; i < tokens.length; i++) {
+            parameters[i] = decodeWithTypePrefix(tokens[i]);
+        }
+        return parameters;
+    }
+
+
+    /**
      * Decodes the main part of the message containing the type, optional field, and parameters.
      * The expected syntax is:
      * <pre>

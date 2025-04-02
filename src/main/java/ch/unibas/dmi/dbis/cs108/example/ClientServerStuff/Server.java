@@ -332,49 +332,7 @@ public class Server {
             System.out.println("Concealed parameters missing or too short.");
         }
     }
-    /**
-     * Registers a user based on concealed parameters (e.g., username),
-     * detecting name collisions if a user with that name is already registered.
-     * <p>
-     * If a collision is detected, an alternative nickname is suggested.
-     *
-     * @param msg          the incoming {@link Message} that may contain concealed parameters
-     * @param senderSocket the network socket of the sender
-     */
-    private void registerUserIfNeeded(Message msg, InetSocketAddress senderSocket) {
-        String[] concealed = msg.getConcealedParameters();
-        if (concealed != null && concealed.length >= 2) {
-            String username = concealed[concealed.length - 1];
-
-            // Kollision?
-            if (clientsMap.containsKey(username)) {
-                InetSocketAddress existingSocket = clientsMap.get(username);
-                if (!existingSocket.equals(senderSocket)) {
-                    // Falls wir ACK brauchen
-                    if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
-                        ackProcessor.addAck(senderSocket, msg.getUUID());
-                    }
-                    // gerenrate nick suggestion
-                    String suggestedNickname = Nickname_Generator.generateNickname();
-                    Message collisionResponse = new Message("NAME_TAKEN", new Object[]{suggestedNickname}, "RESPONSE");
-                    collisionResponse.setUUID("");
-                    enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
-                }
-            } else {
-                // new registration
-                clientsMap.put(username, senderSocket);
-                System.out.println("Registered user: " + username + " at " + senderSocket
-                        + ". Total clients: " + clientsMap.size());
-
-                // if we want to logg ack
-                if (msg.getUUID() != null
-                        && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                    ackProcessor.addAck(senderSocket, msg.getUUID());
-                    System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
-                }
-            }
-        }
-    }
+   
 
     /**
      * Sends the given {@link Message} to all connected clients except the sender.

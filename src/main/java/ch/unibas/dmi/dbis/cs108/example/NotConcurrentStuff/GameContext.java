@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Player;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
@@ -270,7 +271,7 @@ public class GameContext {
                 }
             });
 
-            // --- Third Overlay Button: Create Object Button ---
+                        // --- Third Overlay Button: Create Object Button ---
             Button createObjectButton = new Button("Create Object Button");
             // Position this button below the join game button.
             StackPane.setAlignment(createObjectButton, Pos.TOP_CENTER);
@@ -286,46 +287,40 @@ public class GameContext {
                     return;
                 }
 
-                // Get the name from the overlay input field (registered as "overlayInputField").
+                // Get the parameter string from the overlay input field.
                 Node node = uiManager.getComponent("overlayInputField");
                 if (!(node instanceof TextField)) {
                     System.out.println("Overlay input field not found or is not a TextField.");
                     return;
                 }
-                String playerName = ((TextField) node).getText().trim();
-                if (playerName.isEmpty()) {
-                    System.out.println("Please enter a name for the player in the input field.");
+                String input = ((TextField) node).getText().trim();
+                if (input.isEmpty()) {
+                    System.out.println("Please enter the parameters for the game object in the input field.");
                     return;
                 }
 
-                // Define the object type, for example "Player". Change as needed.
-                String objectType = "Player";
+                // If the input contains surrounding square brackets, remove them.
+                if (input.startsWith("[") && input.endsWith("]")) {
+                    input = input.substring(1, input.length() - 1);
+                }
 
-                // Create the CREATEGO message. In this example we provide:
-                //  - the sessionId (again) as the first argument,
-                //  - objectType as the second argument,
-                //  - playerName (retrieved from the input field),
-                //  - position and radius details,
-                //  - and sessionId again at the end for the game ID.
-                Message createObjectMsg = new Message(
-                        "CREATEGO",
-                        new Object[]{
-                                sessionId,      // or some new UUID if needed
-                                objectType,
-                                playerName,
-                                200.0f,
-                                100.0f,
-                                25.0f,
-                                sessionId
-                        },
-                        "REQUEST"
-                );
+                // Decode the user-specified parameters using MessageCodec.decodeParameters.
+                Object[] userParameters = MessageCodec.decodeParameters(input);
+
+                // Build the final parameters array with the current game session ID as the first parameter.
+                Object[] finalParameters = new Object[userParameters.length + 1];
+                finalParameters[0] = sessionId; // Ensure the first parameter is the current gameId.
+                System.arraycopy(userParameters, 0, finalParameters, 1, userParameters.length);
+
+                // Create the CREATEGO message with the constructed parameters.
+                Message createObjectMsg = new Message("CREATEGO", finalParameters, "REQUEST");
 
                 // Send the message via the static client method.
                 Client.sendMessageStatic(createObjectMsg);
 
-                System.out.println("Sent CREATEGO message for new game object with name: " + playerName);
+                System.out.println("Sent CREATEGO message with parameters: " + java.util.Arrays.toString(finalParameters));
             });
+
 
             // --- Fourth Overlay Button: Select Object Button ---
             Button selectObjectButton = new Button("Select Object Button");
