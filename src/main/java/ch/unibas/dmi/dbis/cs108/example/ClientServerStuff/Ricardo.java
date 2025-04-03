@@ -1,10 +1,10 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 
 import java.util.Arrays;
@@ -19,6 +19,11 @@ public class Ricardo extends GameObject {
     // Rotation in degrees.
     private double rotation = 0.0;
     private double oldRotation = 0.0;
+    
+    // New fields for keyboard-controlled movement:
+    private double speed = 5.0;
+    // Optionally, you could track old positions if needed
+    // but here we use local temporary variables in myUpdateLocal()
 
     /**
      * Constructs a new Ricardo instance.
@@ -45,10 +50,39 @@ public class Ricardo extends GameObject {
     }
 
     /**
-     * Local update logic: if the rotation has changed, send a ROTATE message.
+     * Local update logic: processes keyboard input for movement and rotation.
+     * If the Ricardo object is selected, it reads WASD keys to update its position.
+     * If the rotation has changed, a ROTATE message is sent.
      */
     @Override
     public void myUpdateLocal() {
+        // Save current position
+        double oldX = x;
+        double oldY = y;
+
+        // Process keyboard input for movement if this object is selected.
+        if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
+            if (KeyboardState.isKeyPressed(KeyCode.W)) {
+                y -= speed;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.S)) {
+                y += speed;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.A)) {
+                x -= speed;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.D)) {
+                x += speed;
+            }
+        }
+
+        // If the position changed, send a MOVE message so others get updated.
+        if (x != oldX || y != oldY) {
+            Message moveMsg = new Message("MOVE", new Object[]{x, y}, null);
+            sendMessage(moveMsg);
+        }
+
+        // Process rotation changes (as before).
         if (rotation != oldRotation) {
             Message rotateMsg = new Message("ROTATE", new Object[]{rotation}, null);
             sendMessage(rotateMsg);
@@ -57,7 +91,7 @@ public class Ricardo extends GameObject {
     }
 
     /**
-     * Global update logic: process incoming ROTATE messages.
+     * Global update logic: processes incoming ROTATE and MOVE messages.
      *
      * @param msg The message to process.
      */
@@ -74,6 +108,22 @@ public class Ricardo extends GameObject {
                     this.rotation = newRotation;
                 }
                 System.out.println("Processed ROTATE for " + getName() + ": new rotation = " + newRotation);
+            }
+        } else if ("MOVE".equals(msg.getMessageType())) {
+            Object[] params = msg.getParameters();
+            System.out.println("MOVE message parameters: " + Arrays.toString(params));
+            if (params.length >= 2) {
+                double newX = (params[0] instanceof Number)
+                        ? ((Number) params[0]).doubleValue()
+                        : x;
+                double newY = (params[1] instanceof Number)
+                        ? ((Number) params[1]).doubleValue()
+                        : y;
+                synchronized (this) {
+                    this.x = newX;
+                    this.y = newY;
+                }
+                System.out.println("Processed MOVE for " + getName() + ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
@@ -110,6 +160,6 @@ public class Ricardo extends GameObject {
      */
     @Override
     public Object[] getConstructorParamValues() {
-        return new Object[] { getName(), getGameId(), x, y, imagePath };
+        return new Object[]{getName(), getGameId(), x, y, imagePath};
     }
 }

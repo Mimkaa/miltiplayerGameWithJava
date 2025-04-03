@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Client {
 
     /** The default server address (localhost). */
-    public static final String SERVER_ADDRESS = "localhost";
+    public static final String SERVER_ADDRESS = "25.12.99.19";
     /** The default server port (9876). */
     public static final int SERVER_PORT = 9876;
 

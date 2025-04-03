@@ -21,6 +21,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
 import java.util.Arrays;
@@ -75,6 +76,12 @@ public class GameContext {
                     String gameID = receivedMessage.getParameters()[0].toString();
                     currentGameId.set(gameID);
                     System.out.println("Current game id set to: " + currentGameId.get());
+                    Platform.runLater(() -> {
+                        Node labelNode = uiManager.getComponent("gameIdLabel");
+                        if (labelNode instanceof Label) {
+                            ((Label) labelNode).setText("Game ID: " + gameID);
+                        }
+                    });
                 } else if ("SELECTGO".equals(type)) {
                     System.out.println("Processing SELECTGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 1) {
@@ -223,6 +230,14 @@ public class GameContext {
             StackPane.setMargin(gameSelect, new Insets(10, 10, 0, 10));
             CentralGraphicalUnit.getInstance().addNode(gameSelect);
             uiManager.registerComponent("gameSelect", gameSelect);
+
+            // --- Label to display current game id ---
+            Label gameIdLabel = new Label("Game ID:" + currentGameId.get());
+            // Position the label below the input field.
+            StackPane.setAlignment(gameIdLabel, Pos.TOP_CENTER);
+            gameIdLabel.setTranslateY(240);
+            CentralGraphicalUnit.getInstance().addNode(gameIdLabel);
+            uiManager.registerComponent("gameIdLabel", gameIdLabel);
 
             // --- Overlay Input Field ---
             TextField overlayInputField = new TextField();

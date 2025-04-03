@@ -191,7 +191,7 @@ public class Server {
      */
     public void start() {
         try {
-            InetAddress ipAddress = InetAddress.getByName("localhost");
+            InetAddress ipAddress = InetAddress.getByName("25.12.99.19");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
