@@ -33,12 +33,12 @@ dependencies {
     implementation 'org.reflections:reflections:0.10.2'
 
     implementation 'ch.qos.logback:logback-classic:1.4.6'
-    
+
     // JUnit dependencies for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation("org.junit.jupiter:junit-jupiter:5.+")
-    
+
     // Lombok for compile-time code generation.
     compileOnly 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'
@@ -52,11 +52,17 @@ jar {
     duplicatesStrategy(DuplicatesStrategy.INCLUDE)
     manifest {
         attributes(
-            'Main-Class': mainClassName
+                'Main-Class': mainClassName
         )
     }
     from {
         configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } +
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+                configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    run {
+        jvmArgs = [
+                '--module-path', configurations.runtimeClasspath.asPath,
+                '--add-modules', 'javafx.controls,javafx.fxml,javafx.base,javafx.graphics'
+        ]
     }
 }
