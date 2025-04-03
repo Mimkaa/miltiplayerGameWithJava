@@ -7,12 +7,11 @@ plugins {
 group 'ch.unibas.dmi.dbis'
 version '0.0.1-ALPHA'
 
-// Specify your main application class here.
 mainClassName = 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
 
 javafx {
     version = "19.0.2.1"
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.base', 'javafx.graphics']
+    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.base', 'javafx.graphics' ]
 }
 
 java {
@@ -26,15 +25,20 @@ repositories {
 }
 
 dependencies {
-    // JavaFX dependency for controls; other modules are handled by the plugin.
+    // JavaFX dependencies (the plugin helps manage these)
     implementation 'org.openjfx:javafx-controls:19.0.2.1'
+    implementation 'org.openjfx:javafx-fxml:19.0.2.1'
 
-    // reflections for zero configuration classpath analysis
+    // Dyn4j dependency for physics simulation.
+    implementation 'org.dyn4j:dyn4j:5.0.2'
+
+    // Reflections for classpath analysis.
     implementation 'org.reflections:reflections:0.10.2'
 
+    // Logging
     implementation 'ch.qos.logback:logback-classic:1.4.6'
 
-    // JUnit dependencies for testing.
+    // JUnit for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation("org.junit.jupiter:junit-jupiter:5.+")
@@ -59,10 +63,17 @@ jar {
         configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } +
                 configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+    // Optional: a run block with JVM args (if needed)
     run {
         jvmArgs = [
                 '--module-path', configurations.runtimeClasspath.asPath,
                 '--add-modules', 'javafx.controls,javafx.fxml,javafx.base,javafx.graphics'
         ]
+    }
+
+    task printRuntimeClasspath {
+        doLast {
+            println "Runtime classpath: " + configurations.runtimeClasspath.asPath
+        }
     }
 }
