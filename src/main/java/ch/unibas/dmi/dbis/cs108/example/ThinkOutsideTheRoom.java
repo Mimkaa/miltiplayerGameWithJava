@@ -3,49 +3,62 @@ package ch.unibas.dmi.dbis.cs108.example;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 
-import java.util.Scanner;
-
-/**
- * Main entry point for starting Server and Client instances individually or simultaneously.
- */
 public class ThinkOutsideTheRoom {
 
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Choose mode to run:");
-        System.out.println("1. Server");
-        System.out.println("2. Client");
-        System.out.println("3. Server & Client");
-        System.out.print("Your choice: ");
 
-        String choice = scanner.nextLine();
+public static void main(String[] args) {
+    if (args.length == 0) {
+        System.out.println("Usage:");
+        System.out.println("  server <port>");
+        System.out.println("  client <host:port> [username]");
+        System.out.println("  both <port> [username]");
+        return;
+    }
 
-        switch (choice) {
-            case "1":
-                System.out.println("Starting server...");
-                Server.main(args);
-                break;
+    String mode = args[0].toLowerCase();
 
-            case "2":
-                System.out.println("Starting client...");
-                Client.main(args);
-                break;
+    switch (mode) {
+        case "server":
+            if (args.length != 2) {
+                System.err.println("Usage: server <port>");
+                return;
+            }
+            Server.main(new String[]{args[1]});
+            break;
 
-            case "3":
-                System.out.println("Starting server and client simultaneously...");
-                new Thread(() -> Server.main(args)).start();
+        case "client":
+            if (args.length < 2 || args.length > 3) {
+                System.err.println("Usage: client <host:port> [username]");
+                return;
+            }
+            Client.main(args);
+            break;
 
-                // Kleine Verzögerung, damit der Server sicher zuerst startet
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ignored) {}
+        case "both":
+            if (args.length < 2 || args.length > 3) {
+                System.err.println("Usage: both <port> [username]");
+                return;
+            }
 
-                Client.main(args);
-                break;
+            String port = args[1];
+            new Thread(() -> Server.main(new String[]{port})).start();
 
-            default:
-                System.out.println("Invalid choice. Exiting.");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+            }
+
+            String address = "localhost:" + port;
+
+            if (args.length == 3) {
+                Client.main(new String[]{"client", address, args[2]});
+            } else {
+                Client.main(new String[]{"client", address});
+            }
+            break;
+
+        default:
+            System.err.println("Unknown mode. Use: server, client or both");
         }
     }
 }
-

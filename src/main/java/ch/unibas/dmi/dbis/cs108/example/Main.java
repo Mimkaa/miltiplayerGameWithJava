@@ -40,7 +40,7 @@ public class Main {
             new Thread(client::run).start();
             Thread.sleep(1000);
             // Optionally, you could also invoke client.login() or other methods here.
-            
+
         } catch (Exception e) {
             e.printStackTrace();
         }

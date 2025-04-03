@@ -43,7 +43,7 @@ public class ServerCommandTests {
     static void setup() throws Exception {
         clientSocket = new DatagramSocket();
         serverAddress = InetAddress.getByName("localhost");
-        Server.getInstance().start();
+        Server.getInstance().start(SERVER_PORT);
         Thread.sleep(1000); // Allow the server some time to finish starting up
     }
 
