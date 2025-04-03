@@ -26,6 +26,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
+
+import javax.swing.*;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.Future;
@@ -184,7 +186,25 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + sessionId);
                     }
-                } else {
+                }
+                else if ("GETUSERS".equals(type))
+                {
+                    Platform.runLater(() -> {
+                        Node node = uiManager.getComponent("usersList");
+                        if (node instanceof TextField) {
+                            Object[]params = (Object[]) receivedMessage.getParameters();
+                            ((TextField)node).clear();
+                            for (Object param : params) {
+                                ((TextField) node).appendText(param.toString());
+                            }
+
+
+                        }
+                    });
+
+
+                }
+                else {
                     System.out.println("Unknown message type: " + type);
                 }
             }
@@ -217,6 +237,10 @@ public class GameContext {
         Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
         CentralGraphicalUnit.getInstance().addNode(mainUIPane);
         uiManager.registerComponent("mainUIPane", mainUIPane);
+
+        Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
+        CentralGraphicalUnit.getInstance().addNode(adminPane);
+        uiManager.registerComponent("adminUIPane", adminPane);
         
         // Create and add the toggle button (outside of the main UI pane).
         //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
@@ -230,10 +254,6 @@ public class GameContext {
         System.out.println("All UI components have been added via GameUIComponents.");
         });
         
-        
-
-
-
 
 
         Scanner inputScanner = new Scanner(System.in);

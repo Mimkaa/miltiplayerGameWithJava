@@ -166,6 +166,44 @@ public class GameUIComponents {
         return mainUIPane;
     }
 
+    public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        Pane administrativePane = new Pane();
+        administrativePane.setTranslateX(0);
+        administrativePane.setTranslateY(50);
+        administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
+
+        Button OnlineUsersButton = new Button("Online Users");
+        OnlineUsersButton.setLayoutX(200);
+        OnlineUsersButton.setLayoutY(200);
+        administrativePane.getChildren().add(OnlineUsersButton);
+        uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
+        OnlineUsersButton.setOnAction(e -> {
+
+                Message selectGoMsg = new Message("GETUSERS", new Object[]{}, "REQUEST");
+                Client.sendMessageStatic(selectGoMsg);
+
+
+        });
+
+        TextField usersList = new TextField(GameContext.getCurrentGameId() != null
+                ? GameContext.getCurrentGameId()
+                : ""
+        );
+        usersList.setPromptText("Game ID");
+        usersList.setEditable(false); // non-editable but copyable
+        usersList.setLayoutX(200);
+        usersList.setLayoutY(240);
+
+
+        administrativePane.getChildren().add(usersList);
+
+
+        uiManager.registerComponent("usersList", usersList);
+
+
+        return administrativePane;
+    }
+
     /**
      * Creates and returns a toggle button to control the visibility of the given mainUIPane.
      *
@@ -197,12 +235,19 @@ public class GameUIComponents {
         guiInterfaces.setOnAction(e -> {
             String selected = guiInterfaces.getSelectionModel().getSelectedItem();
             System.out.println("Selected chat mode: " + selected);
-            // Retrieve the mainUIPane registered under "mainUIPane"
-            Node mainPaneNode = uiManager.getComponent("mainUIPane");
-            if (mainPaneNode instanceof Pane) {
-                Pane mainUIPane = (Pane) mainPaneNode;
-                // Show mainUIPane only if "Lobby" is selected, hide otherwise.
-                mainUIPane.setVisible("Lobby".equals(selected));
+
+            // Show/hide the Lobby pane
+            Node lobbyPaneNode = uiManager.getComponent("mainUIPane");
+            if (lobbyPaneNode instanceof Pane) {
+                Pane lobbyPane = (Pane) lobbyPaneNode;
+                lobbyPane.setVisible("Lobby".equals(selected));
+            }
+
+            // Show/hide the Administration pane
+            Node adminPaneNode = uiManager.getComponent("adminUIPane");
+            if (adminPaneNode instanceof Pane) {
+                Pane adminPane = (Pane) adminPaneNode;
+                adminPane.setVisible("Administration".equals(selected));
             }
         });
 
