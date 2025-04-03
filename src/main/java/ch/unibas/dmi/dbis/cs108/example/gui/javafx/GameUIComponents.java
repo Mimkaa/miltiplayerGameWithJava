@@ -191,7 +191,7 @@ public class GameUIComponents {
         StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
         guiInterfaces.setTranslateX(0);
         guiInterfaces.setTranslateY(0);
-        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat");
+        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "None");
         guiInterfaces.setPromptText("Select GUI Iterface");
 
         guiInterfaces.setOnAction(e -> {
