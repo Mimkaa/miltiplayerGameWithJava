@@ -3,9 +3,6 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import java.util.Arrays;
-
-import ch.unibas.dmi.dbis.cs108.example.physics.Collidable;
-import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
@@ -16,7 +13,7 @@ import javafx.scene.text.Text;
  * sends position updates ("MOVE" messages) when it moves, and receives
  * position updates from other instances via {@link #myUpdateGlobal(Message)}.
  */
-public class Player extends GameObject implements Collidable {
+public class Player extends GameObject {
 
     // Fields corresponding to constructor parameters:
     private float x;
@@ -139,12 +136,6 @@ public class Player extends GameObject implements Collidable {
     @Override
     public Object[] getConstructorParamValues() {
         return new Object[] { getName(), x, y, radius, getGameId() };
-    }
-
-    @Override
-    public Rectangle2D getBounds() {
-        return new Rectangle2D(x - radius, y - radius, radius * 2, radius * 2);
-
     }
 }
 
