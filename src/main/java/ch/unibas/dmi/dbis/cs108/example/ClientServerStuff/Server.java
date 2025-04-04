@@ -413,37 +413,6 @@ public class Server {
         }
     }
 
-    /**
-     * Sendet eine serverseitige Nachricht an alle registrierten Clients.
-     * <p>
-     * Diese Methode verwendet den serverseitigen DatagramSocket, um die übergebene Nachricht
-     * an alle Clients zu versenden, die in der {@code clientsMap} registriert sind.
-     * Die Nachricht wird dabei zunächst mit {@link MessageCodec#encode(Message)} in einen
-     * String konvertiert und anschließend als UDP-Paket an die jeweilige Adresse und Port des Clients gesendet.
-     * <p>
-     * Diese Methode ist speziell für serverseitige Nachrichten (z.B. Snapshots des Spielzustands,
-     * Systembenachrichtigungen o.ä.) gedacht und greift nicht auf die clientseitige Singleton-Instanz
-     * (Client.instance) zu.
-     *
-     * @param msg Die zu versendende Nachricht als {@link Message}-Objekt. Die Nachricht wird intern kodiert.
-     */
-    public void sendServerMessage(Message msg) {
-        // Versende die Nachricht an alle registrierten Clients in der clientsMap
-        for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-            try {
-                InetAddress dest = entry.getValue().getAddress();
-                int port = entry.getValue().getPort();
-                String encoded = MessageCodec.encode(msg);
-                byte[] data = encoded.getBytes();
-                DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
-                serverSocket.send(packet);
-                System.out.println("Server sent message to " + entry.getKey() + " at " + entry.getValue());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     // ================================
     // Request Handling
     // ================================

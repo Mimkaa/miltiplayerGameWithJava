@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
@@ -95,6 +94,7 @@ public class Client {
      * Constructs a new {@code Client} with the given game session name and
      * initializes the associated {@link Game} object.
      *
+     * @param gameSessionName the name of the game session
      */
     public Client() {
         instance = this;  // Set the singleton instance.
@@ -147,17 +147,27 @@ public class Client {
      */
     public void run() {
         try {
-            // Client-Socket initialisieren
+            // Initialize the client socket once.
             clientSocket = new DatagramSocket();
 
-            // Reliable Sender initialisieren
+            // Initialize the reliable sender without a fixed destination.
             myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000);
 
-            // AckProcessor initialisieren und starten
+            // Initialize the AckProcessor using the same socket.
             ackProcessor = new AckProcessor(clientSocket);
             ackProcessor.start();
 
-            // Receiver Task: UDP-Pakete empfangen und dekodieren
+            // IMPORTANT: Initialize chat manager BEFORE starting the UI.
+            //initChatManager();
+
+            // Start processing loops for player commands (optional, depends on Game logic).
+            //game.startPlayersCommandProcessingLoop();
+
+            // Optionally, we could start ping tracking here (commented out for demonstration).
+            // pingManager = new PingManager(outgoingQueue, InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT, 300);
+            // pingManager.start();
+
+            // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
             AsyncManager.runLoop(() -> {
                 try {
                     byte[] receiveData = new byte[1024];
@@ -172,68 +182,27 @@ public class Client {
                 }
             });
 
-            // Verarbeitung eingehender Nachrichten
             AsyncManager.runLoop(() -> {
                 try {
                     Message msg = incomingQueue.poll();
                     if (msg != null) {
-                        // ACK-Nachrichten verarbeiten
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+                            // Process the ACK message.
                             if (msg.getParameters() != null && msg.getParameters().length > 0) {
                                 String ackUuid = msg.getParameters()[0].toString();
                                 myReliableUDPSender.acknowledge(ackUuid);
                             } else {
                                 System.out.println("Received ACK with no parameters.");
                             }
-                        }
-                        // SNAPSHOT-Nachrichten verarbeiten
-                        else if ("SNAPSHOT".equalsIgnoreCase(msg.getMessageType())) {
-                            Object[] snapshotData = msg.getParameters();
-                            if (snapshotData == null || snapshotData.length == 0) {
-                                System.out.println("Received SNAPSHOT with empty parameters; ignoring.");
-                            } else {
-                                // Hole das aktuelle Game über den GameContext.
-                                String currentGameId = GameContext.getCurrentGameId();
-                                if (currentGameId == null) {
-                                    System.out.println("No current game id available; ignoring SNAPSHOT.");
-                                } else {
-                                    ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game currentGame =
-                                            GameContext.getInstance().getGameSessionManager().getGameSession(currentGameId);
-                                    if (currentGame != null) {
-                                        for (Object obj : snapshotData) {
-                                            if (obj == null) continue;
-                                            try {
-                                                Object[] state = (Object[]) obj;
-                                                if (state.length < 3) continue;
-                                                String objectId = state[0].toString();
-                                                float newX = ((Number) state[1]).floatValue();
-                                                float newY = ((Number) state[2]).floatValue();
-                                                for (GameObject go : currentGame.getGameObjects()) {
-                                                    if (go.getId().equals(objectId)) {
-                                                        // Direktes Setzen; alternativ kann hier interpoliert werden.
-                                                        go.setX(newX);
-                                                        go.setY(newY);
-                                                        break;
-                                                    }
-                                                }
-                                            } catch (Exception e) {
-                                                System.err.println("Error processing snapshot entry: " + e.getMessage());
-                                                e.printStackTrace();
-                                            }
-                                        }
-                                    } else {
-                                        System.out.println("Current game is null; ignoring SNAPSHOT.");
-                                    }
-                                }
-                            }
-                        }
-                        // Andere Nachrichten verarbeiten
-                        else {
+                        } else {
+                            // For non-ACK messages, if the message has a UUID and option is not "GAME",
+                            // add it to the ACK processor.
                             if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                                 InetSocketAddress dest = new InetSocketAddress(
-                                        InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                    InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
+                            // Now dispatch the message via the MessageHub.
                             messageHub.dispatch(msg);
                         }
                     }
@@ -242,40 +211,42 @@ public class Client {
                 }
             });
 
-            // Sender Task: Nachrichten aus der Outgoing-Queue senden.
+            // Sender Task: Continuously poll outgoingQueue and send messages.
             AsyncManager.runLoop(() -> {
                 Message msg = outgoingQueue.poll();
                 if (msg != null) {
                     try {
                         InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
                         if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                            // Best-effort-Sendung für GAME-Nachrichten.
+                            // Send best effort for "GAME" messages
                             String encoded = MessageCodec.encode(msg);
                             byte[] data = encoded.getBytes();
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
+
                         } else if ("CLIENT".equalsIgnoreCase(msg.getOption())) {
-                            // Lokale Client-Updates durchführen.
+                            // Perform local client state updates
                             AsyncManager.run(() -> updateLocalClientState(msg));
                         } else {
-                            // Reliable Senden ansonsten.
+                            // Reliable send otherwise
                             myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
+                            // Uncomment for debug:
+                            // System.out.println("Reliable sent: " + MessageCodec.encode(msg));
                         }
                     } catch (Exception e) {
+                        e.printStackTrace();
                         e.printStackTrace();
                     }
                 }
             });
 
-            // Blockiere den Main-Thread unendlich.
+            // Block the main thread indefinitely.
             Thread.currentThread().join();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
-
-
 
     /**
      * A static utility to send a {@link Message} by appending the current username
