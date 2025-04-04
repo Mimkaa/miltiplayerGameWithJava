@@ -23,6 +23,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
+import lombok.Getter;
 
 import java.util.Arrays;
 import java.util.Scanner;
@@ -30,7 +31,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Set;
 
+@Getter
 public class GameContext {
+
+    //Singleton instance
+    @Getter
+    private static GameContext instance;
+
+
     private final GameSessionManager gameSessionManager;
     private final Client client;
     private MessageHogger testHogger;
@@ -43,6 +51,7 @@ public class GameContext {
     private final UIManager uiManager = new UIManager();
 
     public GameContext() {
+        instance = this;
         this.gameSessionManager = new GameSessionManager();
         this.client = new Client();
 
@@ -365,6 +374,11 @@ public class GameContext {
 
         // Otherwise, draw the game
         game.draw(gc);
+    }
+
+
+    public static Game getGameById(String gameId) {
+        return getInstance().getGameSessionManager().getGameSession(gameId);
     }
 
 
