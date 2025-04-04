@@ -1,6 +1,4 @@
-package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
-
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.*;
+package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import java.lang.reflect.Constructor;
 import java.util.HashMap;

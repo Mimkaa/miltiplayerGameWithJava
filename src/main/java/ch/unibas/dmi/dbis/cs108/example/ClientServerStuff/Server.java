@@ -2,10 +2,10 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -13,15 +13,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.Map;
-import java.io.IOException;
-import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
+
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
 
 import lombok.Setter;

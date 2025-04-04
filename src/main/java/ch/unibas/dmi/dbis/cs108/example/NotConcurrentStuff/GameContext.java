@@ -2,11 +2,9 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
@@ -14,29 +12,22 @@ import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.input.KeyEvent;
+
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
+
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
+
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
+
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
 
-import javax.swing.*;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
 import java.util.Set;
 
 public class GameContext {

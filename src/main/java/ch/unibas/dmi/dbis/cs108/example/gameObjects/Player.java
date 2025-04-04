@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
@@ -16,7 +15,7 @@ import java.util.Arrays;
 @Setter
 public class Player extends GameObject {
 
-    // Fields used for the bounding box (collision detection) – declared as float.
+    // Fields used for the bounding box – using float.
     private float x;
     private float y;
     private float width;
@@ -69,7 +68,7 @@ public class Player extends GameObject {
         float oldX = getX();
         float oldY = getY();
 
-        // Only update position based on keyboard input
+        // Only update position based on keyboard input if this object is selected.
         if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
             if (KeyboardState.isKeyPressed(KeyCode.W)) { setY(getY() - speed); }
             if (KeyboardState.isKeyPressed(KeyCode.S)) { setY(getY() + speed); }
@@ -128,5 +127,41 @@ public class Player extends GameObject {
     @Override
     public Object[] getConstructorParamValues() {
         return new Object[]{ getName(), getX(), getY(), getWidth(), getHeight(), getGameId() };
+    }
+
+    // -----------------------
+    // Implement bounding box methods explicitly.
+    // These are required because GameObject declares them as abstract.
+    @Override
+    public float getX() {
+        return this.x;
+    }
+    @Override
+    public float getY() {
+        return this.y;
+    }
+    @Override
+    public float getWidth() {
+        return this.width;
+    }
+    @Override
+    public float getHeight() {
+        return this.height;
+    }
+    @Override
+    public void setX(float x) {
+        this.x = x;
+    }
+    @Override
+    public void setY(float y) {
+        this.y = y;
+    }
+    @Override
+    public void setWidth(float width) {
+        this.width = width;
+    }
+    @Override
+    public void setHeight(float height) {
+        this.height = height;
     }
 }

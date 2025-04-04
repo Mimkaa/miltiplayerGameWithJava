@@ -1,59 +1,50 @@
-package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
+package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import javafx.scene.canvas.GraphicsContext;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public abstract class GameObject {
-
     private String id = UUID.randomUUID().toString();
     private final String gameId;
     protected String name;
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
 
-    // Collidability flag: if true, object participates in collision detection.
+    // Collision properties.
     private boolean collidable = true;
-
-    // NEW: Movable flag. If false, the object will not be moved by collision resolution.
+    // Whether the object is movable by external forces (e.g. collision resolution).
     private boolean movable = true;
-
-    public abstract void setWidth(float width);
-
-    public abstract void setHeight(float height);
-
-    // Abstract bounding box methods using float.
-    public abstract float getX();
-    public abstract float getY();
-    public abstract float getWidth();
-    public abstract float getHeight();
-
-    public abstract void setX(float x);
-    public abstract void setY(float y);
 
     public GameObject(String name, String gameId) {
         this.name = name;
         this.gameId = gameId;
     }
 
-    // ------------------
-    // Getters / Setters
-    // ------------------
+    // Abstract bounding box methods for collision detection.
+    public abstract float getX();
+    public abstract float getY();
+    public abstract float getWidth();
+    public abstract float getHeight();
+    public abstract void setX(float x);
+    public abstract void setY(float y);
+    public abstract void setWidth(float width);
+    public abstract void setHeight(float height);
+
+    // Getters and setters.
     public String getId() { return id; }
     public void setId(String newId) { this.id = newId; }
-    public void setName(String newName) { this.name = newName; }
     public String getName() { return name; }
+    public void setName(String newName) { this.name = newName; }
     public String getGameId() { return gameId; }
     public boolean isCollidable() { return collidable; }
     public void setCollidable(boolean collidable) { this.collidable = collidable; }
-
-    // NEW: Movable getter and setter.
     public boolean isMovable() { return movable; }
     public void setMovable(boolean movable) { this.movable = movable; }
 
-    // ------------------
-    // Message Handling
-    // ------------------
+    // Message handling.
     public void addIncomingMessage(Message message) {
         incomingMessages.offer(message);
     }
@@ -63,14 +54,13 @@ public abstract class GameObject {
             myUpdateGlobal(msg);
         }
     }
+
     public abstract void myUpdateLocal();
     protected abstract void myUpdateGlobal(Message msg);
     public abstract void draw(GraphicsContext gc);
     public abstract Object[] getConstructorParamValues();
 
-    // ------------------
-    // Collision Methods
-    // ------------------
+    // Collision detection and resolution.
     public boolean intersects(GameObject other) {
         return this.getX() < other.getX() + other.getWidth() &&
                 this.getX() + this.getWidth() > other.getX() &&
@@ -79,18 +69,15 @@ public abstract class GameObject {
     }
 
     /**
-     * Resolves a collision between this object and another.
-     * If both objects are movable, they are moved equally.
-     * If one object is immovable, only the movable object is adjusted.
+     * Resolves collisions based on whether objects are movable.
      */
     public void resolveCollision(GameObject other) {
         float overlapX = Math.min(this.getX() + this.getWidth(), other.getX() + other.getWidth()) -
                 Math.max(this.getX(), other.getX());
         float overlapY = Math.min(this.getY() + this.getHeight(), other.getY() + other.getHeight()) -
                 Math.max(this.getY(), other.getY());
-
-        // If both are movable, do symmetric resolution.
         if (this.isMovable() && other.isMovable()) {
+            // Symmetric resolution.
             if (overlapX < overlapY) {
                 if (this.getX() < other.getX()) {
                     this.setX(this.getX() - overlapX / 2);
@@ -108,9 +95,8 @@ public abstract class GameObject {
                     other.setY(other.getY() - overlapY / 2);
                 }
             }
-        }
-        // If only this object is movable.
-        else if (this.isMovable() && !other.isMovable()) {
+        } else if (this.isMovable() && !other.isMovable()) {
+            // Only adjust this object.
             if (overlapX < overlapY) {
                 if (this.getX() < other.getX()) {
                     this.setX(this.getX() - overlapX);
@@ -124,9 +110,8 @@ public abstract class GameObject {
                     this.setY(this.getY() + overlapY);
                 }
             }
-        }
-        // If only the other object is movable.
-        else if (!this.isMovable() && other.isMovable()) {
+        } else if (!this.isMovable() && other.isMovable()) {
+            // Only adjust the other object.
             if (overlapX < overlapY) {
                 if (this.getX() < other.getX()) {
                     other.setX(other.getX() + overlapX);
@@ -141,12 +126,9 @@ public abstract class GameObject {
                 }
             }
         }
-        // If neither is movable, do nothing.
     }
 
-    // ------------------
-    // Command Interface
-    // ------------------
+    // Command interface.
     public interface Command {
         void execute();
     }
@@ -156,9 +138,7 @@ public abstract class GameObject {
         public void execute() { code.run(); }
     }
 
-    /**
-     * Sends a message by attaching this object's unique ID and game session ID.
-     */
+    // Messaging helper.
     protected void sendMessage(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed == null || concealed.length < 2) {
@@ -178,9 +158,6 @@ public abstract class GameObject {
         }
     }
 
-    /**
-     * Extracts the game session ID (the second concealed parameter) from a message.
-     */
     protected String extractGameId(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length > 1) {
