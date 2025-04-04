@@ -24,6 +24,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
 
@@ -187,22 +188,17 @@ public class GameContext {
                         System.out.println("No game session found with id: " + sessionId);
                     }
                 }
-                else if ("GETUSERS".equals(type))
-                {
+                else if ("GETUSERS".equals(type)) {
                     Platform.runLater(() -> {
                         Node node = uiManager.getComponent("usersList");
-                        if (node instanceof TextField) {
-                            Object[]params = (Object[]) receivedMessage.getParameters();
-                            ((TextField)node).clear();
+                        if (node instanceof TextArea) {
+                            Object[] params = (Object[]) receivedMessage.getParameters();
+                            ((TextArea) node).clear();
                             for (Object param : params) {
-                                ((TextField) node).appendText(param.toString());
+                                ((TextArea) node).appendText(param.toString() + "\n");
                             }
-
-
                         }
                     });
-
-
                 }
                 else {
                     System.out.println("Unknown message type: " + type);

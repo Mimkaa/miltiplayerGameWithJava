@@ -12,6 +12,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -169,12 +170,43 @@ public class GameUIComponents {
     public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
         Pane administrativePane = new Pane();
         administrativePane.setTranslateX(0);
-        administrativePane.setTranslateY(50);
+        administrativePane.setTranslateY(30);
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
-        Button OnlineUsersButton = new Button("Online Users");
+        Button OnlineUsersButtonCurrGS = new Button("Online Users Current GS");
+        OnlineUsersButtonCurrGS.setLayoutX(200);
+        OnlineUsersButtonCurrGS.setLayoutY(20);
+        administrativePane.getChildren().add(OnlineUsersButtonCurrGS);
+        uiManager.registerComponent("OnlineUsersButton", OnlineUsersButtonCurrGS);
+        OnlineUsersButtonCurrGS.setOnAction(e -> {
+                String gameSId = GameContext.getCurrentGameId();
+                if (gameSId!=null)
+                {
+                    Message selectGoMsg = new Message("COLLECTGS", new Object[]{ gameSId }, "REQUEST");// CGS - current game session
+                    Client.sendMessageStatic(selectGoMsg);
+                }
+
+
+        });
+
+        TextArea usersListCurrGS = new TextArea();
+        usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
+        usersListCurrGS.setPromptText("Game ID");
+        usersListCurrGS.setEditable(false); // non-editable but copyable
+        usersListCurrGS.setLayoutX(200);
+        usersListCurrGS.setLayoutY(50);
+        usersListCurrGS.setPrefWidth(200);   // set preferred width
+        usersListCurrGS.setPrefHeight(150);  // set preferred height
+
+        administrativePane.getChildren().add(usersListCurrGS);
+
+
+        uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
+
+
+        Button OnlineUsersButton = new Button("Online Users Global");
         OnlineUsersButton.setLayoutX(200);
-        OnlineUsersButton.setLayoutY(200);
+        OnlineUsersButton.setLayoutY(210);
         administrativePane.getChildren().add(OnlineUsersButton);
         uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
         OnlineUsersButton.setOnAction(e -> {
@@ -185,15 +217,14 @@ public class GameUIComponents {
 
         });
 
-        TextField usersList = new TextField(GameContext.getCurrentGameId() != null
-                ? GameContext.getCurrentGameId()
-                : ""
-        );
+        TextArea usersList = new TextArea();
+        usersList.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersList.setPromptText("Game ID");
         usersList.setEditable(false); // non-editable but copyable
         usersList.setLayoutX(200);
         usersList.setLayoutY(240);
-
+        usersList.setPrefWidth(200);   // set preferred width
+        usersList.setPrefHeight(150);  // set preferred height
 
         administrativePane.getChildren().add(usersList);
 
