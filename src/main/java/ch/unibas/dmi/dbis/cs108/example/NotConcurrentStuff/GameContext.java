@@ -199,7 +199,18 @@ public class GameContext {
                             }
                         }
                     });
+
                 }
+                else if ("COLLECTGS".equals(type))
+                {
+                    String receivedGSID = receivedMessage.getParameters()[0].toString();
+
+                    if(receivedGSID.equals(GameContext.getCurrentGameId()))
+                    {
+                        System.out.println("I have the same ID");
+                    }
+                }
+
                 else {
                     System.out.println("Unknown message type: " + type);
                 }
