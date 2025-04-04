@@ -6,26 +6,38 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
+import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
+
+import javax.swing.*;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
+import java.util.Set;
 
 public class GameContext {
     private final GameSessionManager gameSessionManager;
@@ -254,71 +266,26 @@ public class GameContext {
      */
     public void start() {
         uiManager.waitForCentralUnitAndInitialize(() -> {
-        // Use the GameUIComponents class to create the main UI pane.
-        Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
-        CentralGraphicalUnit.getInstance().addNode(mainUIPane);
-        uiManager.registerComponent("mainUIPane", mainUIPane);
+            // Use the GameUIComponents class to create the main UI pane.
+            Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
+            CentralGraphicalUnit.getInstance().addNode(mainUIPane);
+            uiManager.registerComponent("mainUIPane", mainUIPane);
 
-        Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
-        CentralGraphicalUnit.getInstance().addNode(adminPane);
-        uiManager.registerComponent("adminUIPane", adminPane);
+            Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
+            CentralGraphicalUnit.getInstance().addNode(adminPane);
+            uiManager.registerComponent("adminUIPane", adminPane);
 
-        // Create and add the toggle button (outside of the main UI pane).
-        //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
-        //CentralGraphicalUnit.getInstance().addNode(togglePaneButton);
-        //uiManager.registerComponent("togglePaneButton", togglePaneButton);
-        //togglePaneButton.toFront();
-        ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
-        CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
-
-                // Build the final parameters array with the current game session ID as the first parameter.
-                Object[] finalParameters = new Object[userParameters.length + 1];
-                finalParameters[0] = sessionId; // Ensure the first parameter is the current gameId.
-                System.arraycopy(userParameters, 0, finalParameters, 1, userParameters.length);
-
-                // Create the CREATEGO message with the constructed parameters.
-                Message createObjectMsg = new Message("CREATEGO", finalParameters, "REQUEST");
-
-                // Send the message via the static client method.
-                Client.sendMessageStatic(createObjectMsg);
-
-                System.out.println("Sent CREATEGO message with parameters: " + java.util.Arrays.toString(finalParameters));
-            });
+            // Create and add the toggle button (outside of the main UI pane).
+            //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
+            //CentralGraphicalUnit.getInstance().addNode(togglePaneButton);
+            //uiManager.registerComponent("togglePaneButton", togglePaneButton);
+            //togglePaneButton.toFront();
+            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
+            CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
 
 
-            // --- Fourth Overlay Button: Select Object Button ---
-            Button selectObjectButton = new Button("Select Object Button");
-            StackPane.setAlignment(selectObjectButton, Pos.TOP_CENTER);
-            selectObjectButton.setTranslateY(200);
-            CentralGraphicalUnit.getInstance().addNode(selectObjectButton);
-            uiManager.registerComponent("selectObjectButton", selectObjectButton);
-            selectObjectButton.setOnAction(e -> {
-                // Retrieve the text from the overlay input field.
-                Node node = uiManager.getComponent("overlayInputField");
-                if (node instanceof TextField) {
-                    String objectName = ((TextField) node).getText().trim();
-                    if (objectName.isEmpty()) {
-                        System.out.println("Please enter an object name to select.");
-                        return;
-                    }
-                    // Retrieve the current game session ID.
-                    String sessionId = GameContext.getCurrentGameId();
-                    if (sessionId == null || sessionId.isEmpty()) {
-                        System.out.println("No current game session available.");
-                        return;
-                    }
-                    // Create the SELECTGO message with the object name.
-                    Message selectGoMsg = new Message("SELECTGO", new Object[]{sessionId,objectName}, "REQUEST");
-                    Client.sendMessageStatic(selectGoMsg);
-                    System.out.println("Sent SELECTGO message with object name: " + objectName);
-                } else {
-                    System.out.println("Overlay input field not found.");
-                }
-            });
-
-            System.out.println("Overlay ComboBox, input field, and three buttons added to UI.");
+            System.out.println("All UI components have been added via GameUIComponents.");
         });
-
 
 
 
