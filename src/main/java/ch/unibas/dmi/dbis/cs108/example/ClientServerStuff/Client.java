@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *   <li>Create an instance of {@code Client} with a desired game session name.</li>
  *   <li>Optionally customize the client username.</li>
  *   <li>Initialize chat via {@link #initChatManager()}.</li>
- *   <li>Set up the game UI using {@link #startGraphicsStuff()}.</li>
+ *   <li>Set up the game UI using .</li>
  *   <li>Start console reading via {@link #startConsoleReaderLoop()}.</li>
  *   <li>Run the main loop in a separate thread via {@link #run()}.</li>
  *   <li>Use {@link #login()} to join the game session on the server.</li>

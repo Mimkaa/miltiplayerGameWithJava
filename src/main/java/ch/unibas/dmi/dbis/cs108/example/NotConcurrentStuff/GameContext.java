@@ -34,6 +34,11 @@ import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
+import java.util.Set;
+
 public class GameContext {
     private final GameSessionManager gameSessionManager;
     private final Client client;
@@ -79,12 +84,41 @@ public class GameContext {
                 } else if ("JOINGAME".equals(type)) {
                     System.out.println("Processing JOINGAME response");
                     String gameID = receivedMessage.getParameters()[0].toString();
+                    String username = receivedMessage.getParameters()[1].toString();
+                    String prevGameId =  receivedMessage.getParameters()[2].toString();
                     currentGameId.set(gameID);
+                    // add the user to the gameSession
+                    gameSessionManager.getGameSession(gameID).getUsers().add(username);
+
+                    if(!prevGameId.equals("default"))
+                    {
+                        gameSessionManager.getGameSession(prevGameId).getUsers().remove(username);
+                    }
+
                     System.out.println("Current game id set to: " + currentGameId.get());
                     Platform.runLater(() -> {
                         Node fieldNode = uiManager.getComponent("gameIdField");
                         if (fieldNode instanceof TextField) {
                             ((TextField) fieldNode).setText(gameID);
+                        }
+                        // 2) Update the 'usersListCurrGS' TextArea with the current game’s info
+                        Node usersListNode = uiManager.getComponent("usersListCurrGS");
+                        if (usersListNode instanceof TextArea) {
+                            TextArea usersListCurrGS = (TextArea) usersListNode;
+
+                            // Retrieve the current set of users from the Game instance
+                            Set<String> userSet = gameSessionManager.getGameSession(gameID).getUsers();
+
+                            // Build a text string showing current Game ID and users
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("Current Game ID: ").append(gameID).append("\n");
+                            sb.append("Users in this game:\n");
+                            for (String user : userSet) {
+                                sb.append(user).append("\n");
+                            }
+
+                            // Set the TextArea's content
+                            usersListCurrGS.setText(sb.toString());
                         }
                     });
                 } else if ("SELECTGO".equals(type)) {
@@ -201,15 +235,7 @@ public class GameContext {
                     });
 
                 }
-                else if ("COLLECTGS".equals(type))
-                {
-                    String receivedGSID = receivedMessage.getParameters()[0].toString();
 
-                    if(receivedGSID.equals(GameContext.getCurrentGameId()))
-                    {
-                        System.out.println("I have the same ID");
-                    }
-                }
 
                 else {
                     System.out.println("Unknown message type: " + type);

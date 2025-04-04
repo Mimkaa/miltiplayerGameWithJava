@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
-
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
@@ -20,6 +21,8 @@ public class Game {
     private final String gameName;
     private final CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>();
     private final MessageHogger gameMessageHogger;
+    // Creates a concurrent Set<String> backed by a ConcurrentHashMap
+    private final Set<String> users = ConcurrentHashMap.newKeySet();
 
     public Game(String gameId, String gameName) {
         this.gameId = gameId;

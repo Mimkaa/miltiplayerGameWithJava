@@ -25,6 +25,8 @@ public class JoinGameCommandHandler implements CommandHandler {
             return;
         }
         String requestedGameName = params[0].toString();
+        String username =  params[1].toString();
+        String prevGameId =  params[2].toString();
 
         // Search the gameSessionManager for a game with this name
         Game foundGame = null;
@@ -64,16 +66,25 @@ public class JoinGameCommandHandler implements CommandHandler {
                 + " joined game session name: " + requestedGameName
                 + " (ID: " + foundGameId + ")");
 
+        // remove the user from the previous game
+        if(!prevGameId.equals("default"))
+        {
+            server.getGameSessionManager().getGameSession(prevGameId).getUsers().remove(username);
+        }
+        // add the username in the game
+        foundGame.getUsers().add(username);
+
         // Send back a success response with the found game’s ID
         Message response = new Message(
                 "JOINGAME",
-                new Object[]{foundGameId},
+                new Object[]{foundGameId,username,prevGameId},
                 "RESPONSE",
                 msg.getConcealedParameters()
         );
         InetSocketAddress address = server.getClientsMap().get(senderUsername);
         if (address != null) {
-            server.enqueueMessage(response, address.getAddress(), address.getPort());
+            server.broadcastMessageToAll(response);
+            //server.enqueueMessage(response, address.getAddress(), address.getPort());
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
         }

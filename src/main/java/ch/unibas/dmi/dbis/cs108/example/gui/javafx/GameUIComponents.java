@@ -95,7 +95,9 @@ public class GameUIComponents {
                     System.out.println("Please select a game from the combo box.");
                     return;
                 }
-                Message joinGameMessage = new Message("JOINGAME", new Object[]{selectedGameName}, "REQUEST");
+
+
+                Message joinGameMessage = new Message("JOINGAME", new Object[]{selectedGameName, Client.getInstance().getUsername(), GameContext.getCurrentGameId()==null?"default":GameContext.getCurrentGameId()}, "REQUEST");
                 Client.sendMessageStatic(joinGameMessage);
                 System.out.println("Sent JOINGAME message with game name: " + selectedGameName);
             } else {
@@ -173,21 +175,7 @@ public class GameUIComponents {
         administrativePane.setTranslateY(30);
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
-        Button OnlineUsersButtonCurrGS = new Button("Online Users Current GS");
-        OnlineUsersButtonCurrGS.setLayoutX(200);
-        OnlineUsersButtonCurrGS.setLayoutY(20);
-        administrativePane.getChildren().add(OnlineUsersButtonCurrGS);
-        uiManager.registerComponent("OnlineUsersButton", OnlineUsersButtonCurrGS);
-        OnlineUsersButtonCurrGS.setOnAction(e -> {
-                String gameSId = GameContext.getCurrentGameId();
-                if (gameSId!=null)
-                {
-                    Message selectGoMsg = new Message("COLLECTGS", new Object[]{ gameSId }, "REQUEST");// CGS - current game session
-                    Client.sendMessageStatic(selectGoMsg);
-                }
 
-
-        });
 
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");

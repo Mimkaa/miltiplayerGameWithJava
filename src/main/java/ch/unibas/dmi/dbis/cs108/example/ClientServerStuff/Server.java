@@ -13,12 +13,14 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
 
@@ -100,6 +102,7 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
+    
 
 
 
@@ -205,6 +208,8 @@ public class Server {
             reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
+
+
 
             // Optionally initialize a default game session:
             // Game defaultGame = new Game("GameSession1", "Default Game");
