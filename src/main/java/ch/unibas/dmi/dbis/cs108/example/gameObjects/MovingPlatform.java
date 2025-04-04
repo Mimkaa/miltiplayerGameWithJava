@@ -12,74 +12,88 @@ import lombok.Setter;
 @Setter
 public class MovingPlatform extends GameObject {
 
-    // Bounding box fields (using float for collision detection)
+    // Bounding box fields for collision detection.
     private float x;
     private float y;
     private float width;
     private float height;
 
-    // Store the starting x position to oscillate around it.
-    private float initialX;
-    // Amplitude of oscillation (max displacement from the initial x position)
-    private float amplitude;
-    // Horizontal velocity (units per second) – positive moves right, negative moves left.
-    private float vx;
+    // Oscillation parameters for the horizontal movement.
+    private float startX;
+    private float endX;
+    private float periodX; // period in seconds for x oscillation
 
-    // Field to track the last update time for delta time calculations.
-    private long lastUpdateTime;
+    // Oscillation parameters for the vertical movement.
+    private float startY;
+    private float endY;
+    private float periodY; // period in seconds for y oscillation
+
+    // Time when the platform was created (for interpolation).
+    private long startTimeNano;
 
     /**
-     * Constructs a MovingPlatform game object.
+     * Constructs a MovingPlatform game object that oscillates in both x and y.
      *
-     * @param name      The platform's name.
-     * @param x         Starting x coordinate.
-     * @param y         Starting y coordinate.
-     * @param width     Width of the platform.
-     * @param height    Height of the platform.
-     * @param amplitude Maximum displacement from the initial x position.
-     * @param speed     The speed of movement (units per second).
-     * @param gameId    The game session ID.
+     * @param name    The platform's name.
+     * @param startX  The left-most x position.
+     * @param endX    The right-most x position.
+     * @param startY  The top-most y position.
+     * @param endY    The bottom-most y position.
+     * @param width   The width of the platform.
+     * @param height  The height of the platform.
+     * @param periodX The period (in seconds) for a full horizontal oscillation cycle.
+     * @param periodY The period (in seconds) for a full vertical oscillation cycle.
+     * @param gameId  The game session ID.
      */
-    public MovingPlatform(String name, float x, float y, float width, float height, float amplitude, float speed, String gameId) {
+    public MovingPlatform(String name, float startX, float endX, float startY, float endY, float width, float height, float periodX, float periodY, String gameId) {
         super(name, gameId);
-        this.x = x;
-        this.y = y;
+        this.startX = startX;
+        this.endX = endX;
+        this.startY = startY;
+        this.endY = endY;
         this.width = width;
         this.height = height;
-        this.initialX = x;
-        this.amplitude = amplitude;
-        // Set initial horizontal velocity to speed (moving right).
-        this.vx = speed;
-        // Initialize the last update time.
-        this.lastUpdateTime = System.nanoTime();
+        this.periodX = periodX;
+        this.periodY = periodY;
+        // Initialize current position to the starting positions.
+        this.x = startX;
+        this.y = startY;
+        // Record the creation time.
+        this.startTimeNano = System.nanoTime();
     }
 
     @Override
     public void myUpdateLocal() {
-        // Calculate delta time in seconds.
+        // Compute the elapsed time in seconds.
         long now = System.nanoTime();
-        float dt = (now - lastUpdateTime) / 1_000_000_000f;
-        lastUpdateTime = now;
+        float elapsed = (now - startTimeNano) / 1_000_000_000f; // seconds
 
-        // Update horizontal position using delta time.
-        setX(getX() + vx * dt);
+        // Compute normalized time t in [0,1] for each axis.
+        float tX = (elapsed % periodX) / periodX;
+        float tY = (elapsed % periodY) / periodY;
 
-        // Reverse direction if we exceed the oscillation bounds.
-        if (getX() > initialX + amplitude) {
-            setX(initialX + amplitude);
-            vx = -vx;
-        } else if (getX() < initialX - amplitude) {
-            setX(initialX - amplitude);
-            vx = -vx;
-        }
+        // Use cosine interpolation for smooth oscillation.
+        // This formula produces a value that goes smoothly from 0 to 1 and back.
+        float interpX = 0.5f - 0.5f * (float)Math.cos(2 * Math.PI * tX);
+        float interpY = 0.5f - 0.5f * (float)Math.cos(2 * Math.PI * tY);
 
-        // Send a MOVE message so other clients are updated.
+        // Compute new positions based on interpolation.
+        float newX = startX + (endX - startX) * interpX;
+        float newY = startY + (endY - startY) * interpY;
+
+        // Update positions.
+        setX(newX);
+        setY(newY);
+
+        // Optionally, send a MOVE message so other clients update the platform.
         Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
         sendMessage(moveMsg);
     }
 
     @Override
     protected void myUpdateGlobal(Message msg) {
+        // For moving platforms you might want to ignore remote updates if they are meant to be static.
+        // Otherwise, you could update x and y similarly as in myUpdateLocal().
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
             if (params.length >= 2) {
@@ -113,7 +127,7 @@ public class MovingPlatform extends GameObject {
 
     @Override
     public Object[] getConstructorParamValues() {
-        // For re-creation via messages, we pass name, x, y, width, height, amplitude, speed, gameId.
-        return new Object[]{ getName(), getX(), getY(), getWidth(), getHeight(), amplitude, Math.abs(vx), getGameId() };
+        // Return parameters in the same order as the constructor.
+        return new Object[]{ getName(), startX, endX, startY, endY, getWidth(), getHeight(), periodX, periodY, getGameId() };
     }
 }
