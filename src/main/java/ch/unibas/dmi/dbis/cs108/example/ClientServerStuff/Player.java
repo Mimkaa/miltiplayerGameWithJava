@@ -2,140 +2,129 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
-import java.util.Arrays;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import lombok.Getter;
+import lombok.Setter;
+import java.util.Arrays;
 
-/**
- * The {@code Player} class demonstrates a simple moveable game object that
- * sends position updates ("MOVE" messages) when it moves, and receives
- * position updates from other instances via {@link #myUpdateGlobal(Message)}.
- */
+@Getter
+@Setter
 public class Player extends GameObject {
 
-    // Fields corresponding to constructor parameters:
+    // Fields used for the bounding box (collision detection) – declared as float.
     private float x;
     private float y;
-    private final float radius;
+    private float width;
+    private float height;
 
-    // Additional fields:
-    private float oldX;
-    private float oldY;
+    // Additional fields for movement.
     private float speed = 5.0f;
-    private float inputX = 0;
-    private float inputY = 0;
+    private float vx = 2.0f;
+    private float vy = 1.0f;
+
+    // For visual feedback: if a collision occurs, this flag is set.
+    private boolean collisionDetected = false;
 
     /**
-     * Main constructor for Player.
+     * Overloaded constructor that accepts five parameters.
+     * This assumes the provided side length is used for both width and height.
      *
-     * @param name       The player's name.
-     * @param x          Starting X coordinate.
-     * @param y          Starting Y coordinate.
-     * @param radius     Radius for drawing.
-     * @param myGameId   The unique ID of the game session.
+     * @param name   The player's name.
+     * @param x      Starting x coordinate (as double).
+     * @param y      Starting y coordinate (as double).
+     * @param side   The side length for both width and height (as double).
+     * @param gameId The game session ID.
      */
-    public Player(String name, float x, float y, float radius, String myGameId) {
-        super(name, myGameId);
-        this.x = x;
-        this.y = y;
-        this.radius = radius;
-        this.oldX = x;
-        this.oldY = y;
+    public Player(String name, double x, double y, double side, String gameId) {
+        // Delegate to the main constructor with width and height equal to side.
+        this(name, (float)x, (float)y, (float)side, (float)side, gameId);
     }
 
     /**
-     * Local update logic: checks input (keyboard + any local inputX/inputY),
-     * updates position, and if position changed, sends a MOVE message.
+     * Main constructor that accepts six parameters (all numeric values as float).
+     *
+     * @param name   The player's name.
+     * @param x      Starting x coordinate (as float).
+     * @param y      Starting y coordinate (as float).
+     * @param width  Rectangle width.
+     * @param height Rectangle height.
+     * @param gameId The game session ID.
      */
+    public Player(String name, float x, float y, float width, float height, String gameId) {
+        super(name, gameId);
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+
     @Override
     public void myUpdateLocal() {
-        // Save old coordinates:
-        oldX = x;
-        oldY = y;
+        // Save old position
+        float oldX = getX();
+        float oldY = getY();
 
-        // Movement from "inputX"/"inputY" if you’re using them for local control:
-        x += inputX * speed;
-        y += inputY * speed;
-
-        // Also handle direct keyboard input (WASD), but only if this is the selected object:
+        // Only update position based on keyboard input
         if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            if (KeyboardState.isKeyPressed(KeyCode.W)) {
-                y -= speed;
-            }
-            if (KeyboardState.isKeyPressed(KeyCode.S)) {
-                y += speed;
-            }
-            if (KeyboardState.isKeyPressed(KeyCode.A)) {
-                x -= speed;
-            }
-            if (KeyboardState.isKeyPressed(KeyCode.D)) {
-                x += speed;
-            }
+            if (KeyboardState.isKeyPressed(KeyCode.W)) { setY(getY() - speed); }
+            if (KeyboardState.isKeyPressed(KeyCode.S)) { setY(getY() + speed); }
+            if (KeyboardState.isKeyPressed(KeyCode.A)) { setX(getX() - speed); }
+            if (KeyboardState.isKeyPressed(KeyCode.D)) { setX(getX() + speed); }
         }
 
-        // If the position changed, send a MOVE message so others get updated:
-        if (x != oldX || y != oldY) {
-            Message moveMsg = new Message("MOVE", new Object[]{x, y}, null);
+        // If the position has changed, send a MOVE message.
+        if (getX() != oldX || getY() != oldY) {
+            Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
             sendMessage(moveMsg);
         }
     }
 
-    /**
-     * Global update logic: processes incoming MOVE messages to sync this player's position.
-     */
     @Override
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
-            System.out.println("MOVE message parameters: " + Arrays.toString(params));
+            System.out.println("Player MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = asFloat(params[0]);
-                float newY = asFloat(params[1]);
+                float newX = (params[0] instanceof Number)
+                        ? ((Number) params[0]).floatValue()
+                        : Float.parseFloat(params[0].toString());
+                float newY = (params[1] instanceof Number)
+                        ? ((Number) params[1]).floatValue()
+                        : Float.parseFloat(params[1].toString());
                 synchronized (this) {
-                    this.x = newX;
-                    this.y = newY;
+                    setX(newX);
+                    setY(newY);
                 }
-                System.out.println("Processed MOVE for " + getName()
-                        + " in game " + extractGameId(msg)
-                        + ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed MOVE for " + getName() +
+                        " in game " + extractGameId(msg) +
+                        ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
 
-    /**
-     * Utility to safely convert an Object param to float.
-     */
-    private float asFloat(Object param) {
-        if (param instanceof Number) {
-            return ((Number)param).floatValue();
-        } else {
-            return Float.parseFloat(param.toString());
-        }
-    }
-
-    /**
-     * Draws the player as a blue circle, and labels with the player's name.
-     */
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.BLUE);
-        gc.fillOval(x - radius, y - radius, radius * 2, radius * 2);
+        // Draw a rectangle (with collision feedback).
+        if (isCollisionDetected()) {
+            gc.setFill(Color.GREEN);
+        } else {
+            gc.setFill(Color.BLUE);
+        }
+        gc.fillRect(getX(), getY(), getWidth(), getHeight());
 
+        // Draw the object's name above the rectangle.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         text.setFont(gc.getFont());
         double textWidth = text.getLayoutBounds().getWidth();
-        gc.fillText(getName(), x - textWidth / 2, y - radius - 5);
+        gc.fillText(getName(), getX() + getWidth() / 2 - textWidth / 2, getY() - 5);
     }
 
-    /**
-     * Returns constructor params in the same order as your Player(...) constructor.
-     */
     @Override
     public Object[] getConstructorParamValues() {
-        return new Object[] { getName(), x, y, radius, getGameId() };
+        return new Object[]{ getName(), getX(), getY(), getWidth(), getHeight(), getGameId() };
     }
 }
-
