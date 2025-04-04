@@ -1,9 +1,10 @@
-package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
+package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
 

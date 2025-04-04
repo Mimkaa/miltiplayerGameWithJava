@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
