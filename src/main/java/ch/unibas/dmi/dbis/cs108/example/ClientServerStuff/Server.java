@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
@@ -13,10 +14,15 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
+import java.io.IOException;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
 
 import lombok.Setter;
@@ -97,7 +103,7 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
-    
+
 
 
 
@@ -148,7 +154,7 @@ public class Server {
     }
 
 
-        /**
+    /**
      * Returns a modified version of the requested name if that name is already taken.
      * It checks both the clientsMap (connected users) and the existing GameObjects.
      * If the requestedName is taken, it appends "_1", "_2", etc., until a free one is found.
@@ -156,7 +162,7 @@ public class Server {
      * @param requestedName The new name the user is requesting
      * @return A guaranteed-unique name
      */
-        public String findUniqueName(String requestedName) {
+    public String findUniqueName(String requestedName) {
         String baseName = requestedName;
         int counter = 1;
         while (isNameTaken(requestedName)) {
@@ -339,7 +345,7 @@ public class Server {
             System.out.println("Concealed parameters missing or too short.");
         }
     }
-   
+
 
     /**
      * Sends the given {@link Message} to all connected clients except the sender.

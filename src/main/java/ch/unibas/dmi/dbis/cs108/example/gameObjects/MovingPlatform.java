@@ -9,7 +9,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class MovingPlatform extends GameObject {
+public class MovingPlatform extends GameObject implements IMovable {
 
     // Bounding box fields for collision detection.
     private float x;
@@ -27,8 +27,9 @@ public class MovingPlatform extends GameObject {
     private float endY;
     private float periodY; // period in seconds for y oscillation
 
-    // Time when the platform was created (for interpolation).
-    private long startTimeNano;
+    // Time tracking for movement.
+    private long lastUpdateNano;
+    private float elapsedTime = 0;
 
     /**
      * Constructs a MovingPlatform game object that oscillates in both x and y.
@@ -57,22 +58,27 @@ public class MovingPlatform extends GameObject {
         // Initialize current position to the starting positions.
         this.x = startX;
         this.y = startY;
-        // Record the creation time.
-        this.startTimeNano = System.nanoTime();
+        // Initialize time tracking.
+        this.lastUpdateNano = System.nanoTime();
     }
 
+    /**
+     * Implements the movement behavior.
+     * Uses deltaTime to update the accumulated elapsed time and then
+     * computes new positions using cosine interpolation.
+     *
+     * @param deltaTime the time in seconds since the last update.
+     */
     @Override
-    public void myUpdateLocal() {
-        // Compute the elapsed time in seconds.
-        long now = System.nanoTime();
-        float elapsed = (now - startTimeNano) / 1_000_000_000f; // seconds
+    public void move(float deltaTime) {
+        // Update elapsed time.
+        elapsedTime += deltaTime;
 
         // Compute normalized time t in [0,1] for each axis.
-        float tX = (elapsed % periodX) / periodX;
-        float tY = (elapsed % periodY) / periodY;
+        float tX = (elapsedTime % periodX) / periodX;
+        float tY = (elapsedTime % periodY) / periodY;
 
-        // Use cosine interpolation for smooth oscillation.
-        // This formula produces a value that goes smoothly from 0 to 1 and back.
+        // Cosine interpolation for smooth oscillation.
         float interpX = 0.5f - 0.5f * (float)Math.cos(2 * Math.PI * tX);
         float interpY = 0.5f - 0.5f * (float)Math.cos(2 * Math.PI * tY);
 
@@ -87,6 +93,17 @@ public class MovingPlatform extends GameObject {
         // Optionally, send a MOVE message so other clients update the platform.
         Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
         sendMessage(moveMsg);
+    }
+
+    /**
+     * Local update method that computes the deltaTime and then calls move.
+     */
+    @Override
+    public void myUpdateLocal() {
+        long now = System.nanoTime();
+        float deltaTime = (now - lastUpdateNano) / 1_000_000_000f;
+        lastUpdateNano = now;
+        move(deltaTime);
     }
 
     @Override
