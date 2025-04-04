@@ -54,7 +54,7 @@ public class MainTest {
      */
     @Test
     public void testMain() {
-        Main.main(new String[0]);
+        ThinkOutsideTheRoom.main(new String[]{"client","127.0.0.1:8888"});
         String output = outStream.toString();
         output = removeNewline(output);
         assertTrue(output.contains("Suggested Nickname:"), "Output should contain 'Suggested Nickname:'");

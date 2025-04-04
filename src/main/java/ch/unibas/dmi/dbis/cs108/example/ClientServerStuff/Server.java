@@ -59,7 +59,7 @@ public class Server {
     // ================================
 
     /** The default UDP port on which this server listens for incoming messages. */
-    public static final int SERVER_PORT = 9876;
+    public static int SERVER_PORT = 9876;
 
     /** Provides the server-side chat manager used for handling chat messages. */
     @Setter
@@ -91,7 +91,7 @@ public class Server {
 
     /**
      * A queue for outgoing messages that should be sent asynchronously to clients.
-     * Processed by a background loop in {@link #start()}.
+     * Processed by a background loop in {@link # start()}.
      */
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
@@ -192,7 +192,8 @@ public class Server {
      * launches background threads for sending and receiving packets, and registers
      * command and message handlers via reflection.
      */
-    public void start() {
+    public void start(int port) {
+        SERVER_PORT = port;
         try {
             InetAddress ipAddress = InetAddress.getByName("localhost");
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
@@ -261,6 +262,12 @@ public class Server {
             e.printStackTrace();
         }
     }
+
+    //start method without parameters for the tests
+    public void start() {
+        start(SERVER_PORT);
+    }
+
 
     // ================================
     // Message Processing
@@ -493,6 +500,16 @@ public class Server {
     // Main Method
     // ================================
     public static void main(String[] args) {
-        Server.getInstance().start();
+        if (args.length == 1) {
+            try {
+                int port = Integer.parseInt(args[0]);
+                Server.getInstance().start(port);
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid port number: " + args[0]);
+            }
+        } else {
+            Server.getInstance().start(9876);
+            System.out.println("Server started at Port: " + 9876);
+        }
     }
 }
