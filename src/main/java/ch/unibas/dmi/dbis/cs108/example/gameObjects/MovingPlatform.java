@@ -7,6 +7,8 @@ import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Arrays;
+
 @Getter
 @Setter
 public class MovingPlatform extends GameObject implements IMovable {
@@ -62,6 +64,13 @@ public class MovingPlatform extends GameObject implements IMovable {
         this.lastUpdateNano = System.nanoTime();
     }
 
+
+    private float velocityX = 100f; // units per second
+    private float velocityY = 100f;
+
+    private int directionX = 1; // +1 or -1
+    private int directionY = 1;
+
     /**
      * Implements the movement behavior.
      * Uses deltaTime to update the accumulated elapsed time and then
@@ -71,28 +80,39 @@ public class MovingPlatform extends GameObject implements IMovable {
      */
     @Override
     public void move(float deltaTime) {
-        // Update elapsed time.
-        elapsedTime += deltaTime;
+        // Berechne neue Position
+        float newX = x + velocityX * directionX * deltaTime;
+        float newY = y + velocityY * directionY * deltaTime;
 
-        // Compute normalized time t in [0,1] for each axis.
-        float tX = (elapsedTime % periodX) / periodX;
-        float tY = (elapsedTime % periodY) / periodY;
+        // Kollision mit Begrenzung (links/rechts)
+        if (newX < startX) {
+            newX = startX;
+            directionX = 1;
+        } else if (newX > endX) {
+            newX = endX;
+            directionX = -1;
+        }
 
-        // Cosine interpolation for smooth oscillation.
-        float interpX = 0.5f - 0.5f * (float)Math.cos(2 * Math.PI * tX);
-        float interpY = 0.5f - 0.5f * (float)Math.cos(2 * Math.PI * tY);
+        // Kollision mit Begrenzung (oben/unten)
+        if (newY < startY) {
+            newY = startY;
+            directionY = 1;
+        } else if (newY > endY) {
+            newY = endY;
+            directionY = -1;
+        }
 
-        // Compute new positions based on interpolation.
-        float newX = startX + (endX - startX) * interpX;
-        float newY = startY + (endY - startY) * interpY;
-
-        // Update positions.
         setX(newX);
         setY(newY);
 
-        // Optionally, send a MOVE message so other clients update the platform.
+        // Nur auf dem Server senden
         Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
         sendMessage(moveMsg);
+    }
+
+    private boolean isServerInstance() {
+        // Trick: Auf dem Server läuft kein JavaFX, daher kein FX Application Thread.
+        return !Thread.currentThread().getName().contains("JavaFX");
     }
 
     /**
@@ -100,10 +120,12 @@ public class MovingPlatform extends GameObject implements IMovable {
      */
     @Override
     public void myUpdateLocal() {
-        long now = System.nanoTime();
-        float deltaTime = (now - lastUpdateNano) / 1_000_000_000f;
-        lastUpdateNano = now;
-        move(deltaTime);
+        if (isServerInstance()) {
+            long now = System.nanoTime();
+            float deltaTime = (now - lastUpdateNano) / 1_000_000_000f;
+            lastUpdateNano = now;
+            move(deltaTime);
+        }
     }
 
     @Override
@@ -113,24 +135,30 @@ public class MovingPlatform extends GameObject implements IMovable {
 
     @Override
     protected void myUpdateGlobal(Message msg) {
-        // For moving platforms you might want to ignore remote updates if they are meant to be static.
-        // Otherwise, you could update x and y similarly as in myUpdateLocal().
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
+            System.out.println("MovingPlatform MOVE message parameters: " + Arrays.toString(params));
+
             if (params.length >= 2) {
                 float newX = (params[0] instanceof Number)
                         ? ((Number) params[0]).floatValue()
                         : Float.parseFloat(params[0].toString());
+
                 float newY = (params[1] instanceof Number)
                         ? ((Number) params[1]).floatValue()
                         : Float.parseFloat(params[1].toString());
+
                 synchronized (this) {
                     setX(newX);
                     setY(newY);
                 }
+
+                System.out.println("Processed MOVE for platform " + getName() +
+                        ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
+
 
     @Override
     public void draw(GraphicsContext gc) {
