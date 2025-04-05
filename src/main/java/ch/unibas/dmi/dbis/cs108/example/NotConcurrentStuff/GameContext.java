@@ -86,41 +86,44 @@ public class GameContext {
                     String gameID = receivedMessage.getParameters()[0].toString();
                     String username = receivedMessage.getParameters()[1].toString();
                     String prevGameId =  receivedMessage.getParameters()[2].toString();
-                    currentGameId.set(gameID);
-                    // add the user to the gameSession
+                    if (Client.getInstance().getUsername().get().equals(username))
+                    {
+                        currentGameId.set(gameID);
+                        System.out.println(receivedMessage);
+                        System.out.println("Current game id set to: " + currentGameId.get());
+                        Platform.runLater(() -> {
+                            Node fieldNode = uiManager.getComponent("gameIdField");
+                            if (fieldNode instanceof TextField) {
+                                ((TextField) fieldNode).setText(gameID);
+                            }
+                            
+                        });
+                    }
+                    
                     gameSessionManager.getGameSession(gameID).getUsers().add(username);
-
                     if(!prevGameId.equals("default"))
                     {
                         gameSessionManager.getGameSession(prevGameId).getUsers().remove(username);
                     }
-
-                    System.out.println("Current game id set to: " + currentGameId.get());
+                    
+                    // Now update the TextArea with the current game info (name and user list).
                     Platform.runLater(() -> {
-                        Node fieldNode = uiManager.getComponent("gameIdField");
-                        if (fieldNode instanceof TextField) {
-                            ((TextField) fieldNode).setText(gameID);
-                        }
-                        // 2) Update the 'usersListCurrGS' TextArea with the current game’s info
                         Node usersListNode = uiManager.getComponent("usersListCurrGS");
                         if (usersListNode instanceof TextArea) {
-                            TextArea usersListCurrGS = (TextArea) usersListNode;
-
-                            // Retrieve the current set of users from the Game instance
-                            Set<String> userSet = gameSessionManager.getGameSession(gameID).getUsers();
-
-                            // Build a text string showing current Game ID and users
-                            StringBuilder sb = new StringBuilder();
-                            sb.append("Current Game ID: ").append(gameID).append("\n");
-                            sb.append("Users in this game:\n");
-                            for (String user : userSet) {
-                                sb.append(user).append("\n");
+                            Game game = gameSessionManager.getGameSession(currentGameId.get());
+                            if (game != null) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append("Current Game Name: ").append(game.getGameName()).append("\n");
+                                sb.append("Users in this game:\n");
+                                for (String user : game.getUsers()) {
+                                    sb.append(user).append("\n");
+                                }
+                                ((TextArea) usersListNode).setText(sb.toString());
                             }
-
-                            // Set the TextArea's content
-                            usersListCurrGS.setText(sb.toString());
                         }
                     });
+                    
+                    
                 } else if ("SELECTGO".equals(type)) {
                     System.out.println("Processing SELECTGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 1) {
@@ -236,7 +239,34 @@ public class GameContext {
 
                 }
 
-
+                else if ("SYNCGP".equals(type)) {
+                    System.out.println("Processing SYNCGP message");
+                    if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
+                        System.out.println("SYNCGP message missing required parameters.");
+                        return;
+                    }
+                    // Extract the game ID from the first parameter.
+                    String gameID = receivedMessage.getParameters()[0].toString();
+                    
+                    // Retrieve the game session by its ID.
+                    Game game = gameSessionManager.getGameSession(gameID);
+                    if (game != null) {
+                        // Clear the current user list.
+                        game.getUsers().clear();
+                        // Loop through each parameter (starting at index 1) and add as a user.
+                        for (int i = 1; i < receivedMessage.getParameters().length; i++) {
+                            String user = receivedMessage.getParameters()[i].toString();
+                            game.getUsers().add(user);
+                        }
+                        System.out.println("Updated game session " + gameID + " user list.");
+                    } else {
+                        System.out.println("No game session found with id: " + gameID);
+                    }
+                    
+                    
+                }
+                
+                
                 else {
                     System.out.println("Unknown message type: " + type);
                 }
@@ -269,11 +299,18 @@ public class GameContext {
         // Use the GameUIComponents class to create the main UI pane.
         Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
         CentralGraphicalUnit.getInstance().addNode(mainUIPane);
+        mainUIPane.setVisible(false);
         uiManager.registerComponent("mainUIPane", mainUIPane);
 
         Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
         CentralGraphicalUnit.getInstance().addNode(adminPane);
+        adminPane.setVisible(false);
         uiManager.registerComponent("adminUIPane", adminPane);
+
+        Pane checkPane = GameUIComponents.createCheckPane(uiManager, gameSessionManager);
+        CentralGraphicalUnit.getInstance().addNode(checkPane);
+        checkPane.setVisible(false);
+        uiManager.registerComponent("checkUIPane", checkPane);
         
         // Create and add the toggle button (outside of the main UI pane).
         //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
@@ -283,7 +320,10 @@ public class GameContext {
         ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
         CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
 
+       
         
+        
+    
         System.out.println("All UI components have been added via GameUIComponents.");
         });
         

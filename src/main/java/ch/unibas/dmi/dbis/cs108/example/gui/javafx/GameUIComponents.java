@@ -2,6 +2,9 @@ package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+
+import java.util.Set;
+
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -174,53 +177,104 @@ public class GameUIComponents {
         administrativePane.setTranslateX(0);
         administrativePane.setTranslateY(30);
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
-
-
-
+    
+        // --- The New Button to Update the "usersListCurrGS" TextArea (placed before the first field) ---
+        Button updateUsersButton = new Button("Update Users List");
+        updateUsersButton.setLayoutX(200);
+        updateUsersButton.setLayoutY(10); // Positioned before the first field (TextArea at Y = 50)
+        administrativePane.getChildren().add(updateUsersButton);
+        uiManager.registerComponent("updateUsersButton", updateUsersButton);
+        updateUsersButton.setOnAction(e -> {
+            String gameID = GameContext.getCurrentGameId();
+            if (gameID != null && gameSessionManager.getGameSession(gameID) != null) {
+                // Retrieve the current set of users for the game session
+                Set<String> userSet = gameSessionManager.getGameSession(gameID).getUsers();
+                StringBuilder sb = new StringBuilder();
+                sb.append("Current Game Name: ")
+                  .append(gameSessionManager.getGameSession(gameID).getGameName())
+                  .append("\n");
+                sb.append("Users in this game:\n");
+                for (String user : userSet) {
+                    sb.append(user).append("\n");
+                }
+                // Update the TextArea's content
+                Node usersListNode = uiManager.getComponent("usersListCurrGS");
+                if (usersListNode instanceof TextArea) {
+                    ((TextArea) usersListNode).setText(sb.toString());
+                }
+            } else {
+                System.err.println("No current game session available to update.");
+            }
+        });
+    
+        // The TextArea that shows the current game info
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Game ID");
         usersListCurrGS.setEditable(false); // non-editable but copyable
         usersListCurrGS.setLayoutX(200);
         usersListCurrGS.setLayoutY(50);
-        usersListCurrGS.setPrefWidth(200);   // set preferred width
-        usersListCurrGS.setPrefHeight(150);  // set preferred height
-
+        usersListCurrGS.setPrefWidth(200);
+        usersListCurrGS.setPrefHeight(150);
         administrativePane.getChildren().add(usersListCurrGS);
-
-
         uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
-
-
+    
+        // Existing button to request online users globally
         Button OnlineUsersButton = new Button("Online Users Global");
         OnlineUsersButton.setLayoutX(200);
         OnlineUsersButton.setLayoutY(210);
         administrativePane.getChildren().add(OnlineUsersButton);
         uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
         OnlineUsersButton.setOnAction(e -> {
-
-                Message selectGoMsg = new Message("GETUSERS", new Object[]{}, "REQUEST");
-                Client.sendMessageStatic(selectGoMsg);
-
-
+            Message selectGoMsg = new Message("GETUSERS", new Object[]{}, "REQUEST");
+            Client.sendMessageStatic(selectGoMsg);
         });
-
+    
+        // Another TextArea (for additional purposes)
         TextArea usersList = new TextArea();
         usersList.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersList.setPromptText("Game ID");
-        usersList.setEditable(false); // non-editable but copyable
+        usersList.setEditable(false);
         usersList.setLayoutX(200);
         usersList.setLayoutY(240);
-        usersList.setPrefWidth(200);   // set preferred width
-        usersList.setPrefHeight(150);  // set preferred height
-
+        usersList.setPrefWidth(200);
+        usersList.setPrefHeight(150);
         administrativePane.getChildren().add(usersList);
-
-
         uiManager.registerComponent("usersList", usersList);
-
-
+    
         return administrativePane;
+    }
+    
+
+    public static Pane createCheckPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        Pane CheckPane = new Pane();
+        CheckPane.setTranslateX(0);
+        CheckPane.setTranslateY(30);
+        CheckPane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
+
+
+
+        
+
+
+        Button OnlineUsersButton = new Button("Online Users Global");
+        OnlineUsersButton.setLayoutX(200);
+        OnlineUsersButton.setLayoutY(210);
+        CheckPane.getChildren().add(OnlineUsersButton);
+        uiManager.registerComponent("OnlineUsersButtonnn", OnlineUsersButton);
+        
+        Button OnlineUsersButtonvvv = new Button("BUtton2");
+        OnlineUsersButtonvvv.setLayoutX(100);
+        OnlineUsersButtonvvv.setLayoutY(210);
+        CheckPane.getChildren().add(OnlineUsersButtonvvv);
+        uiManager.registerComponent("OnlineUsersButtonnnvvv", OnlineUsersButtonvvv);
+        
+
+
+        
+
+
+        return CheckPane;
     }
 
     /**
@@ -251,6 +305,8 @@ public class GameUIComponents {
         guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "None");
         guiInterfaces.setPromptText("Select GUI Iterface");
 
+        guiInterfaces.getSelectionModel().select("None");
+
         guiInterfaces.setOnAction(e -> {
             String selected = guiInterfaces.getSelectionModel().getSelectedItem();
             System.out.println("Selected chat mode: " + selected);
@@ -267,6 +323,13 @@ public class GameUIComponents {
             if (adminPaneNode instanceof Pane) {
                 Pane adminPane = (Pane) adminPaneNode;
                 adminPane.setVisible("Administration".equals(selected));
+            }
+
+            // Show/hide the Administration pane
+            Node checkPaneNode = uiManager.getComponent("checkUIPane");
+            if (adminPaneNode instanceof Pane) {
+                Pane checkPane = (Pane) checkPaneNode;
+                checkPaneNode.setVisible("Wisper Chat".equals(selected));
             }
         });
 
