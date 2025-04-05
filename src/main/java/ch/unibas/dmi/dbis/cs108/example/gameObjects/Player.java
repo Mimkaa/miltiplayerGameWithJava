@@ -29,8 +29,9 @@ public class Player extends GameObject implements IGravityAffected {
     private boolean collisionDetected = false;
     private boolean canJump = true;
 
+
     // Jump impulse (tuned for your game)
-    private float jumpingImpulse = 600f;
+    private float jumpingImpulse = 900f;
 
     // For time–based updates.
     private long lastUpdateTime;
@@ -143,8 +144,10 @@ public class Player extends GameObject implements IGravityAffected {
 
         // Handle input if this is the selected object.
         if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
+            // If W is pressed, and the player is on the ground and allowed to jump,
+            // then apply the jump impulse.
             if (KeyboardState.isKeyPressed(KeyCode.W) && onGround && canJump) {
-                vy = -jumpingImpulse;
+                vy = -jumpingImpulse;  // Set upward velocity (negative y-direction)
                 onGround = false;
             }
             if (KeyboardState.isKeyPressed(KeyCode.A)) {
