@@ -93,7 +93,7 @@ public class Client {
      * Constructs a new {@code Client} with the given game session name and
      * initializes the associated {@link Game} object.
      *
-     * @param gameSessionName the name of the game session
+     * // @param gameSessionName the name of the game session
      */
     public Client() {
         instance = this;  // Set the singleton instance.

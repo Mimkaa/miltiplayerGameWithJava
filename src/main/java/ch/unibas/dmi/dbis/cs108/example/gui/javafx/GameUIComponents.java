@@ -6,17 +6,11 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
-import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
-import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 
 public class GameUIComponents {
 
@@ -176,7 +170,6 @@ public class GameUIComponents {
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
 
-
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Game ID");
@@ -223,6 +216,66 @@ public class GameUIComponents {
         return administrativePane;
     }
 
+    public static Pane createChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        BorderPane root = new BorderPane();
+        root.setPrefSize(600, 500);
+
+        // CHAT MESSAGES
+        VBox messagesBox = new VBox(5);
+        uiManager.registerComponent("chatMessagesBox", messagesBox);
+        messagesBox.setPadding(new Insets(10));
+        ScrollPane scrollPane = new ScrollPane(messagesBox);
+        uiManager.registerComponent("chatScroll", scrollPane);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+
+        // INPUT FIELD & SEND BUTTON
+        TextField chatInputField = new TextField();
+        chatInputField.setPromptText("Type a message...");
+        chatInputField.setPrefWidth(400);
+
+        Button sendButton = new Button("Send");
+        sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+
+        HBox inputBox = new HBox(10, chatInputField, sendButton);
+        inputBox.setAlignment(Pos.CENTER);
+        inputBox.setPadding(new Insets(10));
+
+        VBox chatContainer = new VBox();
+        chatContainer.setAlignment(Pos.BOTTOM_CENTER);
+        chatContainer.setPadding(new Insets(10));
+        chatContainer.setMouseTransparent(false);
+
+        chatContainer.getChildren().addAll(scrollPane, inputBox);
+
+        // Center everything
+        VBox centerWrapper = new VBox();
+        centerWrapper.setAlignment(Pos.CENTER);
+        centerWrapper.getChildren().add(chatContainer);
+        root.setCenter(centerWrapper);
+
+        // SEND ACTION
+        sendButton.setOnAction(e -> {
+            String username = Client.getInstance().getUsername().get();
+            String message = chatInputField.getText();
+            if (!message.trim().isEmpty()) {
+                Object[] params = new String[]{username, message};
+                Message responseMsg = new Message("CHATGLB", params, "REQUEST");
+                Client.sendMessageStatic(responseMsg);
+
+                // Local display
+                Label msg = new Label(username + ": " + message);
+                messagesBox.getChildren().add(msg);
+                chatInputField.clear();
+                scrollPane.setVvalue(1.0);
+            }
+        });
+
+        uiManager.registerComponent("chatInputField", chatInputField);
+        return root;
+    }
+
+
     /**
      * Creates and returns a toggle button to control the visibility of the given mainUIPane.
      *
@@ -244,12 +297,13 @@ public class GameUIComponents {
     }
 
     public static ComboBox<String> createGuiInterfaces(UIManager uiManager) {
+
         ComboBox<String> guiInterfaces = new ComboBox<>();
         StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
         guiInterfaces.setTranslateX(0);
         guiInterfaces.setTranslateY(0);
         guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "None");
-        guiInterfaces.setPromptText("Select GUI Iterface");
+        guiInterfaces.setPromptText("Select GUI Interface");
 
         guiInterfaces.setOnAction(e -> {
             String selected = guiInterfaces.getSelectionModel().getSelectedItem();
@@ -267,6 +321,13 @@ public class GameUIComponents {
             if (adminPaneNode instanceof Pane) {
                 Pane adminPane = (Pane) adminPaneNode;
                 adminPane.setVisible("Administration".equals(selected));
+            }
+
+
+            Node chatPaneNode = uiManager.getComponent("chatUIPane");
+            if (chatPaneNode instanceof Pane) {
+                Pane chatPane = (Pane) chatPaneNode;
+                chatPane.setVisible("Glob Chat".equals(selected));
             }
         });
 

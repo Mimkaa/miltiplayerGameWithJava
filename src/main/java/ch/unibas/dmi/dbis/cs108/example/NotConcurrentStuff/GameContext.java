@@ -16,16 +16,13 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.Node;
 
 import javax.swing.*;
@@ -181,6 +178,11 @@ public class GameContext {
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
                         System.out.println("CHANGENAME message missing required parameters. Expected at least 3 parameters.");
                         return;
+                    }  else if ("CHANGENAME".equals(type)) {
+                    System.out.println("Processing CHANGENAME response");
+                    if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
+                        System.out.println("CHANGENAME message missing required parameters. Expected at least 3 parameters.");
+                        return;
                     }
                     String sessionId = receivedMessage.getParameters()[0].toString();
                     String objectId = receivedMessage.getParameters()[1].toString();
@@ -202,7 +204,32 @@ public class GameContext {
                     } else {
                         System.out.println("CHANGENAME: No game session found with id: " + sessionId);
                     }
-                } else if ("DELETEGO".equals(type)) {
+
+                } else if ("CHATGLB".equals(type)) {
+                    if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length >= 2) {
+                        String sender = receivedMessage.getParameters()[0].toString();
+                        String message = receivedMessage.getParameters()[1].toString();
+
+                        Platform.runLater(() -> {
+                            Node chatNode = uiManager.getComponent("chatMessagesBox");
+                            if (chatNode instanceof VBox) {
+                                VBox messagesBox = (VBox) chatNode;
+
+                                Label msgLabel = new Label(sender + ": " + message);
+                                msgLabel.setWrapText(true);
+                                msgLabel.setStyle("-fx-background-color: #eeeeee; -fx-padding: 5; -fx-border-radius: 5; -fx-background-radius: 5;");
+                                messagesBox.getChildren().add(msgLabel);
+                            }
+
+                            Node scrollNode = uiManager.getComponent("chatScroll");
+                            if (scrollNode instanceof ScrollPane) {
+                                ((ScrollPane) scrollNode).setVvalue(1.0);
+                            }
+                        });
+                    }
+                }
+
+            } else if ("DELETEGO".equals(type)) {
                     System.out.println("Processing DELETEGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
                         System.out.println("DELETEGO message missing required parameters. Expected: [gameSessionId, objectId]");
@@ -231,6 +258,12 @@ public class GameContext {
                             for (Object param : params) {
                                 ((TextArea) node).appendText(param.toString() + "\n");
                             }
+
+                            Node scrollNode = uiManager.getComponent("chatScroll");
+                            if (scrollNode instanceof ScrollPane) {
+                                ((ScrollPane) scrollNode).setVvalue(1.0);
+                            }
+
                         }
                     });
 
@@ -268,23 +301,44 @@ public class GameContext {
         uiManager.waitForCentralUnitAndInitialize(() -> {
         // Use the GameUIComponents class to create the main UI pane.
         Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
-        CentralGraphicalUnit.getInstance().addNode(mainUIPane);
+       // CentralGraphicalUnit.getInstance().addNode(mainUIPane);
         uiManager.registerComponent("mainUIPane", mainUIPane);
 
         Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
-        CentralGraphicalUnit.getInstance().addNode(adminPane);
+       // CentralGraphicalUnit.getInstance().addNode(adminPane);
         uiManager.registerComponent("adminUIPane", adminPane);
-        
-        // Create and add the toggle button (outside of the main UI pane).
+
+        Pane chatPane = GameUIComponents.createChatPane(uiManager, gameSessionManager);
+       // CentralGraphicalUnit.getInstance().addNode(chatPane);
+        uiManager.registerComponent("chatUIPane", chatPane);
+
+        StackPane layeredRoot = new StackPane();
+        layeredRoot.getChildren().addAll(mainUIPane, chatPane, adminPane);
+
+            // Initially only Lobby should be visible
+            mainUIPane.setVisible(true);
+            chatPane.setVisible(false);
+            adminPane.setVisible(false);
+
+
+        // add root node
+            CentralGraphicalUnit.getInstance().addNode(layeredRoot);
+
+
+            // Create and add the toggle button (outside of the main UI pane).
         //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
         //CentralGraphicalUnit.getInstance().addNode(togglePaneButton);
         //uiManager.registerComponent("togglePaneButton", togglePaneButton);
         //togglePaneButton.toFront();
-        ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
-        CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
 
-        
-        System.out.println("All UI components have been added via GameUIComponents.");
+            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
+            StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT); // Konumla
+            guiInterfaces.setTranslateX(10);
+            guiInterfaces.setTranslateY(10);
+            layeredRoot.getChildren().add(guiInterfaces);
+
+
+            System.out.println("All UI components have been added via GameUIComponents.");
         });
         
 
@@ -303,7 +357,7 @@ public class GameContext {
         client.setUsername(userName);
         new Thread(client::run).start();
         client.startConsoleReaderLoop();
-        // register the clinet on the server
+        // register the client on the server
         Message registrationMsg = new Message(
                 "REGISTER",
                 new Object[] {},

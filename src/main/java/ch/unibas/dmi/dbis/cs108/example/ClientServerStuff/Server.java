@@ -302,6 +302,7 @@ public class Server {
             return;
         }
 
+
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
             String username = concealed[concealed.length - 1];
