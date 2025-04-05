@@ -29,7 +29,6 @@ public class Player extends GameObject implements IGravityAffected {
     private boolean collisionDetected = false;
     private boolean canJump = true;
 
-
     // Jump impulse (tuned for your game)
     private float jumpingImpulse = 900f;
 
@@ -54,102 +53,79 @@ public class Player extends GameObject implements IGravityAffected {
 
     @Override
     public void applyGravity(float deltaTime) {
-        // Only apply gravity if not on the ground.
         if (!onGround) {
-            // Use our local GravityEngine constant.
             vy += GravityEngine.GRAVITY * deltaTime;
             setY(getY() + vy * deltaTime);
         }
     }
 
-
     private void checkGroundCollision() {
-        // Retrieve the current game session using the static helper.
         Game currentGame = GameContext.getGameById(getGameId());
         if (currentGame == null) return;
 
         final float tolerance = 10.0f;
         float bottom = getY() + getHeight();
-        onGround = false; // Reset onGround flag
+        onGround = false;
 
-        // Loop over game objects to find a valid ground candidate.
         for (GameObject other : currentGame.getGameObjects()) {
             if (other == this || !other.isCollidable()) continue;
 
             float otherTop = other.getY();
-
-            // Check for horizontal overlap.
             float myLeft = getX();
             float myRight = getX() + getWidth();
             float otherLeft = other.getX();
             float otherRight = other.getX() + other.getWidth();
             boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
 
-            // Adjusted condition: we allow a tolerance both above and below the platform top.
             if (vy >= 0 && horizontalOverlap &&
                     bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
-                // Snap the player's bottom to the platform's top.
                 setY(otherTop - getHeight());
                 vy = 0;
                 onGround = true;
-                break; // Stop after finding a valid ground candidate.
+                break;
             }
         }
     }
 
     private void checkIfSomeoneOnTop() {
-        // Get the current game session.
         Game currentGame = GameContext.getGameById(getGameId());
         if (currentGame == null) return;
 
-        // We'll assume that by default a player can jump when on the ground.
-        // (If not on ground, jump is disabled anyway.)
-        // Here, if someone is detected on top, we disable jump.
         final float tolerance = 10.0f;
         float myTop = getY();
-
-        // Default: if on ground, you can jump
         canJump = onGround;
 
-        // Check every other player.
         for (GameObject other : currentGame.getGameObjects()) {
             if (other == this || !(other instanceof Player)) continue;
 
             float otherBottom = other.getY() + other.getHeight();
-            // If the other player's bottom is very close to this player's top, consider them "on top"
             if (otherBottom >= myTop - tolerance && otherBottom <= myTop + tolerance) {
-                // Disable jump if someone is on top.
                 canJump = false;
                 break;
             }
         }
     }
 
-
     // --- Update Method ---
 
     @Override
     public void myUpdateLocal(float deltaTime) {
         float oldX = getX();
-        float oldY = getY();
-
-        // Apply gravity locally.
+        // Update vertical position based on gravity and collisions.
         applyGravity(deltaTime);
-
-        // Check ground collisions.
         checkGroundCollision();
-
-        // Check if someone is standing on top; if so, disable jumping.
         checkIfSomeoneOnTop();
 
-        // Handle input if this is the selected object.
+        // Handle keyboard input.
         if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            // If W is pressed, and the player is on the ground and allowed to jump,
-            // then apply the jump impulse.
+            // Jumping: send the velocity once.
             if (KeyboardState.isKeyPressed(KeyCode.W) && onGround && canJump) {
-                vy = -jumpingImpulse;  // Set upward velocity (negative y-direction)
+                vy = -jumpingImpulse;
                 onGround = false;
+                Message jumpMsg = new Message("JUMP", new Object[]{vy}, null);
+                sendMessage(jumpMsg);
             }
+            // Horizontal movement.
             if (KeyboardState.isKeyPressed(KeyCode.A)) {
                 setX(getX() - speed);
             }
@@ -158,47 +134,51 @@ public class Player extends GameObject implements IGravityAffected {
             }
         }
 
-        // If position changed, send a MOVE message.
-        if (getX() != oldX || getY() != oldY) {
-            Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
-            sendMessage(moveMsg);
+        // Send MOVE message only for horizontal movement.
+        if (getX() != oldX) {
+            long now = System.nanoTime();// 100 ms in nanoseconds
+                Message moveMsg = new Message("MOVE", new Object[]{getX()}, null);
+                sendMessage(moveMsg);
+            
         }
     }
 
-
     @Override
     public void myUpdateLocal() {
-        // Not used (we always use myUpdateLocal(deltaTime))
+        // Not used; we always use myUpdateLocal(deltaTime)
     }
 
     @Override
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
-            System.out.println("Player MOVE message parameters: " + Arrays.toString(params));
-            if (params.length >= 2) {
+            if (params.length >= 1) {
                 float newX = Float.parseFloat(params[0].toString());
-                float newY = Float.parseFloat(params[1].toString());
                 synchronized (this) {
                     setX(newX);
-                    setY(newY);
                 }
-                System.out.println("Processed MOVE for " + getName() + ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed MOVE for " + getName() + ": new position x=" + newX);
+            }
+        } else if ("JUMP".equals(msg.getMessageType())) {
+            Object[] params = msg.getParameters();
+            if (params.length >= 1) {
+                float newVy = Float.parseFloat(params[0].toString());
+                synchronized (this) {
+                    vy = newVy;
+                }
+                System.out.println("Processed JUMP for " + getName() + ": new velocity vy=" + newVy);
             }
         }
     }
 
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw the player rectangle.
         gc.setFill(collisionDetected ? Color.GREEN : Color.BLUE);
         gc.fillRect(getX(), getY(), getWidth(), getHeight());
-
-        // Draw the player's name above.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         double textWidth = text.getLayoutBounds().getWidth();
-        gc.fillText(getName(), getX() + getWidth()/2 - textWidth/2, getY() - 5);
+        gc.fillText(getName(), getX() + getWidth() / 2 - textWidth / 2, getY() - 5);
     }
 
     @Override
