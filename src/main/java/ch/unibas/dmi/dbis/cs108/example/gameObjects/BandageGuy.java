@@ -89,6 +89,11 @@ public class BandageGuy extends GameObject {
     }
 
     @Override
+    public void myUpdateLocal(float deltaTime) {
+
+    }
+
+    @Override
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();

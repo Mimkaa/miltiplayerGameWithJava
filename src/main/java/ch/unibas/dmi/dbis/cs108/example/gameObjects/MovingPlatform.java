@@ -107,6 +107,11 @@ public class MovingPlatform extends GameObject implements IMovable {
     }
 
     @Override
+    public void myUpdateLocal(float deltaTime) {
+
+    }
+
+    @Override
     protected void myUpdateGlobal(Message msg) {
         // For moving platforms you might want to ignore remote updates if they are meant to be static.
         // Otherwise, you could update x and y similarly as in myUpdateLocal().

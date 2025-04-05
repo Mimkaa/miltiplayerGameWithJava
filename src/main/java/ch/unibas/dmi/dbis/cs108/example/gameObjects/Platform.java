@@ -44,6 +44,11 @@ public class Platform extends GameObject {
         // No movement for static platforms.
     }
 
+    @Override
+    public void myUpdateLocal(float deltaTime) {
+
+    }
+
     /**
      * For now, static platforms don't process global updates.
      */

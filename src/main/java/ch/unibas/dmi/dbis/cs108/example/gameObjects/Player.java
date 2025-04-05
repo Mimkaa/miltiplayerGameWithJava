@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
@@ -13,74 +14,123 @@ import java.util.Arrays;
 
 @Getter
 @Setter
-public class Player extends GameObject {
+public class Player extends GameObject implements IGravityAffected {
 
-    // Fields used for the bounding box – using float.
     private float x;
     private float y;
     private float width;
     private float height;
 
-    // Additional fields for movement.
     private float speed = 5.0f;
-    private float vx = 2.0f;
-    private float vy = 1.0f;
+    private float vy = 0.0f;
+    private float mass = 70.0f;
 
-    // For visual feedback: if a collision occurs, this flag is set.
+    private boolean onGround = false;
     private boolean collisionDetected = false;
+    private boolean canJump = true;
 
-    /**
-     * Overloaded constructor that accepts five parameters.
-     * This assumes the provided side length is used for both width and height.
-     *
-     * @param name   The player's name.
-     * @param x      Starting x coordinate (as double).
-     * @param y      Starting y coordinate (as double).
-     * @param side   The side length for both width and height (as double).
-     * @param gameId The game session ID.
-     */
+    // Jump impulse (tuned for your game)
+    private float jumpingImpulse = 600f;
+
+    // For time–based updates.
+    private long lastUpdateTime;
+
     public Player(String name, double x, double y, double side, String gameId) {
-        // Delegate to the main constructor with width and height equal to side.
-        this(name, (float)x, (float)y, (float)side, (float)side, gameId);
+        this(name, (float) x, (float) y, (float) side, (float) side, gameId);
+        this.lastUpdateTime = System.nanoTime();
     }
 
-    /**
-     * Main constructor that accepts six parameters (all numeric values as float).
-     *
-     * @param name   The player's name.
-     * @param x      Starting x coordinate (as float).
-     * @param y      Starting y coordinate (as float).
-     * @param width  Rectangle width.
-     * @param height Rectangle height.
-     * @param gameId The game session ID.
-     */
     public Player(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.lastUpdateTime = System.nanoTime();
     }
 
+    // --- Local Gravity & Collision ---
+
     @Override
-    public void myUpdateLocal() {
-        // Save old position
+    public void applyGravity(float deltaTime) {
+        // Only apply gravity if not on the ground.
+        if (!onGround) {
+            // Use our local GravityEngine constant.
+            vy += GravityEngine.GRAVITY * deltaTime;
+            setY(getY() + vy * deltaTime);
+        }
+    }
+
+    private void checkGroundCollision() {
+        // Retrieve the current game session using the static helper.
+        Game currentGame = GameContext.getGameById(getGameId());
+        if (currentGame == null) return;
+
+        final float tolerance = 10.0f;
+        float bottom = getY() + getHeight();
+        onGround = false; // Reset onGround flag
+
+        // Loop over game objects to find a valid ground candidate.
+        for (GameObject other : currentGame.getGameObjects()) {
+            if (other == this || !other.isCollidable()) continue;
+
+            float otherTop = other.getY();
+
+            // Check for horizontal overlap.
+            float myLeft = getX();
+            float myRight = getX() + getWidth();
+            float otherLeft = other.getX();
+            float otherRight = other.getX() + other.getWidth();
+            boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
+
+            // Adjusted condition: we allow a tolerance both above and below the platform top.
+            if (vy >= 0 && horizontalOverlap &&
+                    bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
+                // Snap the player's bottom to the platform's top.
+                setY(otherTop - getHeight());
+                vy = 0;
+                onGround = true;
+                break; // Stop after finding a valid ground candidate.
+            }
+        }
+    }
+    // --- Update Method ---
+
+    @Override
+    public void myUpdateLocal(float deltaTime) {
         float oldX = getX();
         float oldY = getY();
 
-        // Only update position based on keyboard input if this object is selected.
+        // Apply gravity locally.
+        applyGravity(deltaTime);
+
+        // Check ground collisions.
+        checkGroundCollision();
+
+        // Handle input if this is the selected object.
         if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            if (KeyboardState.isKeyPressed(KeyCode.W)) { setY(getY() - speed); }
-            if (KeyboardState.isKeyPressed(KeyCode.S)) { setY(getY() + speed); }
-            if (KeyboardState.isKeyPressed(KeyCode.A)) { setX(getX() - speed); }
-            if (KeyboardState.isKeyPressed(KeyCode.D)) { setX(getX() + speed); }
+            if (KeyboardState.isKeyPressed(KeyCode.W) && onGround && canJump) {
+                vy = -jumpingImpulse;
+                onGround = false;
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.A)) {
+                setX(getX() - speed);
+            }
+            if (KeyboardState.isKeyPressed(KeyCode.D)) {
+                setX(getX() + speed);
+            }
         }
 
-        // If the position has changed, send a MOVE message.
+        // If position changed, send a MOVE message.
         if (getX() != oldX || getY() != oldY) {
             Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
             sendMessage(moveMsg);
         }
+    }
+
+    @Override
+    public void myUpdateLocal() {
+        // Not used (we always use myUpdateLocal(deltaTime))
     }
 
     @Override
@@ -89,79 +139,56 @@ public class Player extends GameObject {
             Object[] params = msg.getParameters();
             System.out.println("Player MOVE message parameters: " + Arrays.toString(params));
             if (params.length >= 2) {
-                float newX = (params[0] instanceof Number)
-                        ? ((Number) params[0]).floatValue()
-                        : Float.parseFloat(params[0].toString());
-                float newY = (params[1] instanceof Number)
-                        ? ((Number) params[1]).floatValue()
-                        : Float.parseFloat(params[1].toString());
+                float newX = Float.parseFloat(params[0].toString());
+                float newY = Float.parseFloat(params[1].toString());
                 synchronized (this) {
                     setX(newX);
                     setY(newY);
                 }
-                System.out.println("Processed MOVE for " + getName() +
-                        " in game " + extractGameId(msg) +
-                        ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed MOVE for " + getName() + ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
 
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw a rectangle (with collision feedback).
-        if (isCollisionDetected()) {
-            gc.setFill(Color.GREEN);
-        } else {
-            gc.setFill(Color.BLUE);
-        }
+        // Draw the player rectangle.
+        gc.setFill(collisionDetected ? Color.GREEN : Color.BLUE);
         gc.fillRect(getX(), getY(), getWidth(), getHeight());
 
-        // Draw the object's name above the rectangle.
+        // Draw the player's name above.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
-        text.setFont(gc.getFont());
         double textWidth = text.getLayoutBounds().getWidth();
-        gc.fillText(getName(), getX() + getWidth() / 2 - textWidth / 2, getY() - 5);
+        gc.fillText(getName(), getX() + getWidth()/2 - textWidth/2, getY() - 5);
     }
 
     @Override
     public Object[] getConstructorParamValues() {
-        return new Object[]{ getName(), getX(), getY(), getWidth(), getHeight(), getGameId() };
+        return new Object[]{getName(), getX(), getY(), getWidth(), getHeight(), getGameId()};
     }
 
-    // -----------------------
-    // Implement bounding box methods explicitly.
-    // These are required because GameObject declares them as abstract.
+    // --- Bounding Box Methods ---
+
     @Override
-    public float getX() {
-        return this.x;
-    }
+    public float getX() { return x; }
     @Override
-    public float getY() {
-        return this.y;
-    }
+    public float getY() { return y; }
     @Override
-    public float getWidth() {
-        return this.width;
-    }
+    public float getWidth() { return width; }
     @Override
-    public float getHeight() {
-        return this.height;
-    }
+    public float getHeight() { return height; }
     @Override
-    public void setX(float x) {
-        this.x = x;
-    }
+    public void setX(float x) { this.x = x; }
     @Override
-    public void setY(float y) {
-        this.y = y;
-    }
+    public void setY(float y) { this.y = y; }
     @Override
-    public void setWidth(float width) {
-        this.width = width;
-    }
+    public void setWidth(float width) { this.width = width; }
     @Override
-    public void setHeight(float height) {
-        this.height = height;
+    public void setHeight(float height) { this.height = height; }
+
+    @Override
+    public float getMass() {
+        return mass;
     }
 }

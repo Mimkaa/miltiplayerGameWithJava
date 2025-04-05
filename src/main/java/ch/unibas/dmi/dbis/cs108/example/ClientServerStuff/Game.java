@@ -108,15 +108,20 @@ public class Game {
      * - Checks and resolves collisions among collidable objects
      */
     public void startPlayersCommandProcessingLoop() {
+        final long[] lastUpdate = { System.nanoTime() };
         AsyncManager.runLoop(() -> {
-            // 1) Process each object's messages, commands, and local update.
+            long now = System.nanoTime();
+            float deltaTime = (now - lastUpdate[0]) / 1_000_000_000f; // convert nanoseconds to seconds
+            lastUpdate[0] = now;
+
+            // Process each object's messages, commands, and update with deltaTime.
             for (GameObject go : gameObjects) {
                 go.processIncomingMessages();
                 go.processCommands();
-                go.myUpdateLocal();
+                go.myUpdateLocal(deltaTime); // now deltaTime is defined!
             }
 
-            // 2) Check and resolve collisions among collidable objects.
+            // Then check and resolve collisions among collidable objects.
             for (int i = 0; i < gameObjects.size(); i++) {
                 GameObject a = gameObjects.get(i);
                 if (!a.isCollidable()) continue;
@@ -146,7 +151,6 @@ public class Game {
             }
         });
     }
-
     /**
      * Draws all game objects onto the provided JavaFX GraphicsContext.
      */

@@ -56,6 +56,8 @@ public abstract class GameObject {
     }
 
     public abstract void myUpdateLocal();
+    public abstract void myUpdateLocal(float deltaTime);
+
     protected abstract void myUpdateGlobal(Message msg);
     public abstract void draw(GraphicsContext gc);
     public abstract Object[] getConstructorParamValues();
