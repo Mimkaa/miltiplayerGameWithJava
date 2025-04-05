@@ -50,7 +50,6 @@ public class GameContext {
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
 
-    private static GameContext instance;
 
 
     public GameContext() {
@@ -380,11 +379,6 @@ public class GameContext {
 
         // Otherwise, draw the game
         game.draw(gc);
-    }
-
-    public static Game getGameById(String gameId) {
-        // Ensure that 'instance' is set in your GameContext constructor.
-        return instance.getGameSessionManager().getGameSession(gameId);
     }
 
 

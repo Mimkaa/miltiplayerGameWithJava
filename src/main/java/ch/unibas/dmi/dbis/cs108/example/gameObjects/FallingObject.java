@@ -168,6 +168,11 @@ public class FallingObject extends GameObject implements IGravityAffected {
         updateWithAttachedPlatform();
     }
 
+    @Override
+    public void myUpdateLocal(float deltaTime) {
+
+    }
+
     /**
      * Local update method called every frame.
      * It computes deltaTime, applies gravity (if not grounded), resolves collisions,

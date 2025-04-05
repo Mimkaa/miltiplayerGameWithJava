@@ -61,6 +61,7 @@ public class Player extends GameObject implements IGravityAffected {
         }
     }
 
+
     private void checkGroundCollision() {
         // Retrieve the current game session using the static helper.
         Game currentGame = GameContext.getGameById(getGameId());
@@ -94,6 +95,36 @@ public class Player extends GameObject implements IGravityAffected {
             }
         }
     }
+
+    private void checkIfSomeoneOnTop() {
+        // Get the current game session.
+        Game currentGame = GameContext.getGameById(getGameId());
+        if (currentGame == null) return;
+
+        // We'll assume that by default a player can jump when on the ground.
+        // (If not on ground, jump is disabled anyway.)
+        // Here, if someone is detected on top, we disable jump.
+        final float tolerance = 10.0f;
+        float myTop = getY();
+
+        // Default: if on ground, you can jump
+        canJump = onGround;
+
+        // Check every other player.
+        for (GameObject other : currentGame.getGameObjects()) {
+            if (other == this || !(other instanceof Player)) continue;
+
+            float otherBottom = other.getY() + other.getHeight();
+            // If the other player's bottom is very close to this player's top, consider them "on top"
+            if (otherBottom >= myTop - tolerance && otherBottom <= myTop + tolerance) {
+                // Disable jump if someone is on top.
+                canJump = false;
+                break;
+            }
+        }
+    }
+
+
     // --- Update Method ---
 
     @Override
@@ -106,6 +137,9 @@ public class Player extends GameObject implements IGravityAffected {
 
         // Check ground collisions.
         checkGroundCollision();
+
+        // Check if someone is standing on top; if so, disable jumping.
+        checkIfSomeoneOnTop();
 
         // Handle input if this is the selected object.
         if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
@@ -127,6 +161,7 @@ public class Player extends GameObject implements IGravityAffected {
             sendMessage(moveMsg);
         }
     }
+
 
     @Override
     public void myUpdateLocal() {
