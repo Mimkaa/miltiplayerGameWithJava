@@ -217,6 +217,7 @@ public class GameUIComponents {
     }
 
     public static Pane createChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+
         BorderPane root = new BorderPane();
         root.setPrefSize(600, 500);
 
@@ -274,6 +275,57 @@ public class GameUIComponents {
         uiManager.registerComponent("chatInputField", chatInputField);
         return root;
     }
+
+    public static Pane createLobbyChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        BorderPane root = new BorderPane();
+        root.setPrefSize(600, 500);
+
+        VBox messagesBox = new VBox(5);
+        messagesBox.setPadding(new Insets(10));
+        ScrollPane scrollPane = new ScrollPane(messagesBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: white;");
+
+        TextField input = new TextField();
+        input.setPromptText("Lobby message...");
+        input.setPrefWidth(400);
+
+        Button send = new Button("Send");
+        send.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+
+        HBox inputBox = new HBox(10, input, send);
+        inputBox.setPadding(new Insets(10));
+        inputBox.setAlignment(Pos.CENTER);
+
+        VBox container = new VBox(scrollPane, inputBox);
+        container.setAlignment(Pos.CENTER);
+        container.setPadding(new Insets(10));
+
+        root.setCenter(container);
+
+        // Send button action
+        send.setOnAction(e -> {
+            String message = input.getText().trim();
+            String username = Client.getInstance().getUsername().get();
+            String gameId = GameContext.getCurrentGameId();
+
+            if (!message.isEmpty() && gameId != null) {
+                Message lobbyMsg = new Message("CHATLOBBY", new Object[]{gameId, username, message}, "REQUEST");
+                Client.sendMessageStatic(lobbyMsg);
+
+                // local display
+                Label msg = new Label(username + ": " + message);
+                messagesBox.getChildren().add(msg);
+                scrollPane.setVvalue(1.0);
+                input.clear();
+            }
+        });
+
+        // UI kayıt
+        uiManager.registerComponent("lobbyChatBox", messagesBox);
+        return root;
+    }
+
 
 
     /**

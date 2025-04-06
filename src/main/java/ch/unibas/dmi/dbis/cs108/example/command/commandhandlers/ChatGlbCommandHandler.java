@@ -11,9 +11,20 @@ public class ChatGlbCommandHandler implements CommandHandler {
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
 
-           System.out.println(msg);
-
-
+        Object[] params = msg.getParameters();
+        if (params == null || params.length < 2) {
+            System.out.println("Invalid CHATGLB message from " + senderUsername);
+            return;
         }
+
+        String fromUser = params[0].toString();
+        String message = params[1].toString();
+
+        Message broadcastMsg = new Message("CHATGLB", new String[]{fromUser, message}, "RESPONSE");
+        server.broadcastMessageToAll(broadcastMsg);
+
+        System.out.println("Broadcasted CHATGLB message: " + fromUser + ": " + message);
+
+    }
 }
 

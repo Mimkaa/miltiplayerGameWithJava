@@ -315,10 +315,18 @@ public class GameContext {
         StackPane layeredRoot = new StackPane();
         layeredRoot.getChildren().addAll(mainUIPane, chatPane, adminPane);
 
+
+
             // Initially only Lobby should be visible
             mainUIPane.setVisible(true);
             chatPane.setVisible(false);
             adminPane.setVisible(false);
+
+            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
+            StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT); // Konumla
+            guiInterfaces.setTranslateX(10);
+            guiInterfaces.setTranslateY(10);
+            layeredRoot.getChildren().add(guiInterfaces);
 
 
         // add root node
@@ -331,16 +339,16 @@ public class GameContext {
         //uiManager.registerComponent("togglePaneButton", togglePaneButton);
         //togglePaneButton.toFront();
 
-            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
-            StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT); // Konumla
-            guiInterfaces.setTranslateX(10);
-            guiInterfaces.setTranslateY(10);
-            layeredRoot.getChildren().add(guiInterfaces);
+
+
+
+//            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
+//            CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
 
 
             System.out.println("All UI components have been added via GameUIComponents.");
         });
-        
+
 
 
         Scanner inputScanner = new Scanner(System.in);
