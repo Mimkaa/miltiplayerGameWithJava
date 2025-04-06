@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
+
 import javax.swing.*;
 import java.awt.*;
 

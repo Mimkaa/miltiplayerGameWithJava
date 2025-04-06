@@ -5,9 +5,9 @@ title : Week 6
 
 # Test Plan: Server Command Integration
 
-| Version | Project Name     | Author       | Status       | Date       | Comment                                |
-|---------|------------------|--------------|--------------|------------|----------------------------------------|
-| 0.3     | Server Test Suite | AI Generated | In Progress  | 2025-03-27 | Covers all server command integrations |
+| Version | Project Name  | Author | Status       | Date       | Comment                                |
+|---------|---------------|------|--------------|------------|----------------------------------------|
+| 0.3     | Server Test   | WISA | In Progress  | 2025-03-27 | Covers all server command integrations |
 
 ---
 

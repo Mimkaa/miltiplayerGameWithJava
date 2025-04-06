@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import lombok.Getter;
 
 import javax.swing.SwingUtilities;
@@ -12,6 +13,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -51,9 +53,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class Client {
 
     /** The default server address (localhost). */
-    public static final String SERVER_ADDRESS = "localhost";
+    public static String SERVER_ADDRESS = "localhost";
     /** The default server port (9876). */
-    public static final int SERVER_PORT = 9876;
+    public static int SERVER_PORT = 9876;
 
     /** Manages chat functionality for this client. */
     public ChatManager.ClientChatManager clientChatManager;
@@ -69,8 +71,10 @@ public class Client {
     /** Console input scanner for reading commands. */
     private final Scanner scanner = new Scanner(System.in);
 
+    private final String clientId = UUID.randomUUID().toString();
+
     /** The client's username, stored as an AtomicReference for thread safety. */
-    private final AtomicReference<String> username = new AtomicReference<>(UUID.randomUUID().toString());
+    private final AtomicReference<String> username = new AtomicReference<>(clientId);
 
     /** A reliable UDP sender instance. */
     private ReliableUDPSender myReliableUDPSender;
@@ -79,7 +83,7 @@ public class Client {
 
     /** The UDP socket used by this client. */
     private DatagramSocket clientSocket;
-    
+
     /** Tracks ping (round-trip time) data; left unused unless explicitly started. */
     private PingManager pingManager;
 
@@ -130,7 +134,7 @@ public class Client {
         return this.clientChatManager.getChatPanel();
     }
 
-   
+
 
     /**
      * Main entry point for the client's networking logic, including:
@@ -223,7 +227,7 @@ public class Client {
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
-                        
+
                         } else if ("CLIENT".equalsIgnoreCase(msg.getOption())) {
                             // Perform local client state updates
                             AsyncManager.run(() -> updateLocalClientState(msg));
@@ -358,7 +362,7 @@ public class Client {
                         //game.rebindKeyListeners(gameObject.getName());
                         instance.username.set(gameObject.getName());
                         //game.updateGamePanel();
-                        
+
                     });
                 }
             }
@@ -384,7 +388,7 @@ public class Client {
                     break;
                 }
             }
-            
+
         }
 
         if ("CREATEGAME".equalsIgnoreCase(msg.getMessageType())) {
@@ -398,9 +402,9 @@ public class Client {
                 newGame.startPlayersCommandProcessingLoop();
                 // Update the client's game reference.
                 this.game = newGame;
-                System.out.println("CREATEGAME response received. New game created: " 
+                System.out.println("CREATEGAME response received. New game created: "
                                    + newGameName + " with UUID: " + newGameUuid);
-                
+
             } else {
                 System.err.println("CREATEGAME response missing required parameters!");
             }
@@ -413,27 +417,42 @@ public class Client {
      * Type "exit" (without quotes) to stop reading from the console.
      */
     public void startConsoleReaderLoop() {
-        AsyncManager.runLoop(() -> {
-            System.out.print("Command> ");
-            String command = scanner.nextLine();
-            if ("exit".equalsIgnoreCase(command)) {
-                System.out.println("Exiting console reader...");
-                Thread.currentThread().interrupt();
+            // Prüfe, ob eine Konsole vorhanden ist
+            if (System.console() == null) {
+                System.out.println("No console available. Skipping console input loop.");
                 return;
             }
-            if (!command.contains("|")) {
-                command = command + "||";
-            }
-            try {
-                Message msg = MessageCodec.decode(command);
-                String[] concealedParams = { "something1", "something2" };
-                msg.setConcealedParameters(concealedParams);
-                sendMessageStatic(msg);
-            } catch (Exception e) {
-                System.out.println("Invalid message format: " + command);
-            }
-        });
-    }
+
+            AsyncManager.runLoop(() -> {
+                try {
+                    System.out.print("Command> ");
+                    if (!scanner.hasNextLine()) {
+                        System.out.println("No input. Exiting input loop.");
+                        return;
+                    }
+
+                    String command = scanner.nextLine();
+                    if ("exit".equalsIgnoreCase(command)) {
+                        System.out.println("Exiting console reader...");
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    if (!command.contains("|")) {
+                        command = command + "||";
+                    }
+                    try {
+                        Message msg = MessageCodec.decode(command);
+                        String[] concealedParams = { "something1", "something2" };
+                        msg.setConcealedParameters(concealedParams);
+                        sendMessageStatic(msg);
+                    } catch (Exception e) {
+                        System.out.println("Invalid message format: " + command);
+                    }
+                } catch (NoSuchElementException e) {
+                    System.out.println("Scanner closed or no input available.");
+                }
+            });
+        }
 
     /**
      * Changes the username for this client.
@@ -492,6 +511,13 @@ public class Client {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    public void setServerAddress(String host) {
+        this.SERVER_ADDRESS = host;
+    }
+
+    public void setServerPort(int port) {
+        this.SERVER_PORT = port;
     }
 
     /**

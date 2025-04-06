@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;

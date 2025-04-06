@@ -4,59 +4,105 @@ plugins {
     id 'org.openjfx.javafxplugin' version '0.0.13'
 }
 
+// Projectinformation
 group 'ch.unibas.dmi.dbis'
 version '0.0.1-ALPHA'
-
-// Specify your main application class here.
 mainClassName = 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
 
-javafx {
-    version = "19.0.2.1"
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.base', 'javafx.graphics']
-}
-
+// Java-Toolchain
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
+// Repositories
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    // JavaFX dependency for controls; other modules are handled by the plugin.
-    implementation 'org.openjfx:javafx-controls:19.0.2.1'
+// JavaFX-configuration
+javafx {
+    version = "19.0.2.1"
+    modules = [
+            'javafx.controls',
+            'javafx.fxml',
+            'javafx.base',
+            'javafx.graphics'
+    ]
+}
 
-    // reflections for zero configuration classpath analysis
+// dependencies
+dependencies {
+    // JavaFX
+    implementation 'org.openjfx:javafx-controls:19.0.2.1'
+    implementation 'org.openjfx:javafx-fxml:19.0.2.1'
+
+    // Physik-Engine
+    implementation 'org.dyn4j:dyn4j:5.0.2'
+
+    // Classpath-Analyse
     implementation 'org.reflections:reflections:0.10.2'
 
+    // Logging
     implementation 'ch.qos.logback:logback-classic:1.4.6'
-    
-    // JUnit dependencies for testing.
+
+    // Testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation("org.junit.jupiter:junit-jupiter:5.+")
-    
-    // Lombok for compile-time code generation.
+
+    // Lombok
     compileOnly 'org.projectlombok:lombok:1.18.26'
     annotationProcessor 'org.projectlombok:lombok:1.18.26'
 }
 
+// Testconfiguration
 test {
     useJUnitPlatform()
 }
 
+// JAR-configuration(inkl. dependencies )
 jar {
     duplicatesStrategy(DuplicatesStrategy.INCLUDE)
     manifest {
         attributes(
-            'Main-Class': mainClassName
+                'Main-Class': mainClassName
         )
     }
     from {
         configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } +
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+                configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
+}
+
+// JavaFX
+run {
+    jvmArgs = [
+            '--module-path', configurations.runtimeClasspath.asPath,
+            '--add-modules', 'javafx.controls,javafx.fxml,javafx.base,javafx.graphics'
+    ]
+}
+
+// Javadoc-configuration
+javadoc {
+    options.encoding = 'UTF-8'
+    options.memberLevel = JavadocMemberLevel.PROTECTED
+    options.author = true
+    options.version = true
+    options.links("https://docs.oracle.com/en/java/javase/17/docs/api/")
+}
+
+// Output of runtime classpath
+task printRuntimeClasspath {
+    doLast {
+        println "Runtime classpath: " + configurations.runtimeClasspath.asPath
+    }
+}
+
+// cs108: executable jar, javadoc and unittests
+tasks.register('build-cs108') {
+    group = "build"
+    description = "Builds the project, executable JAR, and Javadoc."
+    dependsOn 'clean', 'build', 'javadoc'
 }

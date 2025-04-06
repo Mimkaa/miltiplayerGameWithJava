@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?><project name="Untitled Gantt Project" company="" webLink="http://" view-date="2025-03-03" view-index="0" gantt-divider-location="775" resource-divider-location="300" version="3.3.3316" locale="de_DE">
+    <description/>
+    <view zooming-state="default:5" id="gantt-chart">
+        <field id="tpd15" name="Notizen" width="20" order="0"/>
+        <field id="tpd3" name="Vorgang" width="407" order="0"/>
+        <field id="tpd4" name="Anfang" width="151" order="1"/>
+        <field id="tpd5" name="Ende" width="151" order="2"/>
+        <field id="tpd6" name="Dauer" width="50" order="3"/>
+        <option id="filter.completedTasks" value="false"/>
+        <option id="filter.dueTodayTasks" value="false"/>
+        <option id="filter.overdueTasks" value="false"/>
+        <option id="filter.inProgressTodayTasks" value="false"/>
+        <timeline><![CDATA[0,68,10,1]]></timeline>
+        <option id="color.recent"><![CDATA[#ff0000 #00ff00 #ff3300 #ffff00]]></option>
+    </view>
+    <view id="resource-table">
+        <field id="0" name="Ressource" width="206" order="0"/>
+        <field id="1" name="Rolle" width="90" order="1"/>
+    </view>
+    <!-- -->
+    <calendars>
+        <day-types>
+            <day-type id="0"/>
+            <day-type id="1"/>
+            <default-week id="1" name="default" sun="1" mon="0" tue="0" wed="0" thu="0" fri="0" sat="1"/>
+            <only-show-weekends value="false"/>
+            <overriden-day-types/>
+            <days/>
+        </day-types>
+    </calendars>
+    <tasks empty-milestones="true">
+        <taskproperties>
+            <taskproperty id="tpd0" name="type" type="default" valuetype="icon"/>
+            <taskproperty id="tpd1" name="priority" type="default" valuetype="icon"/>
+            <taskproperty id="tpd2" name="info" type="default" valuetype="icon"/>
+            <taskproperty id="tpd3" name="name" type="default" valuetype="text"/>
+            <taskproperty id="tpd4" name="begindate" type="default" valuetype="date"/>
+            <taskproperty id="tpd5" name="enddate" type="default" valuetype="date"/>
+            <taskproperty id="tpd6" name="duration" type="default" valuetype="int"/>
+            <taskproperty id="tpd7" name="completion" type="default" valuetype="int"/>
+            <taskproperty id="tpd8" name="coordinator" type="default" valuetype="text"/>
+            <taskproperty id="tpd9" name="predecessorsr" type="default" valuetype="text"/>
+        </taskproperties>
+        <task id="0" uid="b2a0adbc992f4a6486748954cfc4ca7e" name="Milestone 1" color="#ffff00" meeting="true" start="2025-02-18" duration="0" complete="0" thirdDate="2025-02-18" thirdDate-constraint="1" priority="2" expand="true">
+            <notes><![CDATA[Milestone 1: 
+-Outline of the game with its goals, rules and mechanics
+-Have a very clear and well thought out written concept of your game (max two pages, self-made
+-You have already started producing relevant and meaningfully runnable code for your project
+-Project diary exists (PDF or text) and is readable
+-The diary has at least one meaningful entry
+-Show a self made mockup of your game during the presentation
+-Overview of the functionality of client and server specific to your game
+-Overview of the software requirements (not required software
+-Have a name for your game, ideally also for your group
+-Project timeline and responsibilities
+-Have a detailed and well thought out project plan in written form
+]]></notes>
+            <depend id="22" type="2" difference="0" hardness="Strong"/>
+            <depend id="46" type="2" difference="0" hardness="Strong"/>
+            <depend id="69" type="2" difference="0" hardness="Strong"/>
+            <depend id="71" type="2" difference="0" hardness="Strong"/>
+            <task id="32" uid="b96cfae0707c4285b7705d70aba2803f" name="Milestone 1 deadline" meeting="true" start="2025-03-07" duration="0" complete="0" expand="true">
+                <notes><![CDATA[deadline of milestone1
+]]></notes>
+            </task>
+            <task id="7" uid="e580b4ca24e4428485ed01ab845242e6" name="Game_Concept" meeting="false" start="2025-02-25" duration="5" complete="0" expand="true">
+                <notes><![CDATA[writing about the game concept
+]]></notes>
+                <depend id="8" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="10" uid="4efb9302c10f4638a823fd10e055fa7b" name="Mockup" meeting="false" start="2025-02-24" duration="3" complete="0" expand="true">
+                <notes><![CDATA[Drawing the Mockup
+]]></notes>
+                <depend id="8" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="12" uid="a25adc26eaa74305a1fda2c878ea9f35" name="Taskdistribution" color="#ff0000" meeting="false" start="2025-02-25" duration="1" complete="0" expand="true">
+                <notes><![CDATA[taskdistribution: 
+Illila(Server/Client)
+William(Game Logic)
+Aiysha(Art and Music)
+Sena(GUI)]]></notes>
+            </task>
+            <task id="11" uid="f4454ba0aa694f18871efc35fbae8580" name="Research" meeting="false" start="2025-02-18" duration="5" complete="0" expand="true">
+                <notes><![CDATA[Research for ideas for our game, librarys, server, client and general concept of a game.]]></notes>
+                <depend id="6" type="2" difference="0" hardness="Strong"/>
+                <depend id="7" type="2" difference="0" hardness="Strong"/>
+                <depend id="12" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="9" uid="b76b4e45619e4f4a843cfb290853260b" name="PresentationDay" meeting="true" start="2025-03-07" duration="0" complete="0" expand="true">
+                <notes><![CDATA[Presentation of our Powerpoint-Presentation]]></notes>
+            </task>
+            <task id="8" uid="0c03a7d8207845b499413339fd4bec7b" name="presentation" meeting="false" start="2025-03-04" duration="3" complete="0" expand="true">
+                <notes><![CDATA[design a powerpointpresentation for our Game: THINK OUTSIDE THE ROOM]]></notes>
+            </task>
+            <task id="6" uid="c95021bea19f465b911a0872758e031d" name="Requirement_Analysis" meeting="false" start="2025-02-25" duration="5" complete="0" thirdDate="2025-02-24" thirdDate-constraint="1" expand="true">
+                <notes><![CDATA[writing about the requirementanalysis 
+]]></notes>
+                <depend id="8" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="5" uid="b2362de6fc0e4d72a45fb88fc7a00a7c" name="presentation" meeting="false" start="2025-02-27" duration="5" complete="0" expand="true">
+                <notes><![CDATA[beginning with our presentation in Powerpoint]]></notes>
+            </task>
+            <task id="4" uid="eff1a7620c6d4e5e9b117218e77b043a" name="Diary_meeting3" meeting="false" start="2025-02-27" duration="1" complete="0" expand="true">
+                <notes><![CDATA[Writing in the diary about our 3. meeting
+]]></notes>
+            </task>
+            <task id="3" uid="b6a098bc43f54bf6b467db6a363be1aa" name="Diary_meeting2" meeting="false" start="2025-02-25" duration="1" complete="0" expand="true">
+                <notes><![CDATA[Writing in the diary about the 2. meeting
+]]></notes>
+            </task>
+            <task id="2" uid="832b91cc8ce641e3888b30ade00a5e19" name="Diary_meeting1" meeting="false" start="2025-02-20" duration="1" complete="0" expand="true">
+                <notes><![CDATA[writing in the diary about the first meeting]]></notes>
+            </task>
+            <task id="1" uid="616f0a7af6c8410d91d926d38df1a74d" name="Client/Server" meeting="false" start="2025-02-24" duration="8" complete="0" thirdDate="2025-02-24" thirdDate-constraint="1" expand="true">
+                <notes><![CDATA[Starting to implement the client and Server]]></notes>
+            </task>
+        </task>
+        <task id="13" uid="a8cec3488cf94194af1f8c74d1d567af" name="Milestone 2" meeting="true" start="2025-03-03" duration="0" complete="0" expand="true">
+            <notes><![CDATA[Focus: Client-server communication
+
+Define and implement a human-readable network protocol
+
+Login/logout functionality, nickname handling
+
+Working client-to-client chat
+
+Server ↔ Client ping messages to detect connection loss
+
+Project diary updated, QA concept introduced
+
+Technical: meaningful .gitignore, no compiled files in repo, proper commit messages
+
+README ]]></notes>
+            <depend id="27" type="2" difference="0" hardness="Strong"/>
+            <depend id="28" type="2" difference="0" hardness="Strong"/>
+            <depend id="29" type="2" difference="0" hardness="Strong"/>
+            <depend id="30" type="2" difference="0" hardness="Strong"/>
+            <task id="33" uid="6648f287185c42cdbf1d2090c29b5a34" name="Milestone 2 deadline" meeting="true" start="2025-03-24" duration="0" complete="0" expand="true">
+                <notes><![CDATA[deadline of milestone2]]></notes>
+            </task>
+            <task id="35" uid="097d5bdfbf9d4e56af4ccd5d8615cdea" name="Mainclass + jar" meeting="false" start="2025-03-24" duration="1" complete="0" expand="true">
+                <notes><![CDATA[implementing a mainclass and making a executable jar]]></notes>
+            </task>
+            <task id="43" uid="dabcc93437f6447ab8ad853396fa0fcf" name="writing Diary" meeting="false" start="2025-03-10" duration="16" complete="0" expand="true">
+                <notes><![CDATA[writing diary
+]]></notes>
+            </task>
+            <task id="19" uid="07bdae35ef724a7687bc20f44a084417" name="Chat" meeting="false" start="2025-03-20" duration="2" complete="0" expand="true">
+                <notes><![CDATA[Implementing Chat]]></notes>
+            </task>
+            <task id="21" uid="7de688292df445fd82e88e054748a82e" name="CREATE Gameobject" meeting="false" start="2025-03-03" duration="3" complete="0" expand="true">
+                <notes><![CDATA[Implementing the command to create a gameobject]]></notes>
+                <depend id="16" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="22" uid="d9fbc97cb31544ea9a9cd04e16c298d0" name="Nicknames" meeting="false" start="2025-03-07" duration="10" complete="0" expand="true">
+                <notes><![CDATA[Implementing changing Nicknames]]></notes>
+                <depend id="16" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="23" uid="67bc2f08e609491cb544f3a9fd9c22cc" name="Product: Who AM I" meeting="false" start="2025-03-20" duration="2" complete="0" expand="true">
+                <notes><![CDATA[Implementing that the client suggests a nickname based on the system username]]></notes>
+            </task>
+            <task id="20" uid="a406e643f29f4e98afa289fb355298ba" name="Ping Pong" meeting="false" start="2025-03-18" duration="2" complete="0" expand="true">
+                <notes><![CDATA[Implementing Ping Pong]]></notes>
+            </task>
+            <task id="15" uid="beaca70e030f49c6ba35c6ad0a9d5197" name="QA-Konzept" meeting="false" start="2025-03-21" duration="1" complete="0" expand="true">
+                <notes><![CDATA[writing the QA concept]]></notes>
+            </task>
+            <task id="14" uid="d2e084c757ed48c0b267482e8e28bd6c" name="README" meeting="false" start="2025-03-17" duration="1" complete="0" expand="true">
+                <notes><![CDATA[edit README ]]></notes>
+            </task>
+            <task id="17" uid="42ae4969548c4c429e166aa284942481" name="Login" meeting="false" start="2025-03-19" duration="3" complete="0" expand="true">
+                <notes><![CDATA[implementing the command Login]]></notes>
+                <depend id="16" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="18" uid="66fdf2a4fd0e4caeb3583bbd127fab17" name="Logout" meeting="false" start="2025-03-19" duration="3" complete="0" expand="true">
+                <notes><![CDATA[Implementing the command logout]]></notes>
+                <depend id="16" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="16" uid="2c2967c5a1274aa5a623b2f48cb696f7" name="Network Protocol" meeting="false" start="2025-03-24" duration="1" complete="0" expand="true">
+                <notes><![CDATA[writing the network protocol]]></notes>
+            </task>
+        </task>
+        <task id="24" uid="a722ffbd32534b7e80e381958a481537" name="Milestone 3" meeting="true" start="2025-03-25" duration="0" complete="0" expand="true">
+            <task id="45" uid="791ac9a7cfdf4323adc5cf2272abf723" name="Task Distribution" color="#ff0000" meeting="false" start="2025-03-25" duration="1" complete="0" expand="true"/>
+            <task id="44" uid="830b99b8b1024c24900f8cdab09a3fa3" name="Commandline" meeting="false" start="2025-04-03" duration="2" complete="0" expand="true">
+                <notes><![CDATA[Adjusting the mainclass]]></notes>
+            </task>
+            <task id="40" uid="9408eae7609b43eda6911fd5ae025586" name="writing diary" meeting="false" start="2025-03-25" duration="1" complete="0" expand="true">
+                <notes><![CDATA[writing diary]]></notes>
+            </task>
+            <task id="34" uid="79e113da2f3c4cd8bf871aa4dfd46167" name="Milestone 3 deadline" meeting="true" start="2025-04-07" duration="0" complete="0" expand="true">
+                <depend id="50" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="39" uid="c50d1b578fc6422598528e3d61ecbef5" name="Implementing UI" meeting="false" start="2025-04-07" duration="1" complete="0" expand="true">
+                <notes><![CDATA[Implementing Button for lists: Playerlist, lobbylist]]></notes>
+            </task>
+            <task id="46" uid="bc8bcef65ca34a4c91cd4ef237b7a2ec" name="Manual" meeting="false" start="2025-04-07" duration="1" complete="0" thirdDate="2025-04-07" thirdDate-constraint="1" expand="true">
+                <notes><![CDATA[writing the manual]]></notes>
+            </task>
+            <task id="47" uid="5186e1a6f08f4bb4b62c514195c31f41" name="Updating the network protocol" meeting="false" start="2025-04-04" duration="1" complete="0" expand="true">
+                <notes><![CDATA[Updating the network protocol and adjusting it to the milestone 2&3]]></notes>
+            </task>
+            <task id="38" uid="5b673b5593cc49c9bbee54e8330cd89d" name="Implementing Chats UI" meeting="false" start="2025-04-04" duration="1" complete="0" expand="true">
+                <notes><![CDATA[implementing different chats Lobbychat, whisperchat and globalchat]]></notes>
+            </task>
+            <task id="37" uid="b2dc02c29bce4bdd8d6dcf70c772f501" name="implementing Lobbys" meeting="false" start="2025-03-31" duration="5" complete="0" expand="true">
+                <notes><![CDATA[implementing lobbys]]></notes>
+                <depend id="39" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="36" uid="26833c59f9754122b12ccdb896044deb" name="Implementing Physics" meeting="false" start="2025-04-03" duration="2" complete="0" expand="true">
+                <notes><![CDATA[implementing collision detection and Gravitation]]></notes>
+            </task>
+            <task id="30" uid="39cd052a3625409cb046f2fcf2f25bfc" name="Projectplan" meeting="false" start="2025-04-01" duration="9" complete="0" expand="true">
+                <notes><![CDATA[Writing the projectplan with gantsproject]]></notes>
+            </task>
+            <task id="31" uid="62c74779dadc40b094a24176fd6ffb22" name="Rope" meeting="false" start="2025-03-27" duration="2" complete="0" expand="true">
+                <notes><![CDATA[implementing Rope with inverse kinematics]]></notes>
+            </task>
+            <task id="27" uid="f8acd196459641de99b57861be4b29ed" name="Fixing Chat" meeting="false" start="2025-04-01" duration="1" complete="0" expand="true">
+                <notes><![CDATA[fixing chat
+]]></notes>
+            </task>
+            <task id="28" uid="487e4e1d4dc04480af37c6dc37217c84" name="Fixing PingPong" meeting="false" start="2025-04-01" duration="1" complete="0" expand="true">
+                <notes><![CDATA[Fixing PingPong]]></notes>
+            </task>
+            <task id="29" uid="1c639d4d203c4769a1b5cc9f674270be" name="Product Bob001" meeting="false" start="2025-04-01" duration="1" complete="0" expand="true">
+                <notes><![CDATA[fixing issue, that players have the same name
+]]></notes>
+            </task>
+        </task>
+        <task id="71" uid="5bc4ecf6fc6949c382996eb117aa77be" name="implement 2 player character control logic (move + grab/ jump + throw))" meeting="false" start="2025-04-04" duration="2" complete="0" thirdDate="2025-04-04" thirdDate-constraint="1" expand="true"/>
+        <task id="25" uid="c21a0e8f2fdb4589b32515da07f55047" name="Milestone 4" meeting="true" start="2025-04-07" duration="0" complete="0" thirdDate="2025-04-07" thirdDate-constraint="1" expand="true">
+            <depend id="26" type="2" difference="0" hardness="Strong"/>
+            <task id="59" uid="8886a18d3fa14b12baab5abf64314a53" name="handle inputs conflicts (simultaneous inputs) + animation sync" meeting="false" start="2025-04-14" duration="2" complete="0" expand="true"/>
+            <task id="58" uid="cb65c266f96f42aca21f7f270c183142" name="add throwable objects (mechanics) + grab detection" meeting="false" start="2025-04-14" duration="2" complete="0" expand="true"/>
+            <task id="57" uid="b2d84adb44df458ba666df1405109f28" name="update project diary and QA Concept" meeting="false" start="2025-04-23" duration="2" complete="0" expand="true"/>
+            <task id="56" uid="784c92517b824343ba829fa2ee4b8b24" name="write Unit Test" meeting="false" start="2025-04-24" duration="3" complete="0" expand="true"/>
+            <task id="54" uid="a11b92360e884def88b3e6aeadfeaa82" name="Add referee logic to validate level completion" meeting="false" start="2025-04-16" duration="2" complete="0" expand="true"/>
+            <task id="53" uid="926dffd73a354638b8a3b618b99588eb" name="prepare reconnect logic (handling disconnect/rejoin)" meeting="false" start="2025-04-18" duration="2" complete="0" expand="true"/>
+            <task id="52" uid="85e25f7d6eff4abca1f837dd1c05c1c3" name="add moving/static platforms with basic logic" meeting="false" start="2025-04-21" duration="2" complete="0" expand="true"/>
+            <task id="51" uid="ff44652b9b124900a0126a1602dc5e67" name="Build and integrate 1 level with mechanics" meeting="false" start="2025-04-21" duration="2" complete="0" expand="true"/>
+            <task id="50" uid="7e6b2c7b87df4fd18ab74efc06b39a15" name="Task distribution" color="#ff0000" meeting="false" start="2025-04-07" duration="1" complete="0" thirdDate="2025-04-07" thirdDate-constraint="1" expand="true">
+                <notes><![CDATA[task distribution for milestone 4 and update, because the taskdistribution is not finalized]]></notes>
+            </task>
+            <task id="49" uid="3223883b45ba4091b78b29a07a811eac" name="Extend GUI with team indicators and HUD feedback" meeting="false" start="2025-04-14" duration="3" complete="0" expand="true"/>
+            <task id="72" uid="9e37ad40424c47bcb281924bac26e7ac" name="Implement team selection screen in lobby" meeting="false" start="2025-04-14" duration="1" complete="0" expand="true"/>
+            <task id="73" uid="f6f34cdc043d426c870aa92049a3fd1f" name="create persistent highscore system" meeting="false" start="2025-04-23" duration="2" complete="0" expand="true"/>
+            <task id="74" uid="4188dd2d79e94697ac05f7340d74ebf8" name="prepare full 4-player test run and demo presentation" meeting="false" start="2025-04-28" duration="1" complete="0" expand="true"/>
+            <task id="41" uid="9a5d58194ca84dcf95c5fd6a9101633c" name="Milestone 4 deadline" meeting="true" start="2025-04-28" duration="0" complete="0" thirdDate="2025-04-28" thirdDate-constraint="1" expand="true">
+                <notes><![CDATA[deadline of milestone4
+]]></notes>
+            </task>
+        </task>
+        <task id="26" uid="3385a9018436468490b73197664fe8fe" name="Milestone 5" meeting="true" start="2025-04-29" duration="0" complete="0" expand="true">
+            <task id="76" uid="09275a936a3f49c4a693072fb80db6bf" name="taskdistribution" color="#ff0000" meeting="false" start="2025-04-29" duration="1" complete="0" expand="true">
+                <notes><![CDATA[taskdistribution, because the taskdistribution is not finalized
+]]></notes>
+            </task>
+            <task id="66" uid="954e7d51dc6e46a69a554f272d1fc640" name="add cheatcode/ debug commands" meeting="false" start="2025-05-08" duration="1" complete="0" expand="true"/>
+            <task id="70" uid="36d944f50e23420a88de7df021913513" name="Final milestone presentation" meeting="false" start="2025-05-14" duration="1" complete="0" expand="true"/>
+            <task id="75" uid="0a9c860272fe4333a368f07a2586c4a0" name="testrun presentation and demo" meeting="false" start="2025-05-12" duration="1" complete="0" expand="true"/>
+            <task id="69" uid="04141eb3f48441a992785064de48f722" name="Finalize outreach folder: manual, screenshot, video" meeting="false" start="2025-04-29" duration="1" complete="0" expand="true"/>
+            <task id="68" uid="59fbf20ace1b4f1098046682af42caff" name="finalize and test reconnect feature" meeting="false" start="2025-05-06" duration="2" complete="0" expand="true"/>
+            <task id="67" uid="bfca8ab1b08145bea8aa8b26f4369eee" name="final QA Report &amp; lessons learned" meeting="false" start="2025-05-08" duration="2" complete="0" expand="true"/>
+            <task id="65" uid="932cb57a791d4979b5160cfd1f9283a9" name="Add final screenshot &amp; team/game Logo" meeting="false" start="2025-05-06" duration="1" complete="0" expand="true"/>
+            <task id="64" uid="52272e25a2f244529a161ddda5af8b7d" name="record trailer and gameplay video" meeting="false" start="2025-05-05" duration="2" complete="0" expand="true"/>
+            <task id="63" uid="21ebe5c4fc3844e091b4e93d32891bcb" name="add intro sequence (optional)" meeting="false" start="2025-05-05" duration="1" complete="0" expand="true"/>
+            <task id="61" uid="52e1a479cc384922b7a91e371eb55403" name="final polish: animations, input, visual consistency" meeting="false" start="2025-05-01" duration="2" complete="0" expand="true"/>
+            <task id="60" uid="0a54896ce2e34aeab0422169cf8d2bd2" name="final game testing and bug fixing" meeting="false" start="2025-04-29" duration="2" complete="0" expand="true"/>
+            <task id="42" uid="b5931daf36ab4044a6237b505cc41b04" name="deadline Milestone 5" meeting="true" start="2025-05-12" duration="0" complete="0" expand="true">
+                <notes><![CDATA[deadlilne of milestone 5]]></notes>
+            </task>
+        </task>
+    </tasks>
+    <resources>
+        <resource id="2" name="Aiysha" function="SoftwareDevelopment:2" contacts="" phone=""/>
+        <resource id="0" name="Illia" function="SoftwareDevelopment:2" contacts="" phone=""/>
+        <resource id="3" name="Sena" function="SoftwareDevelopment:2" contacts="" phone=""/>
+        <resource id="1" name="William" function="SoftwareDevelopment:2" contacts="" phone=""/>
+    </resources>
+    <allocations>
+        <allocation task-id="5" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="6" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="50.0"/>
+        <allocation task-id="7" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="50.0"/>
+        <allocation task-id="10" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="12" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="8" resource-id="2" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="19" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="35" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="36" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="40" resource-id="2" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="43" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="58" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="52" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="56" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="74" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="60" resource-id="2" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="61" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="63" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="64" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="69" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="1" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="5" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="12" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="8" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="20" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="21" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="80.0"/>
+        <allocation task-id="27" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="28" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="29" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="39" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="40" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="43" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="59" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="54" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="53" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="51" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="73" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="74" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="2" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="3" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="5" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="12" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="8" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="15" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="22" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="23" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="38" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="40" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="43" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="57" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="51" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="56" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="72" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="74" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="60" resource-id="3" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="65" resource-id="3" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="4" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="5" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="6" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="50.0"/>
+        <allocation task-id="7" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="50.0"/>
+        <allocation task-id="12" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="8" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="14" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="16" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="17" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="18" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="21" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="20.0"/>
+        <allocation task-id="30" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="31" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="35" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="40" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="43" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="44" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="47" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="53" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="51" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="49" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="74" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="60" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="61" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="64" resource-id="1" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
+        <allocation task-id="67" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="66" resource-id="1" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+    </allocations>
+    <vacations/>
+    <previous/>
+    <roles roleset-name="Default"/>
+</project>

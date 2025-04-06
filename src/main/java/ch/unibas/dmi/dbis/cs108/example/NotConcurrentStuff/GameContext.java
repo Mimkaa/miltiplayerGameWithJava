@@ -2,11 +2,10 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Player;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
@@ -14,6 +13,7 @@ import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -21,24 +21,34 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.Node;
 
-import javax.swing.*;
+import javafx.scene.control.ComboBox;
+
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.Node;
+import lombok.Getter;
+
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
 import java.util.Set;
 
+import static ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom.client;
+
+@Getter
 public class GameContext {
+
+    //Singleton instance
+    @Getter
+    private static GameContext instance;
+
+
     private final GameSessionManager gameSessionManager;
-    private final Client client;
     private MessageHogger testHogger;
 
     // Make the current game ID and the selected game object's ID static.
@@ -48,9 +58,14 @@ public class GameContext {
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
 
+
+
     public GameContext() {
+        instance = this;
         this.gameSessionManager = new GameSessionManager();
-        this.client = new Client();
+
+        instance = this;
+
 
         // Initialize the custom MessageHogger.
         testHogger = new MessageHogger() {
@@ -383,9 +398,6 @@ public class GameContext {
         return gameSessionManager;
     }
 
-    public Client getClient() {
-        return client;
-    }
 
     /**
      * Starts the client operations and the game loop.
@@ -521,6 +533,17 @@ public class GameContext {
         // Otherwise, draw the game
         game.draw(gc);
     }
+
+
+    public static Game getGameById(String gameId) {
+        return getInstance().getGameSessionManager().getGameSession(gameId);
+    }
+
+/*
+    public static String getLocalClientId() {
+        return ThinkOutsideTheRoom.client.getClientId();
+    }
+*/
 
     public static void main(String[] args) {
         // Create the game context.
