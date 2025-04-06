@@ -1,11 +1,14 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObjectFactory;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
 
-import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
@@ -21,8 +24,10 @@ public class Game {
     private final String gameName;
     private final CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>();
     private final MessageHogger gameMessageHogger;
+
     // Creates a concurrent Set<String> backed by a ConcurrentHashMap
     private final Set<String> users = ConcurrentHashMap.newKeySet();
+
 
     public Game(String gameId, String gameName) {
         this.gameId = gameId;
@@ -52,7 +57,7 @@ public class Game {
             }
         };
 
-        // Start a single main loop for all objects:
+        // Start a single main loop for processing all game objects.
         startPlayersCommandProcessingLoop();
     }
 
@@ -61,12 +66,11 @@ public class Game {
      * then routes it to the correct GameObject.
      */
     public void addIncomingMessage(Message msg) {
-        // You can still do this asynchronously if you like, or just call routeMessageToGameObject(msg).
         AsyncManager.run(() -> routeMessageToGameObject(msg));
     }
 
     /**
-     * Routes the message to the correct GameObject by matching the first concealed param to the object's UUID.
+     * Routes the message to the correct GameObject by matching the first concealed parameter to the object's UUID.
      */
     private void routeMessageToGameObject(Message msg) {
         String[] concealed = msg.getConcealedParameters();
@@ -74,7 +78,7 @@ public class Game {
             String targetObjectUuid = concealed[0];
             for (GameObject go : gameObjects) {
                 if (go.getId().equals(targetObjectUuid)) {
-                    // Directly add to object queue (no new tasks needed)
+                    // Directly add to object's message queue.
                     go.addIncomingMessage(msg);
                     System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
                     return;
@@ -101,22 +105,52 @@ public class Game {
      * - Drains inbound messages for each object
      * - Processes commands for each object
      * - Performs local updates
+     * - Checks and resolves collisions among collidable objects
      */
     public void startPlayersCommandProcessingLoop() {
+        final long[] lastUpdate = { System.nanoTime() };
         AsyncManager.runLoop(() -> {
+            long now = System.nanoTime();
+            float deltaTime = (now - lastUpdate[0]) / 1_000_000_000f; // convert nanoseconds to seconds
+            lastUpdate[0] = now;
+
+            // Process each object's messages, commands, and update with deltaTime.
             for (GameObject go : gameObjects) {
-                // 1) Drain all inbound messages, calling myUpdateGlobal(msg)
                 go.processIncomingMessages();
-
-                // 2) Process queued commands
                 go.processCommands();
+                go.myUpdateLocal(deltaTime); // now deltaTime is defined!
+            }
 
-                // 3) Perform local update
-                go.myUpdateLocal();
+            // Then check and resolve collisions among collidable objects.
+            for (int i = 0; i < gameObjects.size(); i++) {
+                GameObject a = gameObjects.get(i);
+                if (!a.isCollidable()) continue;
+                // Reset collision flag for visual feedback if applicable.
+                if (a instanceof Player) {
+                    ((Player) a).setCollisionDetected(false);
+                }
+                for (int j = i + 1; j < gameObjects.size(); j++) {
+                    GameObject b = gameObjects.get(j);
+                    if (!b.isCollidable()) continue;
+                    if (b instanceof Player) {
+                        ((Player) b).setCollisionDetected(false);
+                    }
+                    if (a.intersects(b)) {
+                        // Resolve the collision (push objects apart).
+                        a.resolveCollision(b);
+                        // Mark collision so that drawing can change colors.
+                        if (a instanceof Player) {
+                            ((Player) a).setCollisionDetected(true);
+                        }
+                        if (b instanceof Player) {
+                            ((Player) b).setCollisionDetected(true);
+                        }
+                        // System.out.println("Collision resolved between " + a.getName() + " and " + b.getName());
+                    }
+                }
             }
         });
     }
-
     /**
      * Draws all game objects onto the provided JavaFX GraphicsContext.
      */
@@ -134,4 +168,3 @@ public class Game {
         System.out.println("Game [" + gameName + "] (ID: " + gameId + ") async manager stopped.");
     }
 }
-

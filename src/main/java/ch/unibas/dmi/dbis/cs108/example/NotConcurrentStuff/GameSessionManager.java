@@ -1,7 +1,10 @@
 package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
+import lombok.Getter;
+
 import java.util.concurrent.ConcurrentHashMap;
 
+@Getter
 public class GameSessionManager {
     // Map of session IDs to Game objects.
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();

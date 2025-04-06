@@ -2,11 +2,9 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Player;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
@@ -14,32 +12,33 @@ import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
-import javafx.scene.input.KeyEvent;
+
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
+
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
+
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
+
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.Node;
+import lombok.Getter;
 
-import javax.swing.*;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
 import java.util.Set;
 
+@Getter
 public class GameContext {
+
+    //Singleton instance
+    @Getter
+    private static GameContext instance;
+
+
     private final GameSessionManager gameSessionManager;
     private final Client client;
     private MessageHogger testHogger;
@@ -51,9 +50,15 @@ public class GameContext {
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
 
+
+
     public GameContext() {
+        instance = this;
         this.gameSessionManager = new GameSessionManager();
         this.client = new Client();
+
+        instance = this;
+
 
         // Initialize the custom MessageHogger.
         testHogger = new MessageHogger() {
@@ -266,27 +271,27 @@ public class GameContext {
      */
     public void start() {
         uiManager.waitForCentralUnitAndInitialize(() -> {
-        // Use the GameUIComponents class to create the main UI pane.
-        Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
-        CentralGraphicalUnit.getInstance().addNode(mainUIPane);
-        uiManager.registerComponent("mainUIPane", mainUIPane);
+            // Use the GameUIComponents class to create the main UI pane.
+            Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
+            CentralGraphicalUnit.getInstance().addNode(mainUIPane);
+            uiManager.registerComponent("mainUIPane", mainUIPane);
 
-        Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
-        CentralGraphicalUnit.getInstance().addNode(adminPane);
-        uiManager.registerComponent("adminUIPane", adminPane);
-        
-        // Create and add the toggle button (outside of the main UI pane).
-        //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
-        //CentralGraphicalUnit.getInstance().addNode(togglePaneButton);
-        //uiManager.registerComponent("togglePaneButton", togglePaneButton);
-        //togglePaneButton.toFront();
-        ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
-        CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
+            Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
+            CentralGraphicalUnit.getInstance().addNode(adminPane);
+            uiManager.registerComponent("adminUIPane", adminPane);
 
-        
-        System.out.println("All UI components have been added via GameUIComponents.");
+            // Create and add the toggle button (outside of the main UI pane).
+            //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
+            //CentralGraphicalUnit.getInstance().addNode(togglePaneButton);
+            //uiManager.registerComponent("togglePaneButton", togglePaneButton);
+            //togglePaneButton.toFront();
+            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
+            CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
+
+
+            System.out.println("All UI components have been added via GameUIComponents.");
         });
-        
+
 
 
         Scanner inputScanner = new Scanner(System.in);
@@ -374,6 +379,15 @@ public class GameContext {
 
         // Otherwise, draw the game
         game.draw(gc);
+    }
+
+
+    public static Game getGameById(String gameId) {
+        return getInstance().getGameSessionManager().getGameSession(gameId);
+    }
+
+    public static String getLocalClientId() {
+        return getInstance().getClient().getClientId();
     }
 
 

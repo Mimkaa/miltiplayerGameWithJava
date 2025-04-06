@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import lombok.Getter;
 
 import java.io.IOException;
@@ -102,7 +103,7 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
-    
+
 
 
 
@@ -153,7 +154,7 @@ public class Server {
     }
 
 
-        /**
+    /**
      * Returns a modified version of the requested name if that name is already taken.
      * It checks both the clientsMap (connected users) and the existing GameObjects.
      * If the requestedName is taken, it appends "_1", "_2", etc., until a free one is found.
@@ -161,7 +162,7 @@ public class Server {
      * @param requestedName The new name the user is requesting
      * @return A guaranteed-unique name
      */
-        public String findUniqueName(String requestedName) {
+    public String findUniqueName(String requestedName) {
         String baseName = requestedName;
         int counter = 1;
         while (isNameTaken(requestedName)) {
@@ -344,7 +345,7 @@ public class Server {
             System.out.println("Concealed parameters missing or too short.");
         }
     }
-   
+
 
     /**
      * Sends the given {@link Message} to all connected clients except the sender.

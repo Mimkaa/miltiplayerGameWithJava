@@ -1,4 +1,4 @@
-package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
+package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
@@ -23,6 +23,10 @@ public class GameObjectFactory {
         registry.put("Square", Square.class);
         registry.put("Ricardo", Ricardo.class);
         registry.put("BandageGuy", BandageGuy.class);
+        registry.put("Platform" , Platform.class);
+        registry.put("MovingPlatform", MovingPlatform.class);
+        registry.put("Box", Box.class);
+
     }
 
     /**

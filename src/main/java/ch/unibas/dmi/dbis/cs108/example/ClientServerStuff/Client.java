@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import lombok.Getter;
 
 import javax.swing.SwingUtilities;
@@ -69,8 +70,10 @@ public class Client {
     /** Console input scanner for reading commands. */
     private final Scanner scanner = new Scanner(System.in);
 
+    private final String clientId = UUID.randomUUID().toString();
+
     /** The client's username, stored as an AtomicReference for thread safety. */
-    private final AtomicReference<String> username = new AtomicReference<>(UUID.randomUUID().toString());
+    private final AtomicReference<String> username = new AtomicReference<>(clientId);
 
     /** A reliable UDP sender instance. */
     private ReliableUDPSender myReliableUDPSender;
@@ -79,7 +82,7 @@ public class Client {
 
     /** The UDP socket used by this client. */
     private DatagramSocket clientSocket;
-    
+
     /** Tracks ping (round-trip time) data; left unused unless explicitly started. */
     private PingManager pingManager;
 
@@ -93,7 +96,6 @@ public class Client {
      * Constructs a new {@code Client} with the given game session name and
      * initializes the associated {@link Game} object.
      *
-     * @param gameSessionName the name of the game session
      */
     public Client() {
         instance = this;  // Set the singleton instance.
@@ -130,7 +132,7 @@ public class Client {
         return this.clientChatManager.getChatPanel();
     }
 
-   
+
 
     /**
      * Main entry point for the client's networking logic, including:
@@ -223,7 +225,7 @@ public class Client {
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
-                        
+
                         } else if ("CLIENT".equalsIgnoreCase(msg.getOption())) {
                             // Perform local client state updates
                             AsyncManager.run(() -> updateLocalClientState(msg));
@@ -358,7 +360,7 @@ public class Client {
                         //game.rebindKeyListeners(gameObject.getName());
                         instance.username.set(gameObject.getName());
                         //game.updateGamePanel();
-                        
+
                     });
                 }
             }
@@ -384,7 +386,7 @@ public class Client {
                     break;
                 }
             }
-            
+
         }
 
         if ("CREATEGAME".equalsIgnoreCase(msg.getMessageType())) {
@@ -398,9 +400,9 @@ public class Client {
                 newGame.startPlayersCommandProcessingLoop();
                 // Update the client's game reference.
                 this.game = newGame;
-                System.out.println("CREATEGAME response received. New game created: " 
+                System.out.println("CREATEGAME response received. New game created: "
                                    + newGameName + " with UUID: " + newGameUuid);
-                
+
             } else {
                 System.err.println("CREATEGAME response missing required parameters!");
             }
