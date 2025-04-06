@@ -219,14 +219,21 @@ public class Player extends GameObject implements IGravityAffected {
     // --- Update Method ---
     @Override
     public void myUpdateLocal(float deltaTime) {
+        // Only process keyboard input if this player is the selected one on this client.
+        if (!this.getId().equals(GameContext.getSelectedGameObjectId())) {
+            // Not controlled locally – update physics only.
+            applyGravity(deltaTime);
+            checkGroundCollision();
+            checkIfSomeoneOnTop();
+            return;
+        }
+
+        // Otherwise, process full input:
         float oldX = getX();
-        // Update vertical position based on gravity and collisions.
         applyGravity(deltaTime);
         checkGroundCollision();
         checkIfSomeoneOnTop();
-        // Process all keyboard input.
         handleKeyboardInput();
-        // Send MOVE message for horizontal movement.
         if (getX() != oldX) {
             Message moveMsg = new Message("MOVE", new Object[]{getX()}, null);
             sendMessage(moveMsg);
