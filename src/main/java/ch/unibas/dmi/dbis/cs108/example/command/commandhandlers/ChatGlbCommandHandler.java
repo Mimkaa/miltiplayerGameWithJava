@@ -21,8 +21,8 @@ public class ChatGlbCommandHandler implements CommandHandler {
         String message = params[1].toString();
 
         Message broadcastMsg = new Message("CHATGLB", new String[]{fromUser, message}, "RESPONSE");
-        server.broadcastMessageToAll(broadcastMsg);
-
+        //server.broadcastMessageToAll(broadcastMsg);
+        server.broadcastMessageToOthers(broadcastMsg, senderUsername);
         System.out.println("Broadcasted CHATGLB message: " + fromUser + ": " + message);
 
     }

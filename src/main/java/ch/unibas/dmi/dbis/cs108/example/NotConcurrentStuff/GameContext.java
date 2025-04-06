@@ -57,13 +57,14 @@ public class GameContext {
             @Override
             protected void processMessage(Message receivedMessage) {
                 String type = receivedMessage.getMessageType();
+
                 if ("CREATEGAME".equals(type)) {
                     System.out.println("Processing CREATEGAME response");
                     String receivedId = receivedMessage.getParameters()[0].toString();
                     String receivedGameName = receivedMessage.getParameters()[1].toString();
                     gameSessionManager.addGameSession(receivedId, receivedGameName);
                     // Update the current game id.
-                    //currentGameId.set(receivedId);
+                    // currentGameId.set(receivedId);
                     System.out.println("Game created with id: " + receivedId);
 
                     // Update the ComboBox with the new game name.
@@ -82,13 +83,13 @@ public class GameContext {
                     System.out.println("Processing JOINGAME response");
                     String gameID = receivedMessage.getParameters()[0].toString();
                     String username = receivedMessage.getParameters()[1].toString();
-                    String prevGameId =  receivedMessage.getParameters()[2].toString();
+                    String prevGameId = receivedMessage.getParameters()[2].toString();
                     currentGameId.set(gameID);
+
                     // add the user to the gameSession
                     gameSessionManager.getGameSession(gameID).getUsers().add(username);
 
-                    if(!prevGameId.equals("default"))
-                    {
+                    if (!prevGameId.equals("default")) {
                         gameSessionManager.getGameSession(prevGameId).getUsers().remove(username);
                     }
 
@@ -102,7 +103,6 @@ public class GameContext {
                         Node usersListNode = uiManager.getComponent("usersListCurrGS");
                         if (usersListNode instanceof TextArea) {
                             TextArea usersListCurrGS = (TextArea) usersListNode;
-
                             // Retrieve the current set of users from the Game instance
                             Set<String> userSet = gameSessionManager.getGameSession(gameID).getUsers();
 
@@ -113,11 +113,11 @@ public class GameContext {
                             for (String user : userSet) {
                                 sb.append(user).append("\n");
                             }
-
                             // Set the TextArea's content
                             usersListCurrGS.setText(sb.toString());
                         }
                     });
+
                 } else if ("SELECTGO".equals(type)) {
                     System.out.println("Processing SELECTGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 1) {
@@ -147,6 +147,7 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + gameId);
                     }
+
                 } else if ("CREATEGO".equals(type)) {
                     System.out.println("Processing CREATEGO response");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
@@ -160,7 +161,9 @@ public class GameContext {
                     if (game != null) {
                         Object[] constructorParams = new Object[0];
                         if (receivedMessage.getParameters().length > 3) {
-                            constructorParams = Arrays.copyOfRange(receivedMessage.getParameters(), 3, receivedMessage.getParameters().length);
+                            constructorParams = Arrays.copyOfRange(
+                                    receivedMessage.getParameters(), 3, receivedMessage.getParameters().length
+                            );
                         }
                         Future<GameObject> futureObj = game.addGameObjectAsync(objectType, newGameObjectUuid, constructorParams);
                         try {
@@ -173,12 +176,8 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + targetGameId);
                     }
+
                 } else if ("CHANGENAME".equals(type)) {
-                    System.out.println("Processing CHANGENAME response");
-                    if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
-                        System.out.println("CHANGENAME message missing required parameters. Expected at least 3 parameters.");
-                        return;
-                    }  else if ("CHANGENAME".equals(type)) {
                     System.out.println("Processing CHANGENAME response");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
                         System.out.println("CHANGENAME message missing required parameters. Expected at least 3 parameters.");
@@ -206,6 +205,7 @@ public class GameContext {
                     }
 
                 } else if ("CHATGLB".equals(type)) {
+                    System.out.println(receivedMessage);
                     if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length >= 2) {
                         String sender = receivedMessage.getParameters()[0].toString();
                         String message = receivedMessage.getParameters()[1].toString();
@@ -217,7 +217,8 @@ public class GameContext {
 
                                 Label msgLabel = new Label(sender + ": " + message);
                                 msgLabel.setWrapText(true);
-                                msgLabel.setStyle("-fx-background-color: #eeeeee; -fx-padding: 5; -fx-border-radius: 5; -fx-background-radius: 5;");
+                                msgLabel.setStyle("-fx-background-color: #eeeeee; -fx-padding: 5; "
+                                        + "-fx-border-radius: 5; -fx-background-radius: 5;");
                                 messagesBox.getChildren().add(msgLabel);
                             }
 
@@ -227,9 +228,8 @@ public class GameContext {
                             }
                         });
                     }
-                }
 
-            } else if ("DELETEGO".equals(type)) {
+                } else if ("DELETEGO".equals(type)) {
                     System.out.println("Processing DELETEGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
                         System.out.println("DELETEGO message missing required parameters. Expected: [gameSessionId, objectId]");
@@ -248,8 +248,8 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + sessionId);
                     }
-                }
-                else if ("GETUSERS".equals(type)) {
+
+                } else if ("GETUSERS".equals(type)) {
                     Platform.runLater(() -> {
                         Node node = uiManager.getComponent("usersList");
                         if (node instanceof TextArea) {
@@ -263,14 +263,10 @@ public class GameContext {
                             if (scrollNode instanceof ScrollPane) {
                                 ((ScrollPane) scrollNode).setVvalue(1.0);
                             }
-
                         }
                     });
 
-                }
-
-
-                else {
+                } else {
                     System.out.println("Unknown message type: " + type);
                 }
             }
@@ -308,13 +304,12 @@ public class GameContext {
        // CentralGraphicalUnit.getInstance().addNode(adminPane);
         uiManager.registerComponent("adminUIPane", adminPane);
 
-        Pane chatPane = GameUIComponents.createChatPane(uiManager, gameSessionManager);
+        Pane chatPane = GameUIComponents.createglbChatPane(uiManager, gameSessionManager);
        // CentralGraphicalUnit.getInstance().addNode(chatPane);
         uiManager.registerComponent("chatUIPane", chatPane);
 
         StackPane layeredRoot = new StackPane();
         layeredRoot.getChildren().addAll(mainUIPane, chatPane, adminPane);
-
 
 
             // Initially only Lobby should be visible
