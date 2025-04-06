@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
+import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
@@ -111,6 +112,11 @@ public class Client {
     public static Client getInstance() {
         return instance;
     }
+
+    public static String getMyClientId() {
+        return ThinkOutsideTheRoom.client.getClientId();
+    }
+
 
     /**
      * Initializes the client chat manager. Must be called <strong>before</strong>

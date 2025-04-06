@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
+import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 
@@ -12,22 +13,23 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 
 public class GameUIComponents {
 
-    /**
-     * Creates and returns the main UI pane containing all the components.
-     *
-     * @param uiManager the UIManager for registering components.
-     * @param gameSessionManager the game session manager.
-     * @return the constructed main UI Pane.
-     */
     public static Pane createMainUIPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        // Create a Pane and set its preferred size
         Pane mainUIPane = new Pane();
+        mainUIPane.setPrefSize(640, 480); // Ensure enough space is available
         mainUIPane.setTranslateX(0);
         mainUIPane.setTranslateY(50);
         mainUIPane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
-        
+
         // --- Overlay ComboBox for game selection ---
         ComboBox<String> gameSelect = new ComboBox<>();
         gameSelect.setPromptText("Select Game...");
@@ -42,16 +44,16 @@ public class GameUIComponents {
         gameSelect.setLayoutY(10);
         mainUIPane.getChildren().add(gameSelect);
         uiManager.registerComponent("gameSelect", gameSelect);
-        
+
         // --- Game ID Input Field to display current game id ---
         TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         gameIdField.setPromptText("Game ID");
-        gameIdField.setEditable(false); // non-editable but copyable
+        gameIdField.setEditable(false);
         gameIdField.setLayoutX(200);
         gameIdField.setLayoutY(240);
         mainUIPane.getChildren().add(gameIdField);
         uiManager.registerComponent("gameIdField", gameIdField);
-        
+
         // --- Overlay Input Field ---
         TextField overlayInputField = new TextField();
         overlayInputField.setPromptText("Enter text here...");
@@ -59,7 +61,7 @@ public class GameUIComponents {
         overlayInputField.setLayoutY(40);
         mainUIPane.getChildren().add(overlayInputField);
         uiManager.registerComponent("overlayInputField", overlayInputField);
-        
+
         // --- First Overlay Button: Create Game Button ---
         Button createGameButton = new Button("Create Game Button");
         createGameButton.setLayoutX(200);
@@ -75,7 +77,7 @@ public class GameUIComponents {
             Message createGameMessage = new Message("CREATEGAME", new Object[]{gameName}, "REQUEST");
             Client.sendMessageStatic(createGameMessage);
         });
-        
+
         // --- Second Overlay Button: Join Game Button ---
         Button joinGameButton = new Button("Join Game Button");
         joinGameButton.setLayoutX(200);
@@ -99,7 +101,7 @@ public class GameUIComponents {
                 System.out.println("Game selector not found.");
             }
         });
-        
+
         // --- Third Overlay Button: Create Object Button ---
         Button createObjectButton = new Button("Create Object Button");
         createObjectButton.setLayoutX(200);
@@ -133,7 +135,7 @@ public class GameUIComponents {
             Client.sendMessageStatic(createObjectMsg);
             System.out.println("Sent CREATEGO message with parameters: " + java.util.Arrays.toString(finalParameters));
         });
-        
+
         // --- Fourth Overlay Button: Select Object Button ---
         Button selectObjectButton = new Button("Select Object Button");
         selectObjectButton.setLayoutX(200);
@@ -160,27 +162,37 @@ public class GameUIComponents {
                 System.out.println("Overlay input field not found.");
             }
         });
-        
+
+        // --- New Overlay Button: Start Level Button ---
+        Button startLevelButton = new Button("Start Level");
+        startLevelButton.setLayoutX(200);
+        startLevelButton.setLayoutY(220); // Make sure this is within the pane
+        mainUIPane.getChildren().add(startLevelButton);
+        uiManager.registerComponent("startLevelButton", startLevelButton);
+        startLevelButton.setOnAction(e -> {
+            Level level = new Level();
+            level.initializeLevel();
+            System.out.println("Level started!");
+        });
+
         return mainUIPane;
     }
 
     public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        // ... (existing administrative pane code) ...
         Pane administrativePane = new Pane();
         administrativePane.setTranslateX(0);
         administrativePane.setTranslateY(30);
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
-
-
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Game ID");
-        usersListCurrGS.setEditable(false); // non-editable but copyable
+        usersListCurrGS.setEditable(false);
         usersListCurrGS.setLayoutX(200);
         usersListCurrGS.setLayoutY(50);
-        usersListCurrGS.setPrefWidth(200);   // set preferred width
-        usersListCurrGS.setPrefHeight(150);  // set preferred height
-
+        usersListCurrGS.setPrefWidth(200);
+        usersListCurrGS.setPrefHeight(150);
         administrativePane.getChildren().add(usersListCurrGS);
 
 

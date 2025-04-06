@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -156,7 +157,7 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
      * sets onGround if the box is landing.
      */
     private void resolveCollisionsUsingParent() {
-        Game currentGame = GameContext.getGameById(getGameId());
+        Game currentGame = Server.getInstance().getGameSessionManager().getGameSession(getGameId());
         if (currentGame == null) return;
         final float tolerance = 5.0f;
         for (GameObject other : currentGame.getGameObjects()) {

@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import javafx.application.Platform;
 import javafx.scene.canvas.GraphicsContext;
@@ -62,7 +63,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         vx = 0;
         vy = 0;
         // Attach key to the grabbing player's position.
-        Game currentGame = GameContext.getGameById(getGameId());
+        Game currentGame = Server.getInstance().getGameSessionManager().getGameSession(getGameId());
         if (currentGame != null) {
             for (GameObject obj : currentGame.getGameObjects()) {
                 if (obj.getId().equals(playerId) && obj instanceof Player) {
