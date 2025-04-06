@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -40,7 +39,6 @@ public class GameContext {
 
 
     private final GameSessionManager gameSessionManager;
-    private final Client client;
     private MessageHogger testHogger;
 
     // Make the current game ID and the selected game object's ID static.
@@ -55,7 +53,6 @@ public class GameContext {
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
-        this.client = new Client();
 
         instance = this;
 
@@ -262,9 +259,6 @@ public class GameContext {
         return gameSessionManager;
     }
 
-    public Client getClient() {
-        return client;
-    }
 
     /**
      * Starts the client operations and the game loop.
@@ -292,29 +286,6 @@ public class GameContext {
             System.out.println("All UI components have been added via GameUIComponents.");
         });
 
-
-
-        Scanner inputScanner = new Scanner(System.in);
-        String suggestedNickname = Nickname_Generator.generateNickname();
-        System.out.println("Suggested Nickname: " + suggestedNickname);
-        System.out.println("Please press enter to use the suggested name, or type your own: ");
-        String userName = inputScanner.nextLine();
-        if (userName.isEmpty()) {
-            userName = suggestedNickname;
-        }
-        System.out.println("Entered nickname: " + userName);
-
-        // Set up the client.
-        client.setUsername(userName);
-        new Thread(client::run).start();
-        client.startConsoleReaderLoop();
-        // register the clinet on the server
-        Message registrationMsg = new Message(
-                "REGISTER",
-                new Object[] {},
-                "REQUEST"
-        );
-        Client.sendMessageStatic(registrationMsg);
 
     }
 
