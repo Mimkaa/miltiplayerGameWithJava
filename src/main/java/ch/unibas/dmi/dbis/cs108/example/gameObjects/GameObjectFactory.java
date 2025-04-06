@@ -25,7 +25,7 @@ public class GameObjectFactory {
         registry.put("BandageGuy", BandageGuy.class);
         registry.put("Platform" , Platform.class);
         registry.put("MovingPlatform", MovingPlatform.class);
-        registry.put("FallingObject", FallingObject.class);
+        registry.put("Box", Box.class);
 
     }
 
