@@ -9,12 +9,10 @@ import javafx.stage.Stage;
 
 public class GUI extends Application {
 
-    public static void main(String[] args) {
-        launch(args);
-    }
 
     @Override
     public void start(Stage stage) {
+        System.out.println("Starting GUI");
 
         GameContext context = ThinkOutsideTheRoom.gameContext;
         if (context != null) {

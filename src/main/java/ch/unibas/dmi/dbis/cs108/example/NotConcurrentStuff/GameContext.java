@@ -451,21 +451,6 @@ public class GameContext {
             System.out.println("All UI components have been added via GameUIComponents.");
         });
 
-
-        Scanner inputScanner = new Scanner(System.in);
-        String suggestedNickname = Nickname_Generator.generateNickname();
-        System.out.println("Suggested Nickname: " + suggestedNickname);
-        System.out.println("Please press enter to use the suggested name, or type your own: ");
-        String userName = inputScanner.nextLine();
-        if (userName.isEmpty()) {
-            userName = suggestedNickname;
-        }
-        System.out.println("Entered nickname: " + userName);
-
-        // Set up the client.
-        client.setUsername(userName);
-        new Thread(client::run).start();
-        client.startConsoleReaderLoop();
         // register the client on the server
         Message registrationMsg = new Message(
                 "REGISTER",
@@ -555,6 +540,8 @@ public class GameContext {
         }).start();
 
         // Launch the JavaFX GUI (this call blocks until the GUI exits).
+        System.out.println("Launching JavaFX...");
         Application.launch(GUI.class, args);
+
     }
 }

@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 
 /**
  * Entry point class for starting the application in different modes:
@@ -83,6 +84,7 @@ public class ThinkOutsideTheRoom {
                     Thread.sleep(1000); // Wait until the server is ready
                 } catch (InterruptedException ignored) {}
 
+                System.out.println("Debug: Username from args = " + bothUsername + " to args = " + args[2]);
                 prepareClientAndContext("localhost", bothPort, bothUsername);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
@@ -123,7 +125,7 @@ public class ThinkOutsideTheRoom {
      */
     private static void prepareClientAndContext(String host, int port, String username) {
         // Generate or request username
-        if (username == null || username.isEmpty()) {
+        if (username == null || username.trim().isEmpty()) {
             String suggested = Nickname_Generator.generateNickname();
             System.out.println("Suggested Nickname: " + suggested);
 
