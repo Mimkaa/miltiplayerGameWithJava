@@ -145,9 +145,12 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable {
 
     /**
      * Local update method called every frame.
-     * If the box is grabbed, it sticks to the carrying player's position.
+     * If the box is grabbed, it "sticks" to the carrying player's position.
      * Otherwise, it resets the ground state, applies gravity, resolves collisions,
-     * and sends a SYNC message with the current position every 2000 ms if this client is authoritative.
+     * and sends a SYNC message with the current position.
+     *
+     * When grabbed, it synchronizes more frequently (every 0.1 second).
+     * When not grabbed, it synchronizes every 2 seconds.
      *
      * @param deltaTime Time in seconds since the last update.
      */
@@ -155,8 +158,8 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable {
     public void myUpdateLocal(float deltaTime) {
         long now = System.nanoTime();
 
-        // If grabbed, stick to the player.
         if (isGrabbed) {
+            // Box is grabbed: stick it to the player.
             Game currentGame = GameContext.getGameById(getGameId());
             if (currentGame != null) {
                 for (GameObject obj : currentGame.getGameObjects()) {
@@ -165,9 +168,9 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable {
                         // Position the box above the player, centered horizontally.
                         setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
                         setY(p.getY() - getHeight());
-                        // Still send a SYNC update so other clients know the new position.
+                        // Send frequent SYNC updates: every 100 ms.
                         if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-                            if (now - lastSyncTime >= 2_000_000_000) { // every 2 seconds
+                            if (now - lastSyncTime >= 50_000_000) { // 0.1 second
                                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                                 sendMessage(syncMsg);
                                 lastSyncTime = now;
@@ -190,9 +193,9 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable {
         // Resolve collisions.
         resolveCollisionsUsingParent();
 
-        // Only the authoritative client (the one whose player ID matches ownerId) sends SYNC updates.
+        // Send SYNC update less frequently (every 2 seconds).
         if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-            if (now - lastSyncTime >= 2_000_000_000) { // every 2 seconds
+            if (now - lastSyncTime >= 1_000_000_000) { // every second
                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                 sendMessage(syncMsg);
                 lastSyncTime = now;
@@ -202,7 +205,7 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable {
 
     @Override
     public void myUpdateLocal() {
-        // Not used; we prefer the deltaTime version.
+        // Not used; update method with deltaTime is preferred.
     }
 
     /**
