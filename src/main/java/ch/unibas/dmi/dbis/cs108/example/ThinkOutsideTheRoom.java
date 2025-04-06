@@ -2,38 +2,42 @@ package ch.unibas.dmi.dbis.cs108.example;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
-import javafx.application.Platform;
+
+import javafx.application.Application;
 
 /**
- * Entry point for the ThinkOutsideTheRoom application.
- * <p>
- * This class allows the user to start the application in one of three modes:
+ * Entry point class for starting the application in different modes:
+ * server, client, or both. It initializes networking components,
+ * sets up the user interface, and handles command-line arguments.
+ *
+ * <p>This class supports:
  * <ul>
- *     <li><b>server &lt;port&gt;</b>: Starts the server on the specified port.</li>
- *     <li><b>client &lt;host:port&gt; [username]</b>: Starts a client that connects to the given server address, optionally with a username.</li>
- *     <li><b>both &lt;port&gt; [username]</b>: Starts both server and client on the same machine for testing purposes.</li>
+ *     <li>Launching only the server</li>
+ *     <li>Launching only the client</li>
+ *     <li>Launching both server and client together</li>
  * </ul>
- * Usage is printed if no arguments or invalid arguments are provided.
+ *
+ * <p>The chosen mode is passed as a command-line argument.
  */
 public class ThinkOutsideTheRoom {
 
+    /** The singleton client instance accessible from other parts like the GUI. */
+    public static Client client;
+
+    /** The game context instance used for UI and session management. */
+    public static GameContext gameContext;
+
     /**
-     * Main method for launching the application.
+     * Main method to parse arguments and start the application accordingly.
      *
-     * @param args Command-line arguments to specify the mode and relevant parameters.
-     *             <ul>
-     *                 <li>server &lt;port&gt;</li>
-     *                 <li>client &lt;host:port&gt; [username]</li>
-     *                 <li>both &lt;port&gt; [username]</li>
-     *             </ul>
+     * @param args Command-line arguments (mode and optional settings)
      */
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.out.println("Usage:");
-            System.out.println("  server <port>");
-            System.out.println("  client <host:port> [username]");
-            System.out.println("  both <port> [username]");
+            printUsage();
             return;
         }
 
@@ -45,7 +49,7 @@ public class ThinkOutsideTheRoom {
                     System.err.println("Usage: server <port>");
                     return;
                 }
-                Server.main(new String[]{args[1]});
+                startServer(args[1]);
                 break;
 
             case "client":
@@ -53,58 +57,109 @@ public class ThinkOutsideTheRoom {
                     System.err.println("Usage: client <host:port> [username]");
                     return;
                 }
+                String[] parts = args[1].split(":");
+                if (parts.length != 2) {
+                    System.err.println("Invalid host:port format.");
+                    return;
+                }
+                String host = parts[0];
+                int port = Integer.parseInt(parts[1]);
+                String username = args.length == 3 ? args[2] : null;
 
-                // username
-                String username = (args.length == 3) ? args[2] : null;
-
-                // starting gamecontext
-                GameContext context = new GameContext();
-
-                new Thread(() -> {
-                    context.start(); // baut UI, registriert sich
-                    Platform.runLater(context::startGameLoop); // startet Game Loop
-                }).start();
-
-                // starting client
-                Client.main(args);
+                prepareClientAndContext(host, port, username);
+                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
-
 
             case "both":
                 if (args.length < 2 || args.length > 3) {
                     System.err.println("Usage: both <port> [username]");
                     return;
                 }
+                int bothPort = Integer.parseInt(args[1]);
+                String bothUsername = args.length == 3 ? args[2] : null;
 
-                String port = args[1];
-
-                // Server starten
-                new Thread(() -> Server.main(new String[]{port})).start();
-
+                startServer(String.valueOf(bothPort));
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(1000); // Wait until the server is ready
                 } catch (InterruptedException ignored) {}
 
-                String address = "localhost:" + port;
-                String usernameBoth = (args.length == 3) ? args[2] : null;
-
-                // starting gamecontext
-                GameContext contextBoth = new GameContext();
-                new Thread(() -> {
-                    contextBoth.start();
-                    Platform.runLater(contextBoth::startGameLoop);
-                }).start();
-
-                // starting client
-                if (usernameBoth != null) {
-                    Client.main(new String[]{"client", address, usernameBoth});
-                } else {
-                    Client.main(new String[]{"client", address});
-                }
+                prepareClientAndContext("localhost", bothPort, bothUsername);
+                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
 
             default:
                 System.err.println("Unknown mode. Use: server, client or both");
         }
+    }
+
+    /**
+     * Prints usage instructions to the console.
+     */
+    private static void printUsage() {
+        System.out.println("Usage:");
+        System.out.println("  server <port>");
+        System.out.println("  client <host:port> [username]");
+        System.out.println("  both <port> [username]");
+    }
+
+    /**
+     * Starts the server in a new thread using the given port.
+     *
+     * @param port The port number to bind the server to.
+     */
+    private static void startServer(String port) {
+        new Thread(() -> Server.main(new String[]{port})).start();
+    }
+
+    /**
+     * Prepares the client and game context.
+     * Initializes the client with the given host, port, and username.
+     * If no username is provided, one will be generated or requested via console.
+     * Starts the networking, optional console reader, and initializes GameContext.
+     *
+     * @param host     The server host address.
+     * @param port     The server port.
+     * @param username The optional username to use (or null to prompt/generate).
+     */
+    private static void prepareClientAndContext(String host, int port, String username) {
+        // Generate or request username
+        if (username == null || username.isEmpty()) {
+            String suggested = Nickname_Generator.generateNickname();
+            System.out.println("Suggested Nickname: " + suggested);
+
+            if (System.console() != null) {
+                System.out.println("Please press Enter to accept or type your own:");
+                String input = System.console().readLine();
+                username = input.isEmpty() ? suggested : input;
+            } else {
+                System.out.println("No console available. Using suggested nickname.");
+                username = suggested;
+            }
+        }
+
+        // Initialize and start the client
+        client = new Client();
+        client.setUsername(username);
+        client.setServerAddress(host);
+        client.setServerPort(port);
+        new Thread(client::run).start();
+
+        try {
+            Thread.sleep(1000); // Wait for connection
+        } catch (InterruptedException ignored) {}
+
+        // Start console command input only if available
+        if (System.console() != null) {
+            client.startConsoleReaderLoop();
+        } else {
+            System.out.println("No console available. Skipping console input loop.");
+        }
+
+        // Send registration message
+        Message register = new Message("REGISTER", new Object[]{}, "REQUEST");
+        Client.sendMessageStatic(register);
+
+        // Create GameContext (UI setup will happen in GUI class)
+        gameContext = new GameContext();
     }
 }
