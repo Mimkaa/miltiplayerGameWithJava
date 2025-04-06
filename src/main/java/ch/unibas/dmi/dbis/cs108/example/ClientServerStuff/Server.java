@@ -28,7 +28,7 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
 import lombok.Setter;
 
 
-@Getter
+
 /**
  * The {@code Server} class implements a simple UDP-based server that
  * can handle both reliable and best-effort messages. It manages a set of
@@ -36,6 +36,7 @@ import lombok.Setter;
  * handling various message types and requests (including creation of new game objects,
  * game session creation/joining, and selection of game objects).
  */
+@Getter
 public class Server {
 
     // ================================

@@ -33,9 +33,10 @@ public class Level {
                     x,                         // x-coordinate
                     y,                         // y-coordinate
                     width,                     // width
-                    height                     // height
+                    height,
+                    sessionId// height
             };
-            Client.sendMessageStatic(new Message("CREATEGO", floorParams, "GAME"));
+            Client.sendMessageStatic(new Message("CREATEGO", floorParams, "REQUEST"));
         }
 
         // Create the door.
@@ -48,9 +49,10 @@ public class Level {
                 850.0f,       // x-coordinate
                 280.0f,       // y-coordinate
                 50.0f,        // width
-                120.0f        // height
+                120.0f,
+                sessionId// height
         };
-        Client.sendMessageStatic(new Message("CREATEGO", doorParams, "GAME"));
+        Client.sendMessageStatic(new Message("CREATEGO", doorParams, "REQUEST"));
 
         // Create the key.
         // Expected parameter order (for Key):
@@ -63,9 +65,10 @@ public class Level {
                 100.0f,       // y-coordinate
                 30.0f,        // width
                 30.0f,        // height
-                100.0f        // mass
+                100.0f,
+                sessionId// mass
         };
-        Client.sendMessageStatic(new Message("CREATEGO", keyParams, "GAME"));
+        Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
 
         // Create two players: Alfred and Gerald.
         // Expected parameter order (for Player):
@@ -77,9 +80,11 @@ public class Level {
                 50.0f,        // x-coordinate
                 200.0f,       // y-coordinate
                 40.0f,        // width
-                40.0f         // height
+                40.0f,
+                sessionId
+                // height
         };
-        Client.sendMessageStatic(new Message("CREATEGO", alfredParams, "GAME"));
+        Client.sendMessageStatic(new Message("CREATEGO", alfredParams, "REQUEST"));
 
         Object[] geraldParams = new Object[] {
                 sessionId,    // game session id
@@ -88,9 +93,10 @@ public class Level {
                 150.0f,       // x-coordinate
                 200.0f,       // y-coordinate
                 40.0f,        // width
-                40.0f         // height
+                40.0f,
+                sessionId// height
         };
-        Client.sendMessageStatic(new Message("CREATEGO", geraldParams, "GAME"));
+        Client.sendMessageStatic(new Message("CREATEGO", geraldParams, "REQUEST"));
 
         System.out.println("Level started! Multiple floors, Door, Key, and two Players (Alfred & Gerald) created.");
     }

@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import javafx.application.Platform;
@@ -29,7 +30,7 @@ public class Door extends GameObject {
     public void myUpdateLocal(float deltaTime) {
         // A static door never changes its position.
         // Instead, check for the win condition.
-        Game currentGame = GameContext.getGameById(getGameId());
+        Game currentGame = Server.getInstance().getGameSessionManager().getGameSession(getGameId());
         if (currentGame == null) return;
         for (GameObject go : currentGame.getGameObjects()) {
             if (go instanceof Key) {
