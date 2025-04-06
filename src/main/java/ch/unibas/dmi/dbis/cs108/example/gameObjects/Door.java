@@ -6,8 +6,8 @@ import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
-import javafx.scene.control.Label;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
@@ -21,12 +21,14 @@ public class Door extends GameObject {
         this.y = y;
         this.width = width;
         this.height = height;
+        // Make the door static: not movable.
+        setMovable(false);
     }
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        // A static door does not move.
-        // Instead, it checks for a win condition:
+        // A static door never changes its position.
+        // Instead, check for the win condition.
         Game currentGame = GameContext.getGameById(getGameId());
         if (currentGame == null) return;
         for (GameObject go : currentGame.getGameObjects()) {
@@ -34,20 +36,15 @@ public class Door extends GameObject {
                 Key key = (Key) go;
                 if (this.intersects(key)) {
                     System.out.println("You won the game!");
-                    // Optionally, send a WIN message to synchronize the win state.
                     Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, null);
                     sendMessage(winMsg);
-
-                    // Display a win message in the middle of the screen.
+                    // Display a win overlay message in the UI.
                     Platform.runLater(() -> {
                         Label winLabel = new Label("You won the game!");
                         winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: green; -fx-background-color: rgba(255,255,255,0.8);");
                         winLabel.setAlignment(Pos.CENTER);
-                        // Add the label to the central container.
                         CentralGraphicalUnit.getInstance().addNode(winLabel);
                     });
-
-                    // Once the win condition is met, we can break out.
                     break;
                 }
             }
@@ -61,7 +58,7 @@ public class Door extends GameObject {
 
     @Override
     protected void myUpdateGlobal(Message msg) {
-        // This door does not process global messages.
+        // Door does not process global updates.
     }
 
     @Override

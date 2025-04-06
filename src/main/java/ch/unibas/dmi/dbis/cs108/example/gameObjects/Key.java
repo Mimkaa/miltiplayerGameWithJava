@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+import javafx.application.Platform;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -15,14 +16,18 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     private float mass;
     private float vx = 0.0f, vy = 0.0f;
     private float terminalVelocity = 600.0f;
-    // Time tracking for synchronisation.
+    // Time tracking for sync.
     private long lastSyncTime = System.nanoTime();
     // Ground state.
     private boolean onGround = false;
+    // Ownership: ID of the player that "owns" the key.
     private String ownerId = null;
     // Grab/Carry fields.
     private boolean isGrabbed = false;
     private String grabbedBy = null;
+
+    // Friction factor to reduce horizontal sliding when on ground.
+    private final float frictionFactor = 0.8f;
 
     /**
      * Constructs a Key.
@@ -49,14 +54,14 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         return mass;
     }
 
-    // IGrabbable interface implementation.
+    // IGrabbable implementation.
     @Override
     public void onGrab(String playerId) {
         isGrabbed = true;
         grabbedBy = playerId;
         vx = 0;
         vy = 0;
-        // Immediately attach the key to the grabbing player.
+        // Attach key to the grabbing player's position.
         Game currentGame = GameContext.getGameById(getGameId());
         if (currentGame != null) {
             for (GameObject obj : currentGame.getGameObjects()) {
@@ -90,7 +95,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         return grabbedBy;
     }
 
-    // IThrowable interface implementation.
+    // IThrowable implementation.
     @Override
     public void throwObject(float throwVx, float throwVy) {
         vx = throwVx;
@@ -119,8 +124,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     }
 
     /**
-     * Uses the collision resolution method provided by GameObject.
-     * Also, if the key intersects with a Door, a win condition is triggered.
+     * Resolves collisions with other objects.
+     * Also checks if the key touches a Door, which triggers the win condition.
      */
     private void resolveCollisions() {
         Game currentGame = GameContext.getGameById(getGameId());
@@ -130,19 +135,26 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
             if (other == this || !other.isCollidable()) continue;
             if (this.intersects(other)) {
                 this.resolveCollision(other);
-                // If colliding with a Player and not yet owned, assign ownership.
+                // Assign ownership if colliding with a player and not yet owned.
                 if (other instanceof Player && ownerId == null) {
                     ownerId = other.getId();
                     System.out.println("Key " + getName() + " now owned by player " + ownerId);
                 }
-                // Check if the key touches a door to trigger win.
+                // Check win condition: if key touches a Door.
                 if (other instanceof Door) {
-                    System.out.println("Key " + getName() + " touched Door. You won the game!");
+                    System.out.println("Key " + getName() + " touched a Door. You won the game!");
                     Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, null);
                     sendMessage(winMsg);
+                    // Optionally, display an overlay message:
+                    Platform.runLater(() -> {
+                        // For example, add a Label to CentralGraphicalUnit's container.
+                        // Label winLabel = new Label("You won the game!");
+                        // winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: green; -fx-background-color: rgba(255,255,255,0.8);");
+                        // CentralGraphicalUnit.getInstance().addNode(winLabel);
+                    });
                 }
                 // Simple landing check.
-                if (Math.abs((this.getY() + this.getHeight()) - other.getY()) < tolerance && vy >= 0) {
+                if (Math.abs((getY() + getHeight()) - other.getY()) < tolerance && vy >= 0) {
                     onGround = true;
                     vy = 0;
                 }
@@ -154,7 +166,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     public void myUpdateLocal(float deltaTime) {
         long now = System.nanoTime();
         if (isGrabbed) {
-            // While grabbed, follow the player's position.
+            // Follow grabbing player's position.
             Game currentGame = GameContext.getGameById(getGameId());
             if (currentGame != null) {
                 for (GameObject obj : currentGame.getGameObjects()) {
@@ -162,7 +174,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                         Player p = (Player) obj;
                         setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
                         setY(p.getY() - getHeight());
-                        // Send frequent SYNC updates (every 0.1 second).
+                        // Send frequent sync updates (every 0.1 sec).
                         if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
                             if (now - lastSyncTime >= 100_000_000) {
                                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
@@ -179,8 +191,16 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         onGround = false;
         applyGravity(deltaTime);
         resolveCollisions();
+        // Apply friction when on ground.
+        if (onGround) {
+            vx *= frictionFactor;
+            if (Math.abs(vx) < 1.0f) {
+                vx = 0;
+            }
+        }
+        // Send periodic sync updates when not grabbed.
         if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-            if (now - lastSyncTime >= 1_000_000_000) { // every 1 second when not grabbed
+            if (now - lastSyncTime >= 1_000_000_000) {
                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                 sendMessage(syncMsg);
                 lastSyncTime = now;
@@ -240,7 +260,9 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         return new Object[]{getName(), x, y, width, height, mass, getGameId()};
     }
 
-    // Bounding box methods.
+    // --------------------
+    // Bounding Box Methods
+    // --------------------
     @Override
     public float getX() { return x; }
     @Override
