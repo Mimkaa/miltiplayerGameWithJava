@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
+import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
@@ -358,7 +360,7 @@ public class GameContext {
     }
 
     public static String getLocalClientId() {
-        return getInstance().getClient().getClientId();
+        return ThinkOutsideTheRoom.client.getClientId();
     }
 
 
