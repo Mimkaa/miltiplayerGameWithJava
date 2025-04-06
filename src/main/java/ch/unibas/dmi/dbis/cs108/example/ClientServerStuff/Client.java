@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHub;
+import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
 import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;

@@ -1,22 +1,17 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
-
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
 public class Platform extends GameObject {
 
-    // Position and size fields (bounding box)
-    private double x;
-    private double y;
-    private double width;
-    private double height;
+    // Position and size fields (bounding box) as floats.
+    private float x;
+    private float y;
+    private float width;
+    private float height;
 
     /**
      * Constructs a static Platform object.
@@ -28,7 +23,7 @@ public class Platform extends GameObject {
      * @param height The height of the platform.
      * @param gameId The game session ID.
      */
-    public Platform(String name, double x, double y, double width, double height, String gameId) {
+    public Platform(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
         this.x = x;
         this.y = y;
@@ -46,7 +41,7 @@ public class Platform extends GameObject {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-
+        // No update needed for static platforms.
     }
 
     /**
@@ -65,7 +60,7 @@ public class Platform extends GameObject {
         gc.setFill(Color.DARKGRAY);
         gc.fillRect(x, y, width, height);
 
-        // Draw platform name
+        // Draw platform name.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         text.setFont(gc.getFont());
@@ -78,6 +73,7 @@ public class Platform extends GameObject {
      */
     @Override
     public Object[] getConstructorParamValues() {
+        // The order must match your constructor: name, x, y, width, height, gameId.
         return new Object[]{ getName(), x, y, width, height, getGameId() };
     }
 
@@ -87,22 +83,22 @@ public class Platform extends GameObject {
 
     @Override
     public float getX() {
-        return (float) x;
+        return x;
     }
 
     @Override
     public float getY() {
-        return (float) y;
+        return y;
     }
 
     @Override
     public float getWidth() {
-        return (float) width;
+        return width;
     }
 
     @Override
     public float getHeight() {
-        return (float) height;
+        return height;
     }
 
     /**
