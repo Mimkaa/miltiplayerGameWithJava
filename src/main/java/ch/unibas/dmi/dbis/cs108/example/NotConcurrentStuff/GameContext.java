@@ -378,6 +378,10 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + gameID);
                     }
+                }
+                else if ("EXIT".equals(type)) {
+                    System.out.println("Exiting Game");
+                    System.exit(0);
                 } else {
                     System.out.println("Unknown message type: " + type);
                 }
