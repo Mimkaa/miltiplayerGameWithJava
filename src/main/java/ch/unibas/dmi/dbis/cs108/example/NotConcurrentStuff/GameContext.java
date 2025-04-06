@@ -358,10 +358,11 @@ public class GameContext {
         return getInstance().getGameSessionManager().getGameSession(gameId);
     }
 
+/*
     public static String getLocalClientId() {
         return ThinkOutsideTheRoom.client.getClientId();
     }
-
+*/
 
     public static void main(String[] args) {
         // Create the game context.
