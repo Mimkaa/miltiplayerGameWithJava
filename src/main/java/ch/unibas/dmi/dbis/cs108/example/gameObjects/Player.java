@@ -132,6 +132,7 @@ public class Player extends GameObject implements IGravityAffected {
         }
     }
 
+
     private void handleGrabInput() {
         Game currentGame = GameContext.getGameById(getGameId());
         if (currentGame == null) return;
