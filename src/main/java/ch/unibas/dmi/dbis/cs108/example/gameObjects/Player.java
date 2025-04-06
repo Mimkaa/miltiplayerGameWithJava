@@ -10,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.util.Arrays;
 
 @Getter
@@ -34,6 +35,8 @@ public class Player extends GameObject implements IGravityAffected {
 
     // For time–based updates.
     private long lastUpdateTime;
+
+    private boolean ePreviouslyPressed = false;
 
     public Player(String name, double x, double y, double side, String gameId) {
         this(name, (float) x, (float) y, (float) side, (float) side, gameId);
@@ -106,6 +109,69 @@ public class Player extends GameObject implements IGravityAffected {
         }
     }
 
+    /**
+     * Handles keyboard input.
+     * <p>
+     * If the E key is pressed and the player is colliding with any IGrabbable object,
+     * call that object's onGrab(this.getId()). Otherwise, if E is not pressed,
+     * for any IGrabbable object that is grabbed by this player, call onRelease().
+     * </p>
+     */
+    private void handleKeyboardInput() {
+        // Ensure this is the controlled player.
+        if (!this.getId().equals(GameContext.getSelectedGameObjectId())) {
+            return;
+        }
+
+        // Jumping.
+        if (KeyboardState.isKeyPressed(KeyCode.W) && onGround && canJump) {
+            vy = -jumpingImpulse;
+            onGround = false;
+            Message jumpMsg = new Message("JUMP", new Object[]{vy}, null);
+            sendMessage(jumpMsg);
+        }
+
+        // Horizontal movement.
+        if (KeyboardState.isKeyPressed(KeyCode.A)) {
+            setX(getX() - speed);
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.D)) {
+            setX(getX() + speed);
+        }
+
+        // Determine current state of E key.
+        boolean ePressed = KeyboardState.isKeyPressed(KeyCode.E);
+
+        Game currentGame = GameContext.getGameById(this.getGameId());
+        if (currentGame == null) return;
+
+        // If E key has just been pressed, attempt to grab nearby grabbable objects.
+        if (ePressed && !ePreviouslyPressed) {
+            for (GameObject go : currentGame.getGameObjects()) {
+                if (go instanceof IGrabbable) {
+                    IGrabbable grabbable = (IGrabbable) go;
+                    if (!grabbable.isGrabbed() && this.intersects(go)) {
+                        grabbable.onGrab(this.getId());
+                    }
+                }
+            }
+        }
+        // If E key has just been released, release objects grabbed by this player.
+        else if (!ePressed && ePreviouslyPressed) {
+            for (GameObject go : currentGame.getGameObjects()) {
+                if (go instanceof IGrabbable) {
+                    IGrabbable grabbable = (IGrabbable) go;
+                    if (grabbable.isGrabbed() && this.getId().equals(grabbable.getGrabbedBy())) {
+                        grabbable.onRelease();
+                    }
+                }
+            }
+        }
+
+        // Update the previous E key state for the next frame.
+        ePreviouslyPressed = ePressed;
+    }
+
     // --- Update Method ---
 
     @Override
@@ -116,30 +182,14 @@ public class Player extends GameObject implements IGravityAffected {
         checkGroundCollision();
         checkIfSomeoneOnTop();
 
-        // Handle keyboard input.
-        if (this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            // Jumping: send the velocity once.
-            if (KeyboardState.isKeyPressed(KeyCode.W) && onGround && canJump) {
-                vy = -jumpingImpulse;
-                onGround = false;
-                Message jumpMsg = new Message("JUMP", new Object[]{vy}, null);
-                sendMessage(jumpMsg);
-            }
-            // Horizontal movement.
-            if (KeyboardState.isKeyPressed(KeyCode.A)) {
-                setX(getX() - speed);
-            }
-            if (KeyboardState.isKeyPressed(KeyCode.D)) {
-                setX(getX() + speed);
-            }
-        }
+        // Process keyboard input.
+        handleKeyboardInput();
 
         // Send MOVE message only for horizontal movement.
         if (getX() != oldX) {
-            long now = System.nanoTime();// 100 ms in nanoseconds
-                Message moveMsg = new Message("MOVE", new Object[]{getX()}, null);
-                sendMessage(moveMsg);
-            
+            long now = System.nanoTime();
+            Message moveMsg = new Message("MOVE", new Object[]{getX()}, null);
+            sendMessage(moveMsg);
         }
     }
 
@@ -189,21 +239,37 @@ public class Player extends GameObject implements IGravityAffected {
     // --- Bounding Box Methods ---
 
     @Override
-    public float getX() { return x; }
+    public float getX() {
+        return x;
+    }
     @Override
-    public float getY() { return y; }
+    public float getY() {
+        return y;
+    }
     @Override
-    public float getWidth() { return width; }
+    public float getWidth() {
+        return width;
+    }
     @Override
-    public float getHeight() { return height; }
+    public float getHeight() {
+        return height;
+    }
     @Override
-    public void setX(float x) { this.x = x; }
+    public void setX(float x) {
+        this.x = x;
+    }
     @Override
-    public void setY(float y) { this.y = y; }
+    public void setY(float y) {
+        this.y = y;
+    }
     @Override
-    public void setWidth(float width) { this.width = width; }
+    public void setWidth(float width) {
+        this.width = width;
+    }
     @Override
-    public void setHeight(float height) { this.height = height; }
+    public void setHeight(float height) {
+        this.height = height;
+    }
 
     @Override
     public float getMass() {

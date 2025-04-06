@@ -7,7 +7,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
-public class Box extends GameObject implements IGravityAffected {
+public class Box extends GameObject implements IGravityAffected, IGrabbable {
 
     // Bounding box and physics fields.
     private float x;
@@ -17,7 +17,7 @@ public class Box extends GameObject implements IGravityAffected {
 
     // Physics properties.
     private float mass;
-    private float vy = 0.0f;                   // Vertical velocity in pixels/second
+    private float vy = 0.0f;                   // Vertical velocity (pixels/second)
     private float terminalVelocity = 600.0f;     // Maximum falling speed
 
     // Time tracking.
@@ -29,20 +29,26 @@ public class Box extends GameObject implements IGravityAffected {
     // Ground state.
     private boolean onGround = false;
 
-    // Ownership: the ID of the player who touched this object.
+    // Ownership: the ID of the player who touched this box.
     private String ownerId = null;
 
-    private double synchInterval = 1000000000; // every 2000 ms objects are synchronized based on the ownerId's client authority.
+    // -------------------------
+    // Grab / Carry Fields
+    // -------------------------
+    // Indicates if the box is currently grabbed.
+    private boolean isGrabbed = false;
+    // The ID of the player carrying this box.
+    private String grabbedBy = null;
 
     /**
      * Constructs a Box.
      *
-     * @param name   The object's name.
+     * @param name   The box's name.
      * @param x      Starting x coordinate.
      * @param y      Starting y coordinate.
-     * @param width  Object width.
-     * @param height Object height.
-     * @param mass   Mass of the object.
+     * @param width  Box width.
+     * @param height Box height.
+     * @param mass   Mass of the box.
      * @param gameId The game session ID.
      */
     public Box(String name, float x, float y, float width, float height, float mass, String gameId) {
@@ -59,14 +65,43 @@ public class Box extends GameObject implements IGravityAffected {
         return mass;
     }
 
+    // -------------------------
+    // IGrabbable Interface Methods
+    // -------------------------
+    @Override
+    public void onGrab(String playerId) {
+        isGrabbed = true;
+        grabbedBy = playerId;
+        // Stop falling when grabbed.
+        vy = 0;
+        System.out.println("Box " + getName() + " grabbed by player " + playerId);
+    }
+
+    @Override
+    public void onRelease() {
+        isGrabbed = false;
+        grabbedBy = null;
+        System.out.println("Box " + getName() + " released");
+    }
+
+    @Override
+    public boolean isGrabbed() {
+        return isGrabbed;
+    }
+
+    @Override
+    public String getGrabbedBy() {
+        return grabbedBy;
+    }
+
     /**
-     * Applies gravity if the object is not on the ground.
+     * Applies gravity if the box is not on the ground and not grabbed.
      *
      * @param deltaTime Time in seconds since the last update.
      */
     @Override
     public void applyGravity(float deltaTime) {
-        if (!onGround) {
+        if (!onGround && !isGrabbed) {
             vy += GravityEngine.GRAVITY * deltaTime;
             if (vy > terminalVelocity) {
                 vy = terminalVelocity;
@@ -79,31 +114,27 @@ public class Box extends GameObject implements IGravityAffected {
 
     /**
      * Uses the collision resolving provided by GameObject.
-     * For every collidable object in the game session that intersects this falling object,
-     * we call the inherited resolveCollision method.
-     * We also check if the object is landing (its bottom is near another object's top).
+     * Iterates over collidable objects and, if an intersection is detected,
+     * resolves the collision. Also assigns ownership if colliding with a player and
+     * sets onGround if the box is landing.
      */
     private void resolveCollisionsUsingParent() {
-        // Get the current game session.
         Game currentGame = GameContext.getGameById(getGameId());
         if (currentGame == null) return;
 
         final float tolerance = 5.0f;
-        // Iterate over all game objects.
         for (GameObject other : currentGame.getGameObjects()) {
             if (other == this || !other.isCollidable()) continue;
-
             if (this.intersects(other)) {
-                // Use the common collision resolving method from GameObject.
+                // Use the standard collision resolution.
                 this.resolveCollision(other);
 
-                // If the colliding object is a Player, assign ownership if not already set.
+                // If colliding with a Player and not already owned, assign ownership.
                 if (other instanceof Player && ownerId == null) {
                     ownerId = other.getId();
-                    System.out.println("Falling object " + getName() + " is now owned by player " + ownerId);
+                    System.out.println("Box " + getName() + " is now owned by player " + ownerId);
                 }
-
-                // Check if the falling object's bottom is near the other object's top.
+                // Check if the bottom of the box is near the top of the other object.
                 if (Math.abs((this.getY() + this.getHeight()) - other.getY()) < tolerance && vy >= 0) {
                     onGround = true;
                     vy = 0;
@@ -114,8 +145,9 @@ public class Box extends GameObject implements IGravityAffected {
 
     /**
      * Local update method called every frame.
-     * It resets the ground state, applies gravity, resolves collisions using the parent method,
-     * and sends a SYNC message with the current position every 1000 ms if this client is authoritative.
+     * If the box is grabbed, it sticks to the carrying player's position.
+     * Otherwise, it resets the ground state, applies gravity, resolves collisions,
+     * and sends a SYNC message with the current position every 2000 ms if this client is authoritative.
      *
      * @param deltaTime Time in seconds since the last update.
      */
@@ -123,7 +155,31 @@ public class Box extends GameObject implements IGravityAffected {
     public void myUpdateLocal(float deltaTime) {
         long now = System.nanoTime();
 
-        // Reset ground state at the beginning of each frame.
+        // If grabbed, stick to the player.
+        if (isGrabbed) {
+            Game currentGame = GameContext.getGameById(getGameId());
+            if (currentGame != null) {
+                for (GameObject obj : currentGame.getGameObjects()) {
+                    if (obj.getId().equals(grabbedBy) && obj instanceof Player) {
+                        Player p = (Player) obj;
+                        // Position the box above the player, centered horizontally.
+                        setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
+                        setY(p.getY() - getHeight());
+                        // Still send a SYNC update so other clients know the new position.
+                        if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
+                            if (now - lastSyncTime >= 2_000_000_000) { // every 2 seconds
+                                Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
+                                sendMessage(syncMsg);
+                                lastSyncTime = now;
+                            }
+                        }
+                        return; // Skip further updates while grabbed.
+                    }
+                }
+            }
+        }
+
+        // Not grabbed: reset ground state.
         onGround = false;
 
         // Apply gravity if not on the ground.
@@ -136,23 +192,22 @@ public class Box extends GameObject implements IGravityAffected {
 
         // Only the authoritative client (the one whose player ID matches ownerId) sends SYNC updates.
         if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-            if (now - lastSyncTime >= synchInterval) {
+            if (now - lastSyncTime >= 2_000_000_000) { // every 2 seconds
                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                 sendMessage(syncMsg);
                 lastSyncTime = now;
             }
         }
-
     }
 
     @Override
     public void myUpdateLocal() {
-        // Not used; update method with deltaTime is preferred.
+        // Not used; we prefer the deltaTime version.
     }
 
     /**
      * Processes global messages.
-     * For falling objects, we process "SYNC" messages that carry the exact position.
+     * For boxes, we process "SYNC" messages that carry the exact position.
      *
      * @param msg The incoming message.
      */
@@ -196,19 +251,35 @@ public class Box extends GameObject implements IGravityAffected {
     // Bounding Box Methods
     // --------------------
     @Override
-    public float getX() { return x; }
+    public float getX() {
+        return x;
+    }
     @Override
-    public float getY() { return y; }
+    public float getY() {
+        return y;
+    }
     @Override
-    public float getWidth() { return width; }
+    public float getWidth() {
+        return width;
+    }
     @Override
-    public float getHeight() { return height; }
+    public float getHeight() {
+        return height;
+    }
     @Override
-    public void setX(float x) { this.x = x; }
+    public void setX(float x) {
+        this.x = x;
+    }
     @Override
-    public void setY(float y) { this.y = y; }
+    public void setY(float y) {
+        this.y = y;
+    }
     @Override
-    public void setWidth(float width) { this.width = width; }
+    public void setWidth(float width) {
+        this.width = width;
+    }
     @Override
-    public void setHeight(float height) { this.height = height; }
+    public void setHeight(float height) {
+        this.height = height;
+    }
 }

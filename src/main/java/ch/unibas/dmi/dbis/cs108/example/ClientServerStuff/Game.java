@@ -145,7 +145,7 @@ public class Game {
                         if (b instanceof Player) {
                             ((Player) b).setCollisionDetected(true);
                         }
-                        System.out.println("Collision resolved between " + a.getName() + " and " + b.getName());
+                        // System.out.println("Collision resolved between " + a.getName() + " and " + b.getName());
                     }
                 }
             }
