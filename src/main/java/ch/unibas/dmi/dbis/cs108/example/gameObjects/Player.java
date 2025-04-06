@@ -209,11 +209,12 @@ public class Player extends GameObject implements IGravityAffected {
      * Combines all keyboard input handling.
      */
     private void handleKeyboardInput() {
-        handleJumpInput();
-        handleMovementInput();
-        handleGrabInput();
-        handleThrowInput();
-    }
+                handleJumpInput();
+                handleMovementInput();
+                handleGrabInput();
+                handleThrowInput();
+        }
+
 
     // --- Update Method ---
     @Override

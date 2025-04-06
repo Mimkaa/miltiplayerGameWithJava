@@ -112,6 +112,11 @@ public class Client {
         return instance;
     }
 
+    public static String getMyClientId() {
+        return ThinkOutsideTheRoom.client.getClientId();
+    }
+
+
     /**
      * Initializes the client chat manager. Must be called <strong>before</strong>
      * setting up the UI to ensure {@code clientChatManager} is not null.
