@@ -15,7 +15,6 @@ import javafx.application.Application;
 import javafx.application.Platform;
 
 import javafx.scene.layout.Pane;
-
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
 
