@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
+import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
@@ -164,6 +165,21 @@ public class GameUIComponents {
             } else {
                 System.out.println("Overlay input field not found.");
             }
+        });
+
+
+        // --- New Overlay Button: Start Level Button ---
+        Button startLevelButton = new Button("Start Level");
+        startLevelButton.setLayoutX(200);
+        startLevelButton.setLayoutY(220); // Adjust Y-position as needed
+        mainUIPane.getChildren().add(startLevelButton);
+        uiManager.registerComponent("startLevelButton", startLevelButton);
+        startLevelButton.setOnAction(e -> {
+            // Create an instance of your Level class and initialize it.
+            // You can send a series of CREATEGO messages from here or have the Level class handle it.
+            Level level = new Level();
+            level.initializeLevel();
+            System.out.println("Level started!");
         });
         
         return mainUIPane;
