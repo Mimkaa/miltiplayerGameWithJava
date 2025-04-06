@@ -70,8 +70,10 @@ public class Client {
     /** Console input scanner for reading commands. */
     private final Scanner scanner = new Scanner(System.in);
 
+    private final String clientId = UUID.randomUUID().toString();
+
     /** The client's username, stored as an AtomicReference for thread safety. */
-    private final AtomicReference<String> username = new AtomicReference<>(UUID.randomUUID().toString());
+    private final AtomicReference<String> username = new AtomicReference<>(clientId);
 
     /** A reliable UDP sender instance. */
     private ReliableUDPSender myReliableUDPSender;
