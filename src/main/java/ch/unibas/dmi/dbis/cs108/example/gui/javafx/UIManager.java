@@ -41,6 +41,16 @@ public class UIManager {
         }
     }
 
+    public void hideAllComponents() {
+        Platform.runLater(() -> {
+            for (Node node : componentRegistry.values()) {
+                if (node != null) {
+                    node.setVisible(false);
+                }
+            }
+        });
+    }
+
     /**
      * Waits until CentralGraphicalUnit is ready, then calls initializeUI(customInit).
      *

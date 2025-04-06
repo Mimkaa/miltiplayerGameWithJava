@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -170,6 +171,7 @@ public class GameUIComponents {
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
 
+
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Game ID");
@@ -185,35 +187,42 @@ public class GameUIComponents {
         uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
 
 
-        Button OnlineUsersButton = new Button("Online Users Global");
-        OnlineUsersButton.setLayoutX(200);
-        OnlineUsersButton.setLayoutY(210);
-        administrativePane.getChildren().add(OnlineUsersButton);
-        uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
-        OnlineUsersButton.setOnAction(e -> {
 
-                Message selectGoMsg = new Message("GETUSERS", new Object[]{}, "REQUEST");
-                Client.sendMessageStatic(selectGoMsg);
-
-
-        });
-
-        TextArea usersList = new TextArea();
-        usersList.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
-        usersList.setPromptText("Game ID");
-        usersList.setEditable(false); // non-editable but copyable
-        usersList.setLayoutX(200);
-        usersList.setLayoutY(240);
-        usersList.setPrefWidth(200);   // set preferred width
-        usersList.setPrefHeight(150);  // set preferred height
-
-        administrativePane.getChildren().add(usersList);
-
-
-        uiManager.registerComponent("usersList", usersList);
 
 
         return administrativePane;
+    }
+
+
+    public static Pane createCheckPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        Pane CheckPane = new Pane();
+        CheckPane.setTranslateX(0);
+        CheckPane.setTranslateY(30);
+        CheckPane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
+
+
+
+
+
+
+        Button OnlineUsersButton = new Button("Online Users Global");
+        OnlineUsersButton.setLayoutX(200);
+        OnlineUsersButton.setLayoutY(210);
+        CheckPane.getChildren().add(OnlineUsersButton);
+        uiManager.registerComponent("OnlineUsersButtonnn", OnlineUsersButton);
+
+        Button OnlineUsersButtonvvv = new Button("BUtton2");
+        OnlineUsersButtonvvv.setLayoutX(100);
+        OnlineUsersButtonvvv.setLayoutY(210);
+        CheckPane.getChildren().add(OnlineUsersButtonvvv);
+        uiManager.registerComponent("OnlineUsersButtonnnvvv", OnlineUsersButtonvvv);
+
+
+
+
+
+
+        return CheckPane;
     }
 
     public static Pane createglbChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
@@ -275,7 +284,207 @@ public class GameUIComponents {
         uiManager.registerComponent("chatInputField", chatInputField);
         return root;
     }
-    
+
+    public static Pane createWhisperChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+
+        // Keep the existing BorderPane for the chat
+        BorderPane root = new BorderPane();
+        root.setPrefSize(600, 500);
+
+        // === (1) The main Whisper Chat messages & input, same as before ===
+        VBox messagesBox = new VBox(5);
+        uiManager.registerComponent("whisperChatMessagesBox", messagesBox);
+        messagesBox.setPadding(new Insets(10));
+
+        ScrollPane scrollPane = new ScrollPane(messagesBox);
+        uiManager.registerComponent("whisperChatScroll", scrollPane);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+
+        TextField chatInputField = new TextField();
+        chatInputField.setPromptText("Type a message...");
+        chatInputField.setPrefWidth(400);
+        uiManager.registerComponent("whisperChatInputField", chatInputField);
+
+        Button sendButton = new Button("Send");
+        sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+
+        HBox inputBox = new HBox(10, chatInputField, sendButton);
+        inputBox.setAlignment(Pos.CENTER);
+        inputBox.setPadding(new Insets(10));
+
+        VBox chatContainer = new VBox();
+        chatContainer.setAlignment(Pos.BOTTOM_CENTER);
+        chatContainer.setPadding(new Insets(10));
+        chatContainer.setMouseTransparent(false);
+        chatContainer.getChildren().addAll(scrollPane, inputBox);
+
+        VBox centerWrapper = new VBox();
+        centerWrapper.setAlignment(Pos.CENTER);
+        centerWrapper.getChildren().add(chatContainer);
+
+        // Put the chat in the center of our BorderPane
+        root.setCenter(centerWrapper);
+
+        // === (2) Add the OnlineUsersButton and a ComboBox for user selection ===
+
+        Pane topPane = new Pane();
+        topPane.setPrefHeight(100);
+
+        // The "Online Users Global" button
+        Button OnlineUsersButton = new Button("Online Users Global");
+        OnlineUsersButton.setLayoutX(20);
+        OnlineUsersButton.setLayoutY(80);
+        topPane.getChildren().add(OnlineUsersButton);
+        uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
+
+        // On button click, send GETUSERS request
+        OnlineUsersButton.setOnAction(e -> {
+            // This request presumably returns a list of online users
+            Message selectGoMsg = new Message("GETUSERS", new Object[]{}, "REQUEST");
+            Client.sendMessageStatic(selectGoMsg);
+        });
+
+        // Instead of a TextArea, use a ComboBox to select whom we want to whisper to
+        ComboBox<String> userSelect = new ComboBox<>();
+        userSelect.setPromptText("Select a user to whisper");
+        userSelect.setLayoutX(20);
+        userSelect.setLayoutY(120);
+        userSelect.setPrefWidth(200);
+
+        // Register this combo box with the UIManager so we can populate it
+        // when the GETUSERS response comes back in GameContext
+        uiManager.registerComponent("whisperUserSelect", userSelect);
+
+        topPane.getChildren().add(userSelect);
+
+        // Put the topPane with our button and combo box at the top of the BorderPane
+        root.setTop(topPane);
+
+        // === (3) The existing send button logic, but using "WHISPER" message ===
+        sendButton.setOnAction(e -> {
+            String username = Client.getInstance().getUsername().get();
+            String message = chatInputField.getText().trim();
+
+            // Also get the target user from the ComboBox
+            String targetUser = userSelect.getSelectionModel().getSelectedItem();
+            if (targetUser == null || targetUser.isEmpty()) {
+                System.out.println("Please select a user to whisper to!");
+                return;
+            }
+
+            if (!message.isEmpty()) {
+                // For example, you can pass the target user as a parameter:
+                Object[] params = new String[]{Client.getInstance().getUsername().get(), targetUser, message};
+                // Then your server can handle "WHISPER" by delivering
+                // "message" from "username" to "targetUser".
+                Message responseMsg = new Message("WHISPER", params, "REQUEST");
+                Client.sendMessageStatic(responseMsg);
+
+                // Local display
+                Label msg = new Label("Whisper to " + targetUser + ": " + message);
+                messagesBox.getChildren().add(msg);
+                chatInputField.clear();
+                scrollPane.setVvalue(1.0);
+            }
+        });
+
+        // Return the final whisper chat pane
+        return root;
+    }
+
+    public static Pane createLobbyChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        // Main BorderPane layout
+        BorderPane root = new BorderPane();
+        root.setPrefSize(600, 500);
+
+        // ------------------------------------------
+        // (A) Top: Title Label
+        // ------------------------------------------
+        Label titleLabel = new Label("Lobby Chat");
+        titleLabel.setPadding(new Insets(10));
+        titleLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold;");
+        root.setTop(titleLabel);
+        BorderPane.setAlignment(titleLabel, Pos.CENTER);
+
+        // ------------------------------------------
+        // (B) Left: Users List
+        // ------------------------------------------
+        VBox leftSideBox = new VBox(10);
+        leftSideBox.setPadding(new Insets(10));
+
+        TextArea usersListCurrGS = new TextArea();
+        usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
+        usersListCurrGS.setPromptText("Current Game Users");
+        usersListCurrGS.setEditable(false);
+        usersListCurrGS.setPrefSize(150, 400);
+
+        leftSideBox.getChildren().add(usersListCurrGS);
+        uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
+        root.setLeft(leftSideBox);
+
+        // ------------------------------------------
+        // (C) Center: Chat Messages
+        // ------------------------------------------
+        // A VBox to hold chat messages
+        VBox messagesBox = new VBox(5);
+        messagesBox.setPadding(new Insets(10));
+        uiManager.registerComponent("lobbyChatMessagesBox", messagesBox);
+
+        // A ScrollPane containing the messages
+        ScrollPane scrollPane = new ScrollPane(messagesBox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        uiManager.registerComponent("lobbyChatScroll", scrollPane);
+
+        root.setCenter(scrollPane);
+
+        // ------------------------------------------
+        // (D) Bottom: Chat Input + Send Button
+        // ------------------------------------------
+        HBox bottomBox = new HBox(10);
+        bottomBox.setAlignment(Pos.CENTER);
+        bottomBox.setPadding(new Insets(10));
+
+        TextField chatInputField = new TextField();
+        chatInputField.setPromptText("Type a lobby message...");
+        chatInputField.setPrefWidth(400);
+        uiManager.registerComponent("lobbyChatInputField", chatInputField);
+
+        Button sendButton = new Button("Send");
+        sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+        bottomBox.getChildren().addAll(chatInputField, sendButton);
+
+        root.setBottom(bottomBox);
+
+        // ------------------------------------------
+        // (E) Send Button Logic
+        // ------------------------------------------
+        sendButton.setOnAction(e -> {
+            String username = Client.getInstance().getUsername().get();
+            String gameId = GameContext.getCurrentGameId(); // Retrieve the current game ID
+            String message = chatInputField.getText().trim();
+            if (!message.isEmpty() && gameId != null && !gameId.isEmpty()) {
+                // Send username, gameId, and the message text
+                Object[] params = new String[]{username, gameId, message};
+                Message lobbyMsg = new Message("CHATLOBBY", params, "REQUEST");
+                Client.sendMessageStatic(lobbyMsg);
+
+                // Local display in the chat messages area
+                Label msgLabel = new Label(username + " (" + gameId + "): " + message);
+                messagesBox.getChildren().add(msgLabel);
+                chatInputField.clear();
+                scrollPane.setVvalue(1.0);
+            }
+        });
+
+        return root;
+    }
+
+
+
+
+
 
 
     /**
@@ -307,6 +516,8 @@ public class GameUIComponents {
         guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "None");
         guiInterfaces.setPromptText("Select GUI Interface");
 
+        guiInterfaces.getSelectionModel().select("None");
+
         guiInterfaces.setOnAction(e -> {
             String selected = guiInterfaces.getSelectionModel().getSelectedItem();
             System.out.println("Selected chat mode: " + selected);
@@ -325,11 +536,25 @@ public class GameUIComponents {
                 adminPane.setVisible("Administration".equals(selected));
             }
 
-
+            // Show/hide the global chat pane
             Node chatPaneNode = uiManager.getComponent("chatUIPane");
             if (chatPaneNode instanceof Pane) {
                 Pane chatPane = (Pane) chatPaneNode;
                 chatPane.setVisible("Glob Chat".equals(selected));
+            }
+
+            // Show/hide the whisper chat pane
+            Node whisperChatPaneNode = uiManager.getComponent("whisperChatUIPane");
+            if (whisperChatPaneNode instanceof Pane) {
+                Pane whisperChatPane = (Pane) whisperChatPaneNode;
+                whisperChatPane.setVisible("Wisper Chat".equals(selected));
+            }
+
+            // === Add the block for your "Lobby Chat" pane ===
+            Node lobbyChatPaneNode = uiManager.getComponent("lobbyChatUIPane");
+            if (lobbyChatPaneNode instanceof Pane) {
+                Pane lobbyChatPane = (Pane) lobbyChatPaneNode;
+                lobbyChatPane.setVisible("Lobby Chat".equals(selected));
             }
         });
 
@@ -337,6 +562,7 @@ public class GameUIComponents {
         return guiInterfaces;
     }
 
-   
-    
+
+
+
 } 

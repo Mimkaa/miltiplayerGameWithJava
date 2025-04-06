@@ -63,8 +63,6 @@ public class GameContext {
                     String receivedId = receivedMessage.getParameters()[0].toString();
                     String receivedGameName = receivedMessage.getParameters()[1].toString();
                     gameSessionManager.addGameSession(receivedId, receivedGameName);
-                    // Update the current game id.
-                    // currentGameId.set(receivedId);
                     System.out.println("Game created with id: " + receivedId);
 
                     // Update the ComboBox with the new game name.
@@ -72,7 +70,6 @@ public class GameContext {
                         Node node = uiManager.getComponent("gameSelect");
                         if (node instanceof ComboBox) {
                             ComboBox<String> gameSelect = (ComboBox<String>) node;
-                            // Check for duplicates if necessary.
                             if (!gameSelect.getItems().contains(receivedGameName)) {
                                 gameSelect.getItems().add(receivedGameName);
                             }
@@ -83,38 +80,41 @@ public class GameContext {
                     System.out.println("Processing JOINGAME response");
                     String gameID = receivedMessage.getParameters()[0].toString();
                     String username = receivedMessage.getParameters()[1].toString();
-                    String prevGameId = receivedMessage.getParameters()[2].toString();
-                    currentGameId.set(gameID);
+                    String prevGameId =  receivedMessage.getParameters()[2].toString();
+                    if (Client.getInstance().getUsername().get().equals(username))
+                    {
+                        currentGameId.set(gameID);
+                        System.out.println(receivedMessage);
+                        System.out.println("Current game id set to: " + currentGameId.get());
+                        Platform.runLater(() -> {
+                            Node fieldNode = uiManager.getComponent("gameIdField");
+                            if (fieldNode instanceof TextField) {
+                                ((TextField) fieldNode).setText(gameID);
+                            }
 
-                    // add the user to the gameSession
+                        });
+                    }
+
                     gameSessionManager.getGameSession(gameID).getUsers().add(username);
-
-                    if (!prevGameId.equals("default")) {
+                    if(!prevGameId.equals("default"))
+                    {
                         gameSessionManager.getGameSession(prevGameId).getUsers().remove(username);
                     }
 
-                    System.out.println("Current game id set to: " + currentGameId.get());
+                    // Now update the TextArea with the current game info (name and user list).
                     Platform.runLater(() -> {
-                        Node fieldNode = uiManager.getComponent("gameIdField");
-                        if (fieldNode instanceof TextField) {
-                            ((TextField) fieldNode).setText(gameID);
-                        }
-                        // 2) Update the 'usersListCurrGS' TextArea with the current game’s info
                         Node usersListNode = uiManager.getComponent("usersListCurrGS");
                         if (usersListNode instanceof TextArea) {
-                            TextArea usersListCurrGS = (TextArea) usersListNode;
-                            // Retrieve the current set of users from the Game instance
-                            Set<String> userSet = gameSessionManager.getGameSession(gameID).getUsers();
-
-                            // Build a text string showing current Game ID and users
-                            StringBuilder sb = new StringBuilder();
-                            sb.append("Current Game ID: ").append(gameID).append("\n");
-                            sb.append("Users in this game:\n");
-                            for (String user : userSet) {
-                                sb.append(user).append("\n");
+                            Game game = gameSessionManager.getGameSession(currentGameId.get());
+                            if (game != null) {
+                                StringBuilder sb = new StringBuilder();
+                                sb.append("Current Game Name: ").append(game.getGameName()).append("\n");
+                                sb.append("Users in this game:\n");
+                                for (String user : game.getUsers()) {
+                                    sb.append(user).append("\n");
+                                }
+                                ((TextArea) usersListNode).setText(sb.toString());
                             }
-                            // Set the TextArea's content
-                            usersListCurrGS.setText(sb.toString());
                         }
                     });
 
@@ -251,21 +251,118 @@ public class GameContext {
 
                 } else if ("GETUSERS".equals(type)) {
                     Platform.runLater(() -> {
-                        Node node = uiManager.getComponent("usersList");
-                        if (node instanceof TextArea) {
-                            Object[] params = (Object[]) receivedMessage.getParameters();
-                            ((TextArea) node).clear();
+                        // --- (Optionally) update your TextArea ---
+                        Node oldListNode = uiManager.getComponent("usersList");
+                        if (oldListNode instanceof TextArea) {
+                            TextArea usersListArea = (TextArea) oldListNode;
+                            Object[] params = receivedMessage.getParameters();
+                            usersListArea.clear();
                             for (Object param : params) {
-                                ((TextArea) node).appendText(param.toString() + "\n");
+                                usersListArea.appendText(param.toString() + "\n");
                             }
+                        }
 
-                            Node scrollNode = uiManager.getComponent("chatScroll");
-                            if (scrollNode instanceof ScrollPane) {
-                                ((ScrollPane) scrollNode).setVvalue(1.0);
+                        // --- Update the ComboBox for whispering ---
+                        Node comboNode = uiManager.getComponent("whisperUserSelect");
+                        if (comboNode instanceof ComboBox) {
+                            @SuppressWarnings("unchecked")
+                            ComboBox<String> userSelect = (ComboBox<String>) comboNode;
+
+                            // Clear existing items
+                            userSelect.getItems().clear();
+
+                            // Get the current client’s username
+                            String currentUser = Client.getInstance().getUsername().get();
+
+                            // Add each user except this client
+                            for (Object param : receivedMessage.getParameters()) {
+                                String user = param.toString();
+                                if (!user.equals(currentUser)) {
+                                    userSelect.getItems().add(user);
+                                }
                             }
                         }
                     });
+                }
+                else if ("WHISPER".equals(type)) {
+                    System.out.println("Processing WHISPER message: " + receivedMessage);
+                    if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length >= 2) {
+                        String sender = receivedMessage.getParameters()[0].toString();
+                        String message = receivedMessage.getParameters()[1].toString();
 
+                        Platform.runLater(() -> {
+                            // Look up the VBox where we place the whisper messages
+                            Node chatNode = uiManager.getComponent("whisperChatMessagesBox");
+                            if (chatNode instanceof VBox) {
+                                VBox messagesBox = (VBox) chatNode;
+
+                                // Create a new label for the incoming whisper
+                                Label msgLabel = new Label(sender + ": " + message);
+                                msgLabel.setWrapText(true);
+                                msgLabel.setStyle("-fx-background-color: #eeeeee; -fx-padding: 5; "
+                                        + "-fx-border-radius: 5; -fx-background-radius: 5;");
+                                // Add the label to the VBox
+                                messagesBox.getChildren().add(msgLabel);
+                            }
+
+                            // Now scroll to the bottom of the whisper chat
+                            Node scrollNode = uiManager.getComponent("whisperChatScroll");
+                            if (scrollNode instanceof ScrollPane) {
+                                ((ScrollPane) scrollNode).setVvalue(1.0);
+                            }
+                        });
+                    }
+                }
+                // --- NEW: Catch CHATLOBBY messages ---
+                else if ("CHATLOBBY".equals(type)) {
+                    System.out.println("Processing CHATLOBBY message: " + receivedMessage);
+                    if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length >= 3) {
+                        // Expected parameters: [0] = sender, [1] = gameId, [2] = message text
+                        String sender = receivedMessage.getParameters()[0].toString();
+                        String gameId = receivedMessage.getParameters()[1].toString();
+                        String message = receivedMessage.getParameters()[2].toString();
+
+                        Platform.runLater(() -> {
+                            Node lobbyChatNode = uiManager.getComponent("lobbyChatMessagesBox");
+                            if (lobbyChatNode instanceof VBox) {
+                                VBox lobbyMessagesBox = (VBox) lobbyChatNode;
+                                Label msgLabel = new Label(sender + " (" + gameId + "): " + message);
+                                msgLabel.setWrapText(true);
+                                msgLabel.setStyle("-fx-background-color: #eeeeee; -fx-padding: 5; "
+                                        + "-fx-border-radius: 5; -fx-background-radius: 5;");
+                                lobbyMessagesBox.getChildren().add(msgLabel);
+                            }
+                            Node scrollNode = uiManager.getComponent("lobbyChatScroll");
+                            if (scrollNode instanceof ScrollPane) {
+                                ((ScrollPane) scrollNode).setVvalue(1.0);
+                            }
+                        });
+                    }
+                }
+
+                else if ("SYNCGP".equals(type)) {
+                    System.out.println("Processing SYNCGP message");
+                    if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
+                        System.out.println("SYNCGP message missing required parameters.");
+                        return;
+                    }
+                    // Extract the game ID from the first parameter.
+                    String gameID = receivedMessage.getParameters()[0].toString();
+
+                    // Retrieve the game session by its ID.
+                    Game game = gameSessionManager.getGameSession(gameID);
+                    if (game != null) {
+                        // Clear the current user list.
+                        game.getUsers().clear();
+                        // Loop through each parameter (starting at index 1) and add as a user.
+                        for (int i = 1; i < receivedMessage.getParameters().length; i++) {
+                            String user = receivedMessage.getParameters()[i].toString();
+                            game.getUsers().add(user);
+                        }
+                        System.out.println("Updated game session " + gameID + " user list.");
+                    } else {
+                        System.out.println("No game session found with id: " + gameID);
+                    }
                 } else {
                     System.out.println("Unknown message type: " + type);
                 }
@@ -295,55 +392,52 @@ public class GameContext {
      */
     public void start() {
         uiManager.waitForCentralUnitAndInitialize(() -> {
-        // Use the GameUIComponents class to create the main UI pane.
-        Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
-       // CentralGraphicalUnit.getInstance().addNode(mainUIPane);
-        uiManager.registerComponent("mainUIPane", mainUIPane);
+            // 1) Create & register the existing panes
+            Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
+            uiManager.registerComponent("mainUIPane", mainUIPane);
 
-        Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
-       // CentralGraphicalUnit.getInstance().addNode(adminPane);
-        uiManager.registerComponent("adminUIPane", adminPane);
+            Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
+            uiManager.registerComponent("adminUIPane", adminPane);
 
-        Pane chatPane = GameUIComponents.createglbChatPane(uiManager, gameSessionManager);
-       // CentralGraphicalUnit.getInstance().addNode(chatPane);
-        uiManager.registerComponent("chatUIPane", chatPane);
+            Pane chatPane = GameUIComponents.createglbChatPane(uiManager, gameSessionManager);
+            uiManager.registerComponent("chatUIPane", chatPane);
 
-        StackPane layeredRoot = new StackPane();
-        layeredRoot.getChildren().addAll(mainUIPane, chatPane, adminPane);
+            Pane whisperChatPane = GameUIComponents.createWhisperChatPane(uiManager, gameSessionManager);
+            uiManager.registerComponent("whisperChatUIPane", whisperChatPane);
 
+            // 2) Create & register the new Lobby Chat pane
+            Pane lobbyChatPane = GameUIComponents.createLobbyChatPane(uiManager, gameSessionManager);
+            uiManager.registerComponent("lobbyChatUIPane", lobbyChatPane);
 
-            // Initially only Lobby should be visible
+            // 3) Add all these panes to a StackPane
+            StackPane layeredRoot = new StackPane();
+            layeredRoot.getChildren().addAll(
+                    mainUIPane,
+                    chatPane,
+                    adminPane,
+                    whisperChatPane,
+                    lobbyChatPane
+            );
+
+            // 4) Set the initial visibility
             mainUIPane.setVisible(true);
             chatPane.setVisible(false);
             adminPane.setVisible(false);
+            whisperChatPane.setVisible(false);
+            lobbyChatPane.setVisible(false);
 
+            // 5) Create & add the ComboBox for switching between panes
             ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
-            StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT); // Konumla
+            StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
             guiInterfaces.setTranslateX(10);
             guiInterfaces.setTranslateY(10);
             layeredRoot.getChildren().add(guiInterfaces);
 
-
-        // add root node
+            // 6) Finally, add this StackPane to the CentralGraphicalUnit
             CentralGraphicalUnit.getInstance().addNode(layeredRoot);
-
-
-            // Create and add the toggle button (outside of the main UI pane).
-        //Button togglePaneButton = GameUIComponents.createTogglePaneButton(mainUIPane);
-        //CentralGraphicalUnit.getInstance().addNode(togglePaneButton);
-        //uiManager.registerComponent("togglePaneButton", togglePaneButton);
-        //togglePaneButton.toFront();
-
-
-
-
-//            ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
-//            CentralGraphicalUnit.getInstance().addNode(guiInterfaces);
-
 
             System.out.println("All UI components have been added via GameUIComponents.");
         });
-
 
 
         Scanner inputScanner = new Scanner(System.in);
@@ -367,7 +461,6 @@ public class GameContext {
                 "REQUEST"
         );
         Client.sendMessageStatic(registrationMsg);
-
     }
 
     /**
@@ -401,7 +494,7 @@ public class GameContext {
             return;
         }
         // Update all game objects if there is at least one.
-        //game.updateAllObjects();
+        // game.updateAllObjects();
     }
 
     /**
@@ -410,22 +503,18 @@ public class GameContext {
      * @param gc The GraphicsContext to draw on.
      */
     private void draw(GraphicsContext gc) {
-        // If there’s no chosen game, do nothing:
         String gameId = currentGameId.get();
         if (gameId == null || gameId.isEmpty()) {
-            // No game chosen, so skip drawing (do not even clear the canvas).
+            // No game chosen, do nothing
             return;
         }
 
-        // If you *do* want to clear the background, do it here:
+        // Clear the background
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
 
-        // Retrieve the game
         Game game = gameSessionManager.getGameSession(gameId);
         if (game == null) {
-            // The game ID was set but doesn't exist in the manager.
-            // This is unusual, but handle gracefully by returning:
             return;
         }
 
@@ -433,14 +522,13 @@ public class GameContext {
         game.draw(gc);
     }
 
-
     public static void main(String[] args) {
         // Create the game context.
         GameContext context = new GameContext();
         // Start the context on a separate thread.
         new Thread(() -> {
             context.start();
-            Platform.runLater(() -> context.startGameLoop());
+            Platform.runLater(context::startGameLoop);
         }).start();
 
         // Launch the JavaFX GUI (this call blocks until the GUI exits).

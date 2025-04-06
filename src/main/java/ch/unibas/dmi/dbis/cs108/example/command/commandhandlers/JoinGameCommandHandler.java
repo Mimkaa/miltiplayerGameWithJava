@@ -81,10 +81,29 @@ public class JoinGameCommandHandler implements CommandHandler {
                 "RESPONSE",
                 msg.getConcealedParameters()
         );
+        // Get the game ID.
+        String gameId = foundGame.getGameId();
+
+        // Convert the users set to a String array.
+        String[] usersAsStrings = foundGame.getUsers().toArray(new String[0]);
+
+        // Create a new Object array that will hold the game ID and all user names.
+        Object[] paramss = new Object[1 + usersAsStrings.length];
+        paramss[0] = gameId;
+        System.arraycopy(usersAsStrings, 0, paramss, 1, usersAsStrings.length);
+
+        // Create the message with a flattened parameters array.
+        Message syncGamePlayers = new Message(
+                "SYNCGP",
+                paramss,
+                "RESPONSE",
+                msg.getConcealedParameters()
+        );
+        System.out.println(syncGamePlayers);
         InetSocketAddress address = server.getClientsMap().get(senderUsername);
         if (address != null) {
             server.broadcastMessageToAll(response);
-            //server.enqueueMessage(response, address.getAddress(), address.getPort());
+            server.enqueueMessage(syncGamePlayers, address.getAddress(), address.getPort());
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
         }
