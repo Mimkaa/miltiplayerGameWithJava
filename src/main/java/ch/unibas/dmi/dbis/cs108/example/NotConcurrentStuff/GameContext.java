@@ -28,6 +28,8 @@ import javafx.scene.Node;
 import lombok.Getter;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
@@ -372,6 +374,60 @@ public class GameContext {
                         });
                     }
                 }
+
+                else if ("STARTGAME".equals(type)) {
+                    System.out.println("Processing STARTGAME message: " + receivedMessage);
+                    if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length > 0) {
+                        String gameId = receivedMessage.getParameters()[0].toString();
+                        Game toggledGame = gameSessionManager.getGameSession(gameId);
+                        if (toggledGame != null) {
+                            // Toggle the started flag for the specific game
+                            toggledGame.setStartedFlag(!toggledGame.getStartedFlag());
+                            System.out.println("Game " + gameId + " started flag toggled. New value: " + toggledGame.getStartedFlag());
+
+                            Platform.runLater(() -> {
+                                // 1) Retrieve the TextArea from your UI manager
+                                Node gameStateNode = uiManager.getComponent("gameStateShow");
+                                if (gameStateNode instanceof TextArea) {
+                                    TextArea gameStateShow = (TextArea) gameStateNode;
+
+                                    // 2) Fetch ALL games from the GameSessionManager
+                                    //    (Replace with the actual method your manager provides)
+                                    Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals();
+
+                                    // 3) Build a string listing every game’s details
+                                    StringBuilder sb = new StringBuilder();
+
+                                    if (allGames.isEmpty()) {
+                                        sb.append("No games currently available.\n");
+                                    } else {
+                                        for (Game g : allGames) {
+                                            sb.append("Game ID: ").append(g.getGameId()).append("\n");
+                                            sb.append("Name: ").append(g.getGameName()).append("\n");
+                                            sb.append("Started? ").append(g.getStartedFlag()).append("\n");
+                                            sb.append("Players:\n");
+                                            for (String user : g.getUsers()) {
+                                                sb.append("  - ").append(user).append("\n");
+                                            }
+                                            sb.append("\n"); // Blank line between games
+                                        }
+                                    }
+
+                                    // 4) Set the text of the TextArea to our info
+                                    gameStateShow.setText(sb.toString());
+                                }
+                            });
+
+                        } else {
+                            System.out.println("No game session found with id: " + gameId);
+                        }
+                    } else {
+                        System.out.println("STARTGAME message missing required parameters.");
+                    }
+                }
+
+                
+                
 
                 else if ("SYNCGP".equals(type)) {
                     System.out.println("Processing SYNCGP message");

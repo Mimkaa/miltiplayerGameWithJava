@@ -25,6 +25,8 @@ public class Game {
     private final CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>();
     private final MessageHogger gameMessageHogger;
 
+    private boolean startedFlag = false;
+
     // Creates a concurrent Set<String> backed by a ConcurrentHashMap
     private final Set<String> users = ConcurrentHashMap.newKeySet();
 
@@ -59,6 +61,16 @@ public class Game {
 
         // Start a single main loop for processing all game objects.
         startPlayersCommandProcessingLoop();
+    }
+
+    public void setStartedFlag(boolean state)
+    {
+        startedFlag = state;
+    }
+
+    public boolean getStartedFlag()
+    {
+        return startedFlag;
     }
 
     /**
