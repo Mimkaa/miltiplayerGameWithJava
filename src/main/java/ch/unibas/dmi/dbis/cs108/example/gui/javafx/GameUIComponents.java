@@ -1,5 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
+import java.rmi.server.ObjID;
+import java.util.Collection;
+
 import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
@@ -13,12 +16,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 
 public class GameUIComponents {
 
@@ -172,19 +169,23 @@ public class GameUIComponents {
         startLevelButton.setOnAction(e -> {
             Level level = new Level();
             level.initializeLevel();
+            String gameId = GameContext.getCurrentGameId();
+            Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
+            Client.sendMessageStatic(msg);
             System.out.println("Level started!");
+            
         });
 
         return mainUIPane;
     }
 
     public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
-        // ... (existing administrative pane code) ...
         Pane administrativePane = new Pane();
         administrativePane.setTranslateX(0);
         administrativePane.setTranslateY(30);
         administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
+        // TextArea to show the game states
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Game ID");
@@ -195,15 +196,52 @@ public class GameUIComponents {
         usersListCurrGS.setPrefHeight(150);
         administrativePane.getChildren().add(usersListCurrGS);
 
+        // Register the TextArea with the UI manager so we can retrieve it later
+        uiManager.registerComponent("gameStateShow", usersListCurrGS);
 
-        uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
+        // --- Add a "Refresh" button that, when clicked, lists all games in the TextArea ---
+        Button refreshButton = new Button("Refresh Game Info");
+        refreshButton.setLayoutX(200);
+        refreshButton.setLayoutY(210);
+        administrativePane.getChildren().add(refreshButton);
 
+        // On button click, update the TextArea with info from all game sessions
+        refreshButton.setOnAction(e -> {
+            // Because button actions run on the JavaFX thread, we can directly access UI elements
+            Node gameStateNode = uiManager.getComponent("gameStateShow");
+            if (gameStateNode instanceof TextArea) {
+                TextArea gameStateShow = (TextArea) gameStateNode;
 
+                // Fetch all games from the GameSessionManager
+                Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals(); 
+                // Replace "getAllGameSessionsVals()" with your actual method name if different
 
+                // Build a string listing every game’s details
+                StringBuilder sb = new StringBuilder();
 
+                if (allGames.isEmpty()) {
+                    sb.append("No games currently available.\n");
+                } else {
+                    for (Game g : allGames) {
+                        sb.append("Game ID: ").append(g.getGameId()).append("\n");
+                        sb.append("Name: ").append(g.getGameName()).append("\n");
+                        sb.append("Started? ").append(g.getStartedFlag()).append("\n");
+                        sb.append("Players:\n");
+                        for (String user : g.getUsers()) {
+                            sb.append("  - ").append(user).append("\n");
+                        }
+                        sb.append("\n"); // blank line between games
+                    }
+                }
+
+                // Display the info in the TextArea
+                gameStateShow.setText(sb.toString());
+            }
+        });
 
         return administrativePane;
     }
+
 
 
     public static Pane createCheckPane(UIManager uiManager, GameSessionManager gameSessionManager) {

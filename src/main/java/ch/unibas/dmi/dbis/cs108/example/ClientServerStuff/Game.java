@@ -40,6 +40,9 @@ public class Game {
      */
     private final MessageHogger gameMessageHogger;
 
+    private boolean startedFlag = false;
+
+    // Creates a concurrent Set<String> backed by a ConcurrentHashMap
     /**
      * A concurrent set of usernames (or user IDs) currently in the game,
      * backed by a {@link ConcurrentHashMap}.
@@ -84,6 +87,16 @@ public class Game {
 
         // Start a single main loop for processing all game objects.
         startPlayersCommandProcessingLoop();
+    }
+
+    public void setStartedFlag(boolean state)
+    {
+        startedFlag = state;
+    }
+
+    public boolean getStartedFlag()
+    {
+        return startedFlag;
     }
 
     /**
@@ -184,6 +197,7 @@ public class Game {
                         if (b instanceof Player) {
                             ((Player) b).setCollisionDetected(true);
                         }
+                        // System.out.println("Collision resolved between " + a.getName() + " and " + b.getName());
                     }
                 }
             }

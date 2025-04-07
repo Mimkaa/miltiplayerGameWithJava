@@ -78,11 +78,11 @@ Members: William Tran, Illia Solohub, Senanur Ates, Aiysha Frutiger
 </html>
 
 ## Documents
-[Requirementanalysis](docs/requirementAnalysis.md)
+[Requirement Analysis](docs/requirementAnalysis.md)
 
 [Game Concept](docs/gameConcept.md)
 
-[QA Concept](docs/Quality%20Assurance%20Concept%20–%20Think%20Outside%20the%20Room.pdf)
+[QA Concept](docs/QualityAssuranceConcept–ThinkOutsidetheRoom.pdf)
 
 [Network Protocol](docs/NetworkProtocol.pdf)
 
