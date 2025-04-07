@@ -24,11 +24,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
-
-import javafx.scene.control.ComboBox;
-
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.Node;
 import lombok.Getter;
 
@@ -72,6 +67,29 @@ public class GameContext {
             @Override
             protected void processMessage(Message receivedMessage) {
                 String type = receivedMessage.getMessageType();
+
+                if ("REGISTER".equals(type)) {
+                    System.out.println("Processing REGISTER message");
+                    // Retrieve concealed parameters.
+                    String[] concealed = receivedMessage.getConcealedParameters();
+                    if (concealed == null || concealed.length == 0) {
+                        System.out.println("REGISTER message missing concealed parameters.");
+                        return;
+                    }
+                    // The last concealed parameter is assumed to be the username.
+                    String receivedUsername = concealed[concealed.length - 1];
+                    // Get the current client's username.
+                    String currentUsername = Client.getInstance().getUsername().get();
+                
+                    if (currentUsername.equals(receivedUsername)) {
+                        System.out.println("Welcome: " + receivedUsername);
+                    } else {
+                        System.out.println("User joined: " + receivedUsername);
+                    }
+                    
+                    
+                }
+                
 
                 if ("CREATEGAME".equals(type)) {
                     System.out.println("Processing CREATEGAME response");
