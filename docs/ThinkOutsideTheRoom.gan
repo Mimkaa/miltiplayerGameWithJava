@@ -1,16 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?><project name="Untitled Gantt Project" company="" webLink="http://" view-date="2025-03-03" view-index="0" gantt-divider-location="775" resource-divider-location="300" version="3.3.3316" locale="de_DE">
+<?xml version="1.0" encoding="UTF-8"?><project name="Untitled Gantt Project" company="" webLink="http://" view-date="2025-04-07" view-index="0" gantt-divider-location="760" resource-divider-location="300" version="3.3.3316" locale="de_DE">
     <description/>
-    <view zooming-state="default:5" id="gantt-chart">
+    <view zooming-state="default:4" id="gantt-chart">
         <field id="tpd15" name="Notizen" width="20" order="0"/>
-        <field id="tpd3" name="Vorgang" width="407" order="0"/>
-        <field id="tpd4" name="Anfang" width="151" order="1"/>
-        <field id="tpd5" name="Ende" width="151" order="2"/>
-        <field id="tpd6" name="Dauer" width="50" order="3"/>
+        <field id="tpd3" name="Vorgang" width="399" order="0"/>
+        <field id="tpd4" name="Anfang" width="148" order="1"/>
+        <field id="tpd5" name="Ende" width="148" order="2"/>
+        <field id="tpd6" name="Dauer" width="49" order="3"/>
         <option id="filter.completedTasks" value="false"/>
         <option id="filter.dueTodayTasks" value="false"/>
         <option id="filter.overdueTasks" value="false"/>
         <option id="filter.inProgressTodayTasks" value="false"/>
-        <timeline><![CDATA[0,68,10,1]]></timeline>
+        <timeline><![CDATA[0,10,68,1]]></timeline>
         <option id="color.recent"><![CDATA[#ff0000 #00ff00 #ff3300 #ffff00]]></option>
     </view>
     <view id="resource-table">
@@ -181,6 +181,102 @@ README ]]></notes>
             </task>
         </task>
         <task id="24" uid="a722ffbd32534b7e80e381958a481537" name="Milestone 3" meeting="true" start="2025-03-25" duration="0" complete="0" expand="true">
+            <notes><![CDATA[Core Deliverables
+Game Logic (40 points) / Game State (10 points)
+
+Implement the fundamental mechanics of your game.
+
+The server consistently tracks and manages the world state.
+
+Shall We Play a Game (40 points)
+
+Demonstrate the working prototype in an exercise slot by actually playing it (Terminal or GUI).
+
+Demo! (25 points)
+
+Present a functional prototype during the milestone presentation.
+
+GUI (25 points)
+
+A basic user interface, especially for chat and perhaps a minimal display of the game world or players.
+
+Manual (10 points)
+
+A written document describing how to play the current version of the game.
+
+About a Game (5 points)
+
+An outline of goals, rules, and mechanics – can be included in your manual or as a separate short text.
+
+Rules to Code (5 points)
+
+Clarify how your game’s rules map onto actual code structures.
+
+Progress Report (15 points)
+
+Updates on project status, timeline, responsibilities, and any encountered issues.
+
+Who? What? When? (10 points)
+
+Revised project plan for Milestone 4 and 5, reflecting any changes.
+
+Dear Diary (10 points)
+
+A project diary with meaningful updates about your progress.
+
+Networking and Documentation
+Protocol Code (10 points)
+All network commands are implemented in a clear, human-readable format.
+
+Protocol Document (5 points)
+A separate document explaining your protocol, including examples.
+
+Whisper (5 points)
+Private one-to-one chat functionality.
+
+Broadcast (5 points)
+A dedicated command to send messages to all clients across all lobbies/games (if applicable).
+
+Build Script (5 points)
+Produces an executable jar and javadoc for the build-cs108 task.
+
+Command Line (5 points)
+Correct parsing of (client <host>:<port> [username]) or (server <port>).
+
+/ ... / (10 points)
+JavaDoc is sufficiently used to document your source code.
+
+QA (10 points) / QA (advanced) (10 points)
+Present your Quality Assurance measures, ideally with a first result or plan.
+
+Lobby / Player Management
+Game List (5 points)
+Show open, ongoing, and finished games, with statuses.
+
+Lounging (5 points) / Lounging List (5 points)
+
+Support multiple lobbies (one per game) with an internal chat.
+
+A way to list players in each lobby.
+
+Player List (5 points)
+
+A way to list all connected players on the server.
+
+Librarian (10 points)
+
+Use at least one external library besides JUnit (JavaFX alone doesn’t count).
+
+Presentation / Extra
+Technology! (10 points)
+
+Describe additional tools or libraries not covered in lecture and why you use them.
+
+TED Talk (10 points)
+
+Deliver a great, engaging presentation.
+
+]]></notes>
             <task id="45" uid="791ac9a7cfdf4323adc5cf2272abf723" name="Task Distribution" color="#ff0000" meeting="false" start="2025-03-25" duration="1" complete="0" expand="true"/>
             <task id="44" uid="830b99b8b1024c24900f8cdab09a3fa3" name="Commandline" meeting="false" start="2025-04-03" duration="2" complete="0" expand="true">
                 <notes><![CDATA[Adjusting the mainclass]]></notes>
@@ -199,6 +295,7 @@ README ]]></notes>
             </task>
             <task id="47" uid="5186e1a6f08f4bb4b62c514195c31f41" name="Updating the network protocol" meeting="false" start="2025-04-04" duration="1" complete="0" expand="true">
                 <notes><![CDATA[Updating the network protocol and adjusting it to the milestone 2&3]]></notes>
+                <depend id="77" type="2" difference="0" hardness="Strong"/>
             </task>
             <task id="38" uid="5b673b5593cc49c9bbee54e8330cd89d" name="Implementing Chats UI" meeting="false" start="2025-04-04" duration="1" complete="0" expand="true">
                 <notes><![CDATA[implementing different chats Lobbychat, whisperchat and globalchat]]></notes>
@@ -206,19 +303,23 @@ README ]]></notes>
             <task id="37" uid="b2dc02c29bce4bdd8d6dcf70c772f501" name="implementing Lobbys" meeting="false" start="2025-03-31" duration="5" complete="0" expand="true">
                 <notes><![CDATA[implementing lobbys]]></notes>
                 <depend id="39" type="2" difference="0" hardness="Strong"/>
+                <depend id="77" type="2" difference="0" hardness="Strong"/>
             </task>
             <task id="36" uid="26833c59f9754122b12ccdb896044deb" name="Implementing Physics" meeting="false" start="2025-04-03" duration="2" complete="0" expand="true">
                 <notes><![CDATA[implementing collision detection and Gravitation]]></notes>
+                <depend id="77" type="2" difference="0" hardness="Strong"/>
             </task>
             <task id="30" uid="39cd052a3625409cb046f2fcf2f25bfc" name="Projectplan" meeting="false" start="2025-04-01" duration="9" complete="0" expand="true">
                 <notes><![CDATA[Writing the projectplan with gantsproject]]></notes>
             </task>
+            <task id="77" uid="fca1beb96f344b7a9937b459850959fe" name="implementing a demo for our game" meeting="false" start="2025-04-07" duration="2" complete="0" expand="true"/>
             <task id="31" uid="62c74779dadc40b094a24176fd6ffb22" name="Rope" meeting="false" start="2025-03-27" duration="2" complete="0" expand="true">
                 <notes><![CDATA[implementing Rope with inverse kinematics]]></notes>
             </task>
             <task id="27" uid="f8acd196459641de99b57861be4b29ed" name="Fixing Chat" meeting="false" start="2025-04-01" duration="1" complete="0" expand="true">
                 <notes><![CDATA[fixing chat
 ]]></notes>
+                <depend id="77" type="2" difference="0" hardness="Strong"/>
             </task>
             <task id="28" uid="487e4e1d4dc04480af37c6dc37217c84" name="Fixing PingPong" meeting="false" start="2025-04-01" duration="1" complete="0" expand="true">
                 <notes><![CDATA[Fixing PingPong]]></notes>
@@ -228,11 +329,50 @@ README ]]></notes>
 ]]></notes>
             </task>
         </task>
-        <task id="71" uid="5bc4ecf6fc6949c382996eb117aa77be" name="implement 2 player character control logic (move + grab/ jump + throw))" meeting="false" start="2025-04-04" duration="2" complete="0" thirdDate="2025-04-04" thirdDate-constraint="1" expand="true"/>
+        <task id="71" uid="5bc4ecf6fc6949c382996eb117aa77be" name="implement 2 player character control logic (move + grab/ jump + throw))" meeting="false" start="2025-04-04" duration="2" complete="0" thirdDate="2025-04-04" thirdDate-constraint="1" expand="true">
+            <depend id="58" type="2" difference="0" hardness="Strong"/>
+        </task>
         <task id="25" uid="c21a0e8f2fdb4589b32515da07f55047" name="Milestone 4" meeting="true" start="2025-04-07" duration="0" complete="0" thirdDate="2025-04-07" thirdDate-constraint="1" expand="true">
+            <notes><![CDATA[Main Goals
+
+Present a nearly final version of your game, focusing on polish, testing, and a functional GUI.
+
+Key Achievements
+
+GUI (20 points)
+
+The game is represented graphically.
+
+GUI (advanced) (30 points)
+
+The game is fully playable from the UI; minimal/no text input required.
+
+Shall We Play A Game (20 points)
+
+Present the working final game in an exercise slot using your JAR.
+
+Referee (15 points)
+
+Rules are enforced correctly (e.g., you can’t cheat or move beyond boundaries).
+
+Victory! (10 points)
+
+The game correctly determines a winner or end-of-game state.
+
+Unit-Test (10 points) and Unit-Test (advanced) (10 points)
+
+You have thorough, meaningful unit tests that pass successfully.
+
+5 out of 7 (5 points)
+
+Evaluate two other group’s games (giving feedback on achievements).
+
+Peer Precision (5 points)
+
+Your assessment of other teams matches the lecturer’s assessment closely.]]></notes>
             <depend id="26" type="2" difference="0" hardness="Strong"/>
             <task id="59" uid="8886a18d3fa14b12baab5abf64314a53" name="handle inputs conflicts (simultaneous inputs) + animation sync" meeting="false" start="2025-04-14" duration="2" complete="0" expand="true"/>
-            <task id="58" uid="cb65c266f96f42aca21f7f270c183142" name="add throwable objects (mechanics) + grab detection" meeting="false" start="2025-04-14" duration="2" complete="0" expand="true"/>
+            <task id="58" uid="cb65c266f96f42aca21f7f270c183142" name="add throwable objects (mechanics) + grab detection" meeting="false" start="2025-04-08" duration="2" complete="0" expand="true"/>
             <task id="57" uid="b2d84adb44df458ba666df1405109f28" name="update project diary and QA Concept" meeting="false" start="2025-04-23" duration="2" complete="0" expand="true"/>
             <task id="56" uid="784c92517b824343ba829fa2ee4b8b24" name="write Unit Test" meeting="false" start="2025-04-24" duration="3" complete="0" expand="true"/>
             <task id="54" uid="a11b92360e884def88b3e6aeadfeaa82" name="Add referee logic to validate level completion" meeting="false" start="2025-04-16" duration="2" complete="0" expand="true"/>
@@ -252,21 +392,78 @@ README ]]></notes>
             </task>
         </task>
         <task id="26" uid="3385a9018436468490b73197664fe8fe" name="Milestone 5" meeting="true" start="2025-04-29" duration="0" complete="0" expand="true">
+            <notes><![CDATA[Main Goals
+
+Present the final, polished version of your game with all required features, documentation, and QA.
+
+Provide an in-depth demonstration, plus final deliverables (like a trailer, website, etc.).
+
+Key Achievements
+
+Demo! (60 points)
+
+Show your final, bug-free game in the final presentation.
+
+Shall We Play A Game (60 points)
+
+The fully playable final game is presented, typically with your JAR.
+
+GUI (40 points)
+
+The GUI is complete, stable, and all client features are available.
+
+Manual (10 points)
+
+Provide a written game manual describing how to play the final version.
+
+Logo (5 points), Picturesque (10 points), Trailer (5 points), or Website (5 points)
+
+Any visual or outreach elements that show off your game (logo, screenshots, short gameplay video).
+
+High Score (10 points)
+
+High score list is persisted, updated, and displayed on request.
+
+Reconnect (10 points)
+
+Allow players to reconnect to an ongoing game after a disconnect.
+
+QA (15 points), QA Report (15 points)
+
+Show your quality assurance results, final testing coverage, and lessons learned.
+
+Additional Achievements
+
+/ ... / (15 points): JavaDoc is sufficiently documented for the final milestone.
+
+About a Game / About a Game (advanced): Reiterate or expand your game’s concept.
+
+Pachydermatous Librarian (10 points): All external libraries are managed by Gradle via Maven Central.
+
+Free as in Speech (5 points): All game assets are properly licensed or self-created.
+
+We Are Smarter Now (20 points): Provide reflections and lessons learned.]]></notes>
             <task id="76" uid="09275a936a3f49c4a693072fb80db6bf" name="taskdistribution" color="#ff0000" meeting="false" start="2025-04-29" duration="1" complete="0" expand="true">
                 <notes><![CDATA[taskdistribution, because the taskdistribution is not finalized
 ]]></notes>
             </task>
             <task id="66" uid="954e7d51dc6e46a69a554f272d1fc640" name="add cheatcode/ debug commands" meeting="false" start="2025-05-08" duration="1" complete="0" expand="true"/>
             <task id="70" uid="36d944f50e23420a88de7df021913513" name="Final milestone presentation" meeting="false" start="2025-05-14" duration="1" complete="0" expand="true"/>
-            <task id="75" uid="0a9c860272fe4333a368f07a2586c4a0" name="testrun presentation and demo" meeting="false" start="2025-05-12" duration="1" complete="0" expand="true"/>
+            <task id="75" uid="0a9c860272fe4333a368f07a2586c4a0" name="testrun presentation and demo" meeting="false" start="2025-05-08" duration="1" complete="0" expand="true"/>
             <task id="69" uid="04141eb3f48441a992785064de48f722" name="Finalize outreach folder: manual, screenshot, video" meeting="false" start="2025-04-29" duration="1" complete="0" expand="true"/>
-            <task id="68" uid="59fbf20ace1b4f1098046682af42caff" name="finalize and test reconnect feature" meeting="false" start="2025-05-06" duration="2" complete="0" expand="true"/>
+            <task id="68" uid="59fbf20ace1b4f1098046682af42caff" name="finalize and test reconnect feature" meeting="false" start="2025-05-06" duration="2" complete="0" expand="true">
+                <depend id="75" type="2" difference="0" hardness="Strong"/>
+            </task>
             <task id="67" uid="bfca8ab1b08145bea8aa8b26f4369eee" name="final QA Report &amp; lessons learned" meeting="false" start="2025-05-08" duration="2" complete="0" expand="true"/>
             <task id="65" uid="932cb57a791d4979b5160cfd1f9283a9" name="Add final screenshot &amp; team/game Logo" meeting="false" start="2025-05-06" duration="1" complete="0" expand="true"/>
             <task id="64" uid="52272e25a2f244529a161ddda5af8b7d" name="record trailer and gameplay video" meeting="false" start="2025-05-05" duration="2" complete="0" expand="true"/>
             <task id="63" uid="21ebe5c4fc3844e091b4e93d32891bcb" name="add intro sequence (optional)" meeting="false" start="2025-05-05" duration="1" complete="0" expand="true"/>
-            <task id="61" uid="52e1a479cc384922b7a91e371eb55403" name="final polish: animations, input, visual consistency" meeting="false" start="2025-05-01" duration="2" complete="0" expand="true"/>
-            <task id="60" uid="0a54896ce2e34aeab0422169cf8d2bd2" name="final game testing and bug fixing" meeting="false" start="2025-04-29" duration="2" complete="0" expand="true"/>
+            <task id="61" uid="52e1a479cc384922b7a91e371eb55403" name="final polish: animations, input, visual consistency" meeting="false" start="2025-05-01" duration="2" complete="0" expand="true">
+                <depend id="75" type="2" difference="0" hardness="Strong"/>
+            </task>
+            <task id="60" uid="0a54896ce2e34aeab0422169cf8d2bd2" name="final game testing and bug fixing" meeting="false" start="2025-04-29" duration="2" complete="0" expand="true">
+                <depend id="75" type="2" difference="0" hardness="Strong"/>
+            </task>
             <task id="42" uid="b5931daf36ab4044a6237b505cc41b04" name="deadline Milestone 5" meeting="true" start="2025-05-12" duration="0" complete="0" expand="true">
                 <notes><![CDATA[deadlilne of milestone 5]]></notes>
             </task>
@@ -299,6 +496,7 @@ README ]]></notes>
         <allocation task-id="63" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
         <allocation task-id="64" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
         <allocation task-id="69" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
+        <allocation task-id="77" resource-id="2" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
         <allocation task-id="1" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
         <allocation task-id="5" resource-id="0" function="SoftwareDevelopment:2" responsible="true" load="100.0"/>
         <allocation task-id="12" resource-id="0" function="SoftwareDevelopment:2" responsible="false" load="100.0"/>
