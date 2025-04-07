@@ -23,7 +23,7 @@ public class Level {
         // [sessionId, objectType, objectName, x, y, width, height]
         for (int i = 0; i < 5; i++) {
             float x = 100.0f + i * 300.0f;
-            float y = 300.0f - i * 30.0f;
+            float y = 700.0f - i * 30.0f;
             float width = 250.0f;
             float height = 20.0f;
             Object[] floorParams = new Object[] {
@@ -34,7 +34,7 @@ public class Level {
                     y,                         // y-coordinate
                     width,                     // width
                     height,
-                    sessionId// height
+                    sessionId
             };
             Client.sendMessageStatic(new Message("CREATEGO", floorParams, "REQUEST"));
         }
@@ -47,10 +47,10 @@ public class Level {
                 "Door",       // object type
                 "Door1",      // object name
                 850.0f,       // x-coordinate
-                280.0f,       // y-coordinate
+                300.0f,       // y-coordinate
                 50.0f,        // width
                 120.0f,
-                sessionId// height
+                sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", doorParams, "REQUEST"));
 
@@ -66,7 +66,7 @@ public class Level {
                 30.0f,        // width
                 30.0f,        // height
                 100.0f,
-                sessionId// mass
+                sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
 
@@ -77,12 +77,12 @@ public class Level {
                 sessionId,    // game session id
                 "Player",     // object type
                 "Alfred",     // object name
-                50.0f,        // x-coordinate
+                200.0f,        // x-coordinate
                 200.0f,       // y-coordinate
                 40.0f,        // width
                 40.0f,
                 sessionId
-                // height
+
         };
         Client.sendMessageStatic(new Message("CREATEGO", alfredParams, "REQUEST"));
 
@@ -94,9 +94,29 @@ public class Level {
                 200.0f,       // y-coordinate
                 40.0f,        // width
                 40.0f,
-                sessionId// height
+                sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", geraldParams, "REQUEST"));
+
+        // ------------------------------------------------
+        // Create a moving platform from x=1300,y=580 to x=850,y=300
+        // using your MovingPlatform constructor:
+        // (String name, float startX, float endX, float startY, float endY,
+        //  float width, float height, float periodX, float periodY, String gameId)
+        // ------------------------------------------------
+
+        Object[] floorParams = new Object[] {
+                sessionId,                 // game session id
+                "Platform",                // object type
+                "Floor 5",                  // object name
+                900,                         // x-coordinate
+                400,                         // y-coordinate
+                100,                        // width
+                20,
+                sessionId
+        };
+        Client.sendMessageStatic(new Message("CREATEGO", floorParams, "REQUEST"));
+
 
         System.out.println("Level started! Multiple floors, Door, Key, and two Players (Alfred & Gerald) created.");
     }
