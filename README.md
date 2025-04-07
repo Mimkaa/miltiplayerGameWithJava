@@ -82,9 +82,9 @@ Members: William Tran, Illia Solohub, Senanur Ates, Aiysha Frutiger
 
 [Game Concept](docs/gameConcept.md)
 
-[QA Concept](docs/QA_Concept.md)
+[QA Concept](docs/Quality%20Assurance%20Concept%20–%20Think%20Outside%20the%20Room.pdf)
 
-[Network Protocol](docs/Network-Protocol.pdf)
+[Network Protocol](docs/NetworkProtocol.pdf)
 
 [Manual](docs/Manual.pdf)
 
