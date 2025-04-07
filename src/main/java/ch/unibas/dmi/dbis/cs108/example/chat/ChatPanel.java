@@ -5,18 +5,57 @@ import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 
+/**
+ * {@code ChatPanel} is a singleton UI component for displaying and sending chat messages.
+ * It provides a text area for incoming/outgoing messages and a field for user input.
+ */
 public class ChatPanel extends JPanel {
+    /**
+     * The singleton instance of {@code ChatPanel}.
+     */
     private static ChatPanel instance; // singleton instance
 
+    /**
+     * Displays the chat messages.
+     */
     private JTextPane chatPane;
+
+    /**
+     * Field where users can type messages.
+     */
     private JTextField inputField;
+
+    /**
+     * Label used to show typing status (e.g., "User is typing...").
+     */
     private JLabel typingIndicatorLabel;
+
+    /**
+     * The styled document associated with {@link #chatPane}.
+     */
     private StyledDocument doc;
+
+    /**
+     * Style for locally sent messages.
+     */
     private SimpleAttributeSet localStyle;
+
+    /**
+     * Style for remotely sent messages.
+     */
     private SimpleAttributeSet remoteStyle;
+
+    /**
+     * Listener for handling chat events (sending messages, typing).
+     */
     private ChatPanelListener listener;
 
-    // Private constructor prevents external instantiation.
+    /**
+     * Private constructor that initializes the chat UI.
+     * Prevents external instantiation to maintain a singleton design.
+     *
+     * @param listener The listener for handling chat events (message sending, typing notifications).
+     */
     private ChatPanel(ChatPanelListener listener) {
         this.listener = listener;
         initUI();
@@ -24,12 +63,12 @@ public class ChatPanel extends JPanel {
     }
 
     /**
-     * Returns the singleton instance of ChatPanel.
-     * If not yet created, it will be created using the provided listener.
-     * Subsequent calls will return the same instance, and the listener parameter is ignored.
+     * Returns the singleton instance of {@code ChatPanel}. If it hasn't been created yet,
+     * it will be created with the specified listener. If it has already been created,
+     * subsequent calls will return the existing instance (ignoring any new listener passed in).
      *
-     * @param listener the ChatPanelListener to use on initial creation.
-     * @return the singleton ChatPanel instance.
+     * @param listener The {@link ChatPanelListener} to use on initial creation.
+     * @return The singleton {@code ChatPanel} instance.
      */
     public static synchronized ChatPanel getInstance(ChatPanelListener listener) {
         if (instance == null) {
@@ -37,14 +76,25 @@ public class ChatPanel extends JPanel {
         }
         return instance;
     }
-    
+
     /**
-     * Optionally, if you need to update the listener later.
+     * Updates the {@link ChatPanelListener} for this chat panel.
+     *
+     * @param listener The new listener to handle chat events.
      */
     public void setChatPanelListener(ChatPanelListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Initializes the user interface components for the chat panel.
+     * This includes:
+     * <ul>
+     *   <li>A non-editable {@link JTextPane} for displaying chat messages.</li>
+     *   <li>A {@link JTextField} for user input.</li>
+     *   <li>A {@link JLabel} for showing typing indicators.</li>
+     * </ul>
+     */
     private void initUI() {
         setLayout(new BorderLayout());
 
@@ -75,6 +125,7 @@ public class ChatPanel extends JPanel {
         });
         inputField.addKeyListener(new KeyAdapter() {
             private long lastTypingTime = 0;
+
             @Override
             public void keyPressed(KeyEvent e) {
                 long now = System.currentTimeMillis();
@@ -91,9 +142,10 @@ public class ChatPanel extends JPanel {
     }
 
     /**
-     * Appends a new message to the chat area with a timestamp.
-     * @param message the message text to display.
-     * @param isLocal true if the message was sent locally (uses a different style).
+     * Appends a new message to the chat pane with a timestamp.
+     *
+     * @param message  The message text to display.
+     * @param isLocal  {@code true} if the message was sent locally (uses a different text color).
      */
     public void appendMessage(String message, boolean isLocal) {
         SimpleAttributeSet style = isLocal ? localStyle : remoteStyle;
@@ -111,28 +163,45 @@ public class ChatPanel extends JPanel {
     }
 
     /**
-     * Displays a typing indicator.
-     * @param sender the name of the sender who is typing.
+     * Displays a typing indicator, usually invoked when another user is in the process of typing.
+     *
+     * @param sender The name of the sender who is typing.
      */
     public void showTypingIndicator(String sender) {
         typingIndicatorLabel.setText(sender + " is typing...");
     }
 
     /**
-     * Clears the typing indicator.
+     * Clears the typing indicator, typically after the user has finished typing or after a timeout.
      */
     public void clearTypingIndicator() {
         typingIndicatorLabel.setText(" ");
     }
+
+    /**
+     * Gets the {@link JTextField} used for user input in this chat panel.
+     *
+     * @return The {@link JTextField} used for message input.
+     */
     public JTextField getInputField() {
         return inputField;
     }
 
     /**
-     * Listener interface for chat events.
+     * The listener interface for handling chat-related events, such as sending messages
+     * and indicating that a user is typing.
      */
     public interface ChatPanelListener {
+        /**
+         * Called when the user sends a new chat message.
+         *
+         * @param message The message text that was sent.
+         */
         void onChatMessage(String message);
+
+        /**
+         * Called when the user starts typing (or continues typing after a specified interval).
+         */
         void onTyping();
     }
 }

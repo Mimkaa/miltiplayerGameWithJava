@@ -6,17 +6,34 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 import java.net.InetSocketAddress;
 
+/**
+ * Handles the "WHISPER" command, which allows one client to send a private message
+ * directly to another connected user.
+ * <p>
+ * The message should contain the sender's username, the target recipient's username,
+ * and the message content. If the target is not found, a "WHISPER-FAILED" response
+ * is sent back to the sender.
+ * </p>
+ *
+ * <p>Expected parameters:</p>
+ * <ul>
+ *   <li>params[0] - sender username</li>
+ *   <li>params[1] - target recipient username</li>
+ *   <li>params[2] - message content</li>
+ * </ul>
+ */
 public class WhisperCommandHandler implements CommandHandler {
+
+    /**
+     * Processes a WHISPER command by routing a private message from the sender
+     * to the intended recipient. If the recipient is not found, the sender is notified.
+     *
+     * @param server the server handling the communication
+     * @param msg the incoming WHISPER message
+     * @param senderUsername the username of the client issuing the command
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
-        // We expect the incoming "WHISPER" message to have parameters like:
-        //   [0]: actualSenderName
-        //   [1]: targetUsername
-        //   [2]: messageContent
-        //
-        // For example, from the client side:
-        //   new Message("WHISPER", new String[]{sender, targetUser, content}, "REQUEST")
-
         Object[] params = msg.getParameters();
         if (params == null || params.length < 3) {
             System.out.println("WHISPER command missing parameters: [sender, target, content]");

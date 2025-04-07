@@ -8,11 +8,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * The {@code AckProcessor} class is responsible for processing and sending acknowledgment (ACK) messages
  * for received data packets. It uses a {@link DatagramSocket} to send these ACK messages asynchronously.
- * <p>
- * When you call {@link #addAck(InetSocketAddress, String)}, an {@link AckEntry} is created and placed in a queue.
- * Once {@link #start()} is invoked, a continuous background loop handles these entries by constructing the ACK
- * messages and sending them to the specified destinations.
- * </p>
+ *
+ * <p>When you call {@link #addAck(InetSocketAddress, String)}, an {@link AckProcessor.AckEntry} is created
+ * and placed in a queue. Once {@link #start()} is invoked, a continuous background loop handles these entries
+ * by constructing the ACK messages and sending them to the specified destinations.</p>
  */
 public class AckProcessor {
 
@@ -67,8 +66,12 @@ public class AckProcessor {
                     // Optionally, you could also call ackMsg.setUUID(entry.uuid) if your protocol requires it.
                     String encodedAck = MessageCodec.encode(ackMsg);
                     byte[] data = encodedAck.getBytes();
-                    DatagramPacket packet = new DatagramPacket(data, data.length,
-                            entry.destination.getAddress(), entry.destination.getPort());
+                    DatagramPacket packet = new DatagramPacket(
+                            data,
+                            data.length,
+                            entry.destination.getAddress(),
+                            entry.destination.getPort()
+                    );
                     socket.send(packet);
                     System.out.println("Sent ACK for UUID " + entry.uuid + " to " + entry.destination);
                 } catch (Exception e) {
@@ -83,7 +86,14 @@ public class AckProcessor {
      * along with the UUID of the message to be acknowledged.
      */
     private static class AckEntry {
+        /**
+         * The network address and port for sending this acknowledgment.
+         */
         private final InetSocketAddress destination;
+
+        /**
+         * The unique identifier of the message being acknowledged.
+         */
         private final String uuid;
 
         /**

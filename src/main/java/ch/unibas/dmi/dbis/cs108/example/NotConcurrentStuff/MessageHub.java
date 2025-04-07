@@ -5,8 +5,22 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * The {@code MessageHub} is a central dispatcher for routing messages
+ * to multiple {@link MessageHogger} instances in a thread-safe and asynchronous manner.
+ * <p>
+ * It is implemented as a singleton and uses a {@link CopyOnWriteArrayList} to
+ * manage listeners and a {@link java.util.concurrent.ExecutorService} to
+ * dispatch messages without blocking the main thread.
+ * </p>
+ */
 public class MessageHub {
-    // Singleton instance.
+
+    /**
+     * Returns the singleton instance of the {@code MessageHub}.
+     *
+     * @return the global MessageHub instance
+     */
     private static final MessageHub instance = new MessageHub();
 
     public static MessageHub getInstance() {

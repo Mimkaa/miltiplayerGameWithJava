@@ -42,14 +42,13 @@ public class ReliableUDPSender {
     private final AtomicInteger nextSeqNum = new AtomicInteger(1);
 
     /**
-     * A {@link ConcurrentHashMap} that holds pending messages keyed by their UUID.
-     * Each pending message is encapsulated in a {@link PendingMessage} object.
+     * A map of UUID to {@link PendingMessage}, representing all unacknowledged messages.
      */
     private final ConcurrentHashMap<String, PendingMessage> pendingMessages = new ConcurrentHashMap<>();
 
     /**
-     * The {@code PendingMessage} class captures details about an in-flight (unacknowledged)
-     * message, including the time it was last sent and its destination address and port.
+     * Encapsulates a message that has been sent but not yet acknowledged.
+     * Contains metadata required for potential retransmission.
      */
     private class PendingMessage {
         Message message;
@@ -61,7 +60,7 @@ public class ReliableUDPSender {
          * Constructs a {@code PendingMessage} with the given message, last-sent time,
          * and destination details.
          *
-         * @param message     the {@link Message} being sent
+         * @param message      the {@link Message} being sent
          * @param lastSentTime the timestamp (in milliseconds) when the message was last sent
          * @param destination  the destination {@link InetAddress}
          * @param destPort     the destination port
@@ -76,8 +75,8 @@ public class ReliableUDPSender {
 
     /**
      * Constructs a {@code ReliableUDPSender} bound to the given socket, with a specified
-     * window size and retransmission timeout. A background loop (via {@link AsyncManager#runLoop(Runnable)})
-     * is started to continuously check for message timeouts and handle retransmissions.
+     * window size and retransmission timeout. Starts a background loop to monitor
+     * retransmissions.
      *
      * @param socket        the {@link DatagramSocket} used for sending messages
      * @param windowSize    the maximum number of unacknowledged messages
@@ -88,16 +87,12 @@ public class ReliableUDPSender {
         this.socket = socket;
         this.windowSize = windowSize;
         this.timeoutMillis = timeoutMillis;
-        AsyncManager.runLoop(() -> checkTimeouts());
+        AsyncManager.runLoop(this::checkTimeouts);
     }
 
     /**
-     * Sends a message to a specified destination. A sequence number and UUID
-     * are automatically assigned to the message before sending. If the window
-     * of unacknowledged messages is full, the message is not sent.
-     *
-     * <p>This method returns immediately, scheduling the actual send
-     * asynchronously via {@link AsyncManager#run(Runnable)}.</p>
+     * Sends a message to a specified destination. Assigns a new sequence number and UUID
+     * to the message. If the window is full, the message is not sent.
      *
      * @param msg         the {@link Message} to send
      * @param destination the destination {@link InetAddress}
@@ -125,10 +120,10 @@ public class ReliableUDPSender {
     }
 
     /**
-     * Asynchronously sends a packet containing the given message to the specified address and port.
+     * Sends the given message asynchronously as a UDP packet.
      *
      * @param msg         the {@link Message} to encode and send
-     * @param destination the destination {@link InetAddress}
+     * @param destination the destination IP address
      * @param destPort    the destination port
      */
     private void sendPacket(Message msg, InetAddress destination, int destPort) {
@@ -146,14 +141,14 @@ public class ReliableUDPSender {
     }
 
     /**
-     * Periodically checks for timeouts among pending messages. If a message has exceeded
-     * its {@link #timeoutMillis}, it may be retransmitted if it is either:
+     * Checks the list of pending messages and retransmits messages that have
+     * timed out based on {@link #timeoutMillis}.
+     *
+     * <p>Messages are retransmitted if:</p>
      * <ul>
-     *   <li>The base (lowest-sequence) message in the queue</li>
-     *   <li>Its immediate predecessor message has been acknowledged (i.e., is no longer pending)</li>
+     *   <li>They are the base message (lowest sequence number)</li>
+     *   <li>Their predecessor message is already acknowledged (gap-free logic)</li>
      * </ul>
-     * If neither condition is met, the message's last-sent timestamp is updated
-     * (deferring actual retransmission).
      */
     private void checkTimeouts() {
         long now = System.currentTimeMillis();
@@ -168,6 +163,7 @@ public class ReliableUDPSender {
             long seq = pm.message.getSequenceNumber();
             if (now - pm.lastSentTime >= timeoutMillis) {
                 boolean canRetransmit = false;
+
                 if (sorted.get(0).message.getSequenceNumber() == seq) {
                     canRetransmit = true;
                 } else {
@@ -178,6 +174,7 @@ public class ReliableUDPSender {
                         canRetransmit = true;
                     }
                 }
+
                 if (canRetransmit) {
                     try {
                         sendPacket(pm.message, pm.destination, pm.destPort);
@@ -198,8 +195,8 @@ public class ReliableUDPSender {
     }
 
     /**
-     * Immediately resends any pending message whose last-sent time exceeds
-     * {@link #timeoutMillis}, ignoring whether it is the base message or unblocked.
+     * Immediately resends any pending message that has exceeded the timeout threshold,
+     * regardless of whether it’s the base message or unblocked.
      */
     public void forceResendTimeouts() {
         long now = System.currentTimeMillis();
@@ -223,9 +220,8 @@ public class ReliableUDPSender {
     }
 
     /**
-     * Acknowledges a message with the specified UUID, removing it from the
-     * {@link #pendingMessages} map. This method schedules the removal
-     * asynchronously via {@link AsyncManager#run(Runnable)}.
+     * Marks a message as acknowledged, removing it from the pending queue.
+     * This method is executed asynchronously.
      *
      * @param uuid the UUID of the acknowledged message
      */

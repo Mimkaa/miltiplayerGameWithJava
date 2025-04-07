@@ -53,8 +53,28 @@ public class GameContext {
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
 
+    /**
+     * The GameContext class serves as the central coordinator for managing game sessions,
+     * processing messages, handling the game loop, and updating the UI in a JavaFX-based game.
+     *
+     * <p>This class is implemented as a singleton and provides global access to shared game state,</p>
+     * including the current game session, selected game object, and various user interface components.
+     *
+     * <p>Responsibilities include:</p>
+     * <ul>
+     *   <li>Managing game sessions through the GameSessionManager</li>
+     *   <li>Handling incoming server messages via a custom MessageHogger</li>
+     *   <li>Rendering the UI using JavaFX</li>
+     *   <li>Maintaining the game update and rendering loop</li>
+     * </ul>
+     */
 
+// ... (your code unchanged, with Javadoc comments like below before each public method or field)
 
+    /**
+     * Returns the singleton instance of the GameContext.
+     * @return the shared GameContext instance
+     */
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
@@ -407,15 +427,26 @@ public class GameContext {
         };
     }
 
-    // Static getters for the game ID and selected game object ID.
+    /**
+     * Returns the ID of the currently selected game session.
+     * @return the current game ID, or null if not set
+     */
     public static String getCurrentGameId() {
         return currentGameId.get();
     }
 
+    /**
+     * Returns the ID of the currently selected game object.
+     * @return the selected game object ID, or null if not set
+     */
     public static String getSelectedGameObjectId() {
         return selectedGameObjectId.get();
     }
 
+    /**
+     * Returns the GameSessionManager managing all active sessions.
+     * @return the GameSessionManager
+     */
     public GameSessionManager getGameSessionManager() {
         return gameSessionManager;
     }
@@ -516,10 +547,9 @@ public class GameContext {
         // game.updateAllObjects();
     }
 
-    /**
-     * Draws the current game state on the provided GraphicsContext.
-     *
-     * @param gc The GraphicsContext to draw on.
+     /**
+     * Draws the current game state to the screen.
+     * @param gc the GraphicsContext used for rendering
      */
     private void draw(GraphicsContext gc) {
         String gameId = currentGameId.get();
@@ -541,16 +571,19 @@ public class GameContext {
         game.draw(gc);
     }
 
-
+    /**
+     * Gets the Game instance associated with a given ID.
+     * @param gameId the ID of the game session
+     * @return the Game instance, or null if not found
+     */
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
     }
 
-/*
-    public static String getLocalClientId() {
-        return ThinkOutsideTheRoom.client.getClientId();
-    }
-*/
+    /**
+     * Entry point for launching the application.
+     * @param args command-line arguments (unused)
+     */
 
     public static void main(String[] args) {
         // Create the game context.

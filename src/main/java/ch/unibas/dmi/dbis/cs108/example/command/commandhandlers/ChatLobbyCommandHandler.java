@@ -7,7 +7,31 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 import java.net.InetSocketAddress;
 
+/**
+ * Handles the "CHATLOBBY" command, which is used to send chat messages
+ * within a specific game lobby (game session).
+ *
+ * <p>Expected parameters:</p>
+ * <ol>
+ *   <li><code>params[0]</code>: sender's username (String)</li>
+ *   <li><code>params[1]</code>: game session ID (String)</li>
+ *   <li><code>params[2]</code>: chat message content (String)</li>
+ * </ol>
+ *
+ * <p>The message will be broadcast to all users in the game lobby,
+ * except the sender. If the game session does not exist or a user's
+ * address cannot be found, appropriate error messages are logged.</p>
+ */
 public class ChatLobbyCommandHandler implements CommandHandler {
+
+    /**
+     * Processes the incoming "CHATLOBBY" message and broadcasts it to
+     * all users in the corresponding game session, excluding the sender.
+     *
+     * @param server          the server instance handling communication and session management
+     * @param msg             the received message containing the chat content
+     * @param senderUsername  the username of the client who sent the message
+     */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
         Object[] params = msg.getParameters();
@@ -15,6 +39,7 @@ public class ChatLobbyCommandHandler implements CommandHandler {
             System.err.println("CHATLOBBY message missing required parameters.");
             return;
         }
+
         // Expected parameters:
         //   [0] - sender's username
         //   [1] - game session ID

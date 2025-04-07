@@ -27,14 +27,29 @@ import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
 
 import lombok.Setter;
 
-
-
 /**
- * The {@code Server} class implements a simple UDP-based server that
- * can handle both reliable and best-effort messages. It manages a set of
- * registered clients, game sessions via a GameSessionManager, and the logic for
- * handling various message types and requests (including creation of new game objects,
- * game session creation/joining, and selection of game objects).
+ * The {@code Server} class implements a UDP-based game server that handles both reliable and
+ * best-effort messaging for multiplayer game sessions. It manages client connections, game
+ * state synchronization, and message routing between clients.
+ *
+ * <p>Key features include:
+ * <ul>
+ *   <li>Singleton pattern implementation for global server access</li>
+ *   <li>Reliable UDP messaging with acknowledgment handling</li>
+ *   <li>Client registration and unique name management</li>
+ *   <li>Game session management through {@link GameSessionManager}</li>
+ *   <li>Command-based request handling via {@link CommandRegistry}</li>
+ *   <li>Asynchronous message processing with outgoing queue</li>
+ *   <li>Broadcast capabilities to all or specific clients</li>
+ * </ul>
+ *
+ * <p>The server handles several message types:
+ * <ul>
+ *   <li><strong>ACK</strong>: Message acknowledgment handling</li>
+ *   <li><strong>CHAT</strong>: Chat message broadcasting</li>
+ *   <li><strong>REQUEST</strong>: Command-based operations</li>
+ *   <li><strong>GAME</strong>: Best-effort game state updates</li>
+ * </ul>
  */
 @Getter
 public class Server {
@@ -42,13 +57,22 @@ public class Server {
     // ================================
     // Singleton Implementation
     // ================================
+
+    /**
+     * Private constructor to prevent instantiation.
+     */
     private Server() { }
+
+    /**
+     * Helper class for lazy initialization of the singleton instance.
+     */
     private static class SingletonHelper {
+        /** The singleton instance of the Server. */
         private static final Server INSTANCE = new Server();
     }
 
     /**
-     * Returns the singleton instance of the {@code Server}.
+     * Returns the singleton instance of the Server.
      *
      * @return the singleton {@code Server} instance
      */
@@ -82,32 +106,27 @@ public class Server {
 
     /** Processes incoming ACK messages and notifies the ReliableUDPSender. */
     private AckProcessor ackProcessor;
-    // The game session(s) are managed via GameSessionManager.
+
+    /** The game session(s) are managed via GameSessionManager. */
     private final GameSessionManager gameSessionManager = new GameSessionManager();
-    // Install the MessageHub as a singleton.
+
+    /** Install the MessageHub as a singleton. */
     private final MessageHub messageHub = MessageHub.getInstance();
-    // Outgoing messages queue.
 
     /** The primary/default game instance for this server. */
     private Game myGameInstance;
 
     /**
      * A queue for outgoing messages that should be sent asynchronously to clients.
-     * Processed by a background loop in {@link # start()}.
+     * Processed by a background loop in {@link #start()}.
      */
     private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
 
     /** Holds multiple active games by ID (UUID, etc.). */
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
 
-
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
-
-
-
-
-
 
     // ================================
     // Outgoing Message Inner Class
@@ -118,8 +137,11 @@ public class Server {
      * Used internally by the {@code outgoingQueue}.
      */
     private static class OutgoingMessage {
+        /** The message to be sent */
         Message msg;
+        /** Destination IP address */
         InetAddress address;
+        /** Destination UDP port */
         int port;
 
         /**
@@ -150,10 +172,16 @@ public class Server {
         return new Message(type, newParams, "RESPONSE", concealed);
     }
 
+    /**
+     * Enqueues a message for asynchronous sending to the specified address.
+     *
+     * @param msg     the message to send
+     * @param address the destination IP address
+     * @param port    the destination UDP port
+     */
     public void enqueueMessage(Message msg, InetAddress address, int port) {
         outgoingQueue.offer(new OutgoingMessage(msg, address, port));
     }
-
 
     /**
      * Returns a modified version of the requested name if that name is already taken.
@@ -176,12 +204,14 @@ public class Server {
      * Helper function to see if a name is already taken by either:
      *  - Another user in the 'clientsMap', or
      *  - A game object in 'myGameInstance'.
+     *
+     * @param name The name to check
+     * @return true if the name is already taken, false otherwise
      */
     private boolean isNameTaken(String name) {
         if (clientsMap.containsKey(name)) {
             return true;
         }
-        // If you have a default game instance, check its objects as well.
         return false;
     }
 
@@ -193,6 +223,8 @@ public class Server {
      * Initializes and starts this UDP server. Binds to {@link #SERVER_PORT},
      * launches background threads for sending and receiving packets, and registers
      * command and message handlers via reflection.
+     *
+     * @param port The port number to listen on
      */
     public void start(int port) {
         SERVER_PORT = port;
@@ -211,13 +243,6 @@ public class Server {
             reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
             ackProcessor = new AckProcessor(serverSocket);
             ackProcessor.start();
-
-
-
-            // Optionally initialize a default game session:
-            // Game defaultGame = new Game("GameSession1", "Default Game");
-            // defaultGame.startPlayersCommandProcessingLoop();
-            // gameSessionManager.addGameSession("GameSession1", defaultGame);
 
             // Process outgoing messages.
             AsyncManager.runLoop(() -> {
@@ -265,11 +290,12 @@ public class Server {
         }
     }
 
-    //start method without parameters for the tests
+    /**
+     * Starts the server on the default port (9876).
+     */
     public void start() {
         start(SERVER_PORT);
     }
-
 
     // ================================
     // Message Processing
@@ -311,7 +337,6 @@ public class Server {
             return;
         }
 
-
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length >= 2) {
             String username = concealed[concealed.length - 1];
@@ -347,7 +372,6 @@ public class Server {
             System.out.println("Concealed parameters missing or too short.");
         }
     }
-
 
     /**
      * Sends the given {@link Message} to all connected clients except the sender.
@@ -453,6 +477,14 @@ public class Server {
         }
     }
 
+    /**
+     * Synchronizes a newly connected client with the current game state by sending:
+     * 1) All existing game sessions
+     * 2) All game objects within those sessions
+     *
+     * @param username      The username of the new client
+     * @param clientSocket  The socket address of the new client
+     */
     private void synchronizeNewClient(String username, InetSocketAddress clientSocket) {
         // 1) For each existing game in the GameSessionManager:
         for (Map.Entry<String, Game> entry : gameSessionManager.getAllGameSessions().entrySet()) {
@@ -460,7 +492,6 @@ public class Server {
             Game game = entry.getValue();
 
             // a) Send a CREATEGAME message, so the client knows this game ID + name.
-            //    The client can treat this exactly like if the server had just created the game.
             Message createGameMsg = new Message(
                     "CREATEGAME",
                     new Object[]{ gameId, game.getGameName() },
@@ -470,19 +501,11 @@ public class Server {
 
             // b) For each GameObject in that game, send a CREATEGO message with all constructor params.
             for (GameObject go : game.getGameObjects()) {
-                // The CREATEGO parameters:
-                //    0 -> gameObject UUID
-                //    1 -> game session ID
-                //    2 -> object type (from the class or however you identify it)
-                //    3... -> constructor parameters
                 String objectUuid = go.getId();
                 String objectType = go.getClass().getSimpleName();
-
-                // The constructor parameters are exactly what that object's getConstructorParamValues() returns.
                 Object[] constructorParams = go.getConstructorParamValues();
 
                 // Build a combined param array:
-                //    [ 0: objectUuid, 1: gameId, 2: objectType, 3..: constructorParams ]
                 Object[] createGoParams = new Object[3 + constructorParams.length];
                 createGoParams[0] = objectUuid;
                 createGoParams[1] = gameId;
@@ -495,13 +518,15 @@ public class Server {
         }
     }
 
-
-
-
-
     // ================================
     // Main Method
     // ================================
+
+    /**
+     * Main entry point for the server application.
+     *
+     * @param args Command line arguments (optional port number)
+     */
     public static void main(String[] args) {
         if (args.length == 1) {
             try {

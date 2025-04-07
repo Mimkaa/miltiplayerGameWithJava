@@ -9,11 +9,17 @@ import java.util.Random;
 public class Nickname_Generator {
 
     /**
-     * Generates a nickname by combining a randomly chosen adjective, the current system username,
-     * and a random integer between 10 and 99.
+     * Generates a nickname by combining:
+     * <ul>
+     *   <li>A randomly chosen adjective from a predefined list.</li>
+     *   <li>The current system username, retrieved via {@code System.getProperty("user.name")}.</li>
+     *   <li>A random integer between 10 and 99 (inclusive).</li>
+     * </ul>
      *
-     * @return a {@code String} representing the generated nickname, in the format:
-     *         {@code <adjective>_<system-username>_<two-digit-random-number>}
+     * <p>The resulting format is:
+     * <pre>{@code <adjective>_<system-username>_<two-digit-random-number>}</pre>
+     *
+     * @return A {@code String} representing the generated nickname.
      */
     public static String generateNickname() {
         String username = System.getProperty("user.name");

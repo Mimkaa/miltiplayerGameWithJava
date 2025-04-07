@@ -7,6 +7,14 @@ import javafx.scene.paint.Color;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * The {@code BandageGuy} class represents a movable game object with an image,
+ * extending {@link GameObject}. It handles local updates (movement) and
+ * synchronizes its position via messages across the network.
+ * <p>
+ * This object responds to MOVE messages and supports rendering via JavaFX.
+ * </p>
+ */
 @Getter
 @Setter
 public class BandageGuy extends GameObject {
@@ -29,13 +37,13 @@ public class BandageGuy extends GameObject {
     private String imagePath; // File path to the image.
 
     /**
-     * Constructs a BandageGuy game object.
+     * Constructs a BandageGuy game object with image and initial position.
      *
-     * @param name      The object's name.
-     * @param gameId    The game session ID.
-     * @param x         The starting X coordinate.
-     * @param y         The starting Y coordinate.
-     * @param imagePath The file path to the image.
+     * @param name      the display name of the object
+     * @param gameId    the ID of the game session this object belongs to
+     * @param x         the initial x-coordinate
+     * @param y         the initial y-coordinate
+     * @param imagePath the path to the image file representing the object
      */
     public BandageGuy(String name, String gameId, float x, float y, String imagePath) {
         super(name, gameId);

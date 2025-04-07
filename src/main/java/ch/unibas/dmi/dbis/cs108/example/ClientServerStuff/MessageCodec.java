@@ -4,37 +4,43 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
- * A utility class for encoding and decoding {@link Message} objects to and from strings.
+ * A utility class for encoding and decoding {@link Message} objects to and from string format.
  *
- * <p>The encoding format is defined as:</p>
+ * <p>
+ * The <strong>encoding format</strong> is structured as:
+ * </p>
  * <pre>
- * TYPE {option}[parameters]|concealed1, concealed2, ..., uuid|
+ *   TYPE {option}[parameters]|concealed1, concealed2, ..., uuid|
  * </pre>
- *
  * <ul>
- *   <li><strong>TYPE</strong>: the message type (e.g., "MOVE", "ACK", etc.)</li>
- *   <li><strong>{option}</strong>: an optional field, enclosed in braces if present</li>
- *   <li><strong>[parameters]</strong>: a comma-separated list of typed parameters, enclosed in square brackets</li>
- *   <li><strong>|concealed parameters, uuid|</strong>: a pipe-delimited section containing any concealed parameters and the message UUID as the last element</li>
+ *   <li><strong>TYPE</strong> – the message type (e.g., "MOVE", "ACK")</li>
+ *   <li><strong>{option}</strong> – an optional field, present if not empty</li>
+ *   <li><strong>[parameters]</strong> – a comma-separated list of typed parameters, enclosed in square brackets</li>
+ *   <li><strong>|concealed parameters, uuid|</strong> – the concealed parameters plus the UUID at the end, each separated by a comma</li>
  * </ul>
  *
- * Each parameter is encoded with a type prefix to facilitate decoding. For example, an integer is stored as <em>I:123</em>,
- * a float as <em>F:1.23</em>, etc.
+ * <p>
+ * Each parameter in the <em>[parameters]</em> section is encoded with a type prefix (e.g., "I:" for integers, "F:" for floats),
+ * facilitating a typed decoding process.
+ * </p>
  */
 public class MessageCodec {
 
     /**
-     * Encodes a {@link Message} object into a string based on the defined format:
+     * Encodes a given {@link Message} object into a string according to the specified format:
      * <pre>
-     * TYPE {option}[parameters]|concealed1, concealed2, ..., uuid|
+     *   TYPE {option}[parameters]|concealed1, concealed2, ..., uuid|
      * </pre>
      *
-     * <p>The optional field is enclosed in braces if present, the parameters (if any) are
-     * enclosed in square brackets and typed, and the concealed parameters (plus the UUID)
-     * are appended after a pipe character.</p>
+     * <p>
+     * If {@code message.getOption()} is non-empty, it is enclosed in curly braces.
+     * The parameters (if any) are enclosed in square brackets, with each parameter prefixed
+     * by a type marker. Concealed parameters (if any) plus the message UUID are appended after
+     * a pipe character (<em>|</em>).
+     * </p>
      *
      * @param message the {@link Message} object to encode
-     * @return the encoded string representation of the message
+     * @return a string representing the encoded message
      */
     public static String encode(Message message) {
         StringBuilder sb = new StringBuilder();
@@ -68,19 +74,20 @@ public class MessageCodec {
     }
 
     /**
-     * Decodes a string into a {@link Message} object.
-     * The expected format is:
+     * Decodes a string into a {@link Message} object, assuming the string follows
+     * the specified format:
      * <pre>
-     * TYPE {option}[parameters]|concealed1, concealed2, ..., uuid|
+     *   TYPE {option}[parameters]|concealed1, concealed2, ..., uuid|
      * </pre>
+     * <p>
+     * The part before the first pipe (<em>|</em>) contains the message type,
+     * optional field, and parameters. The portion between pipes contains the
+     * concealed parameters plus the UUID (last).
+     * </p>
      *
-     * <p>The main part before the first pipe (<em>|</em>) contains the message type, optional
-     * field, and parameters. The portion between pipes (<em>|</em>) contains the concealed
-     * parameters and the UUID (last element).</p>
-     *
-     * @param encodedMessage the encoded string representation of the message
-     * @return a {@link Message} object corresponding to the encoded string
-     * @throws IllegalArgumentException if the encoded message does not match the expected format
+     * @param encodedMessage the string to decode into a {@link Message}
+     * @return a {@link Message} object containing the decoded data
+     * @throws IllegalArgumentException if the string does not match the expected format
      */
     public static Message decode(String encodedMessage) {
         String[] parts = encodedMessage.split("\\|", -1);
@@ -113,18 +120,18 @@ public class MessageCodec {
     }
 
     /**
-     * Encodes a single parameter with a type prefix:
+     * Encodes a single parameter value with a type prefix.
      * <ul>
-     *   <li><em>I:</em> for {@link Integer}</li>
-     *   <li><em>L:</em> for {@link Long}</li>
-     *   <li><em>F:</em> for {@link Float}</li>
-     *   <li><em>D:</em> for {@link Double}</li>
-     *   <li><em>B:</em> for {@link Boolean}</li>
-     *   <li><em>S:</em> for others (treated as strings)</li>
+     *   <li><em>I:</em> {@link Integer}</li>
+     *   <li><em>L:</em> {@link Long}</li>
+     *   <li><em>F:</em> {@link Float}</li>
+     *   <li><em>D:</em> {@link Double}</li>
+     *   <li><em>B:</em> {@link Boolean}</li>
+     *   <li><em>S:</em> All other types (treated as strings)</li>
      * </ul>
      *
-     * @param param the parameter to encode
-     * @return a {@code String} in the form <em>{type}:{value}</em>
+     * @param param the parameter to encode with a type prefix
+     * @return a string of the form <em>{type}:{value}</em>
      */
     private static String encodeWithTypePrefix(Object param) {
         if (param instanceof Integer) {
@@ -138,16 +145,17 @@ public class MessageCodec {
         } else if (param instanceof Boolean) {
             return "B:" + param;
         } else {
+            // Default is string
             return "S:" + param.toString();
         }
     }
 
     /**
      * Decodes a comma-separated list of typed parameters (e.g., "I:10, F:1.23, S:hello")
-     * into an array of Objects.
+     * into an array of {@link Object}.
      *
-     * @param encodedParameters the string representing the encoded parameters
-     * @return an array of decoded Objects
+     * @param encodedParameters the string to decode
+     * @return an array of objects representing the decoded parameters
      */
     public static Object[] decodeParameters(String encodedParameters) {
         if (encodedParameters == null || encodedParameters.trim().isEmpty()) {
@@ -161,17 +169,16 @@ public class MessageCodec {
         return parameters;
     }
 
-
     /**
-     * Decodes the main part of the message containing the type, optional field, and parameters.
-     * The expected syntax is:
+     * Decodes the main part of the encoded message (type, option, and parameters).
+     * The syntax is assumed to be:
      * <pre>
-     * TYPE {option}[parameters]
+     *   TYPE {option}[parameters]
      * </pre>
      *
-     * @param mainPart the substring from the start of the encoded message up to the first pipe
-     * @return a partially constructed {@link Message} with the type, parameters, and option
-     * @throws IllegalArgumentException if the format is invalid
+     * @param mainPart the portion of the message before the concealed part
+     * @return a partially constructed {@link Message} with type, parameters, and option
+     * @throws IllegalArgumentException if the main part does not match the expected format
      */
     private static Message decodeMainPart(String mainPart) {
         String regex = "^(.+?)(?:\\s*\\{(.+?)\\})?\\s*\\[(.*)\\]$";
@@ -199,10 +206,10 @@ public class MessageCodec {
     }
 
     /**
-     * Decodes a single parameter token, which includes a type marker (I, L, F, D, B, or S).
+     * Decodes a single parameter token (e.g., "I:10", "S:hello") into a typed {@link Object}.
      *
-     * @param token the string token (e.g., "I:10", "S:hello")
-     * @return the decoded parameter as an {@link Object}
+     * @param token a string containing the type prefix and value
+     * @return an object parsed from the token
      */
     private static Object decodeWithTypePrefix(String token) {
         if (token.startsWith("I:")) {
@@ -218,6 +225,7 @@ public class MessageCodec {
         } else if (token.startsWith("S:")) {
             return token.substring(2);
         } else {
+            // If no type prefix is found, return the token as-is (string).
             return token;
         }
     }

@@ -9,15 +9,28 @@ import java.util.UUID;
 import java.util.concurrent.Future;
 
 /**
- * Handles the "CREATE" command, which spawns a new {@link GameObject} in the
- * active {@code myGameInstance}, assigns it a server-generated UUID, and
- * broadcasts the new object to all connected clients.
+ * Handles the "CREATE" command, which spawns a new {@link GameObject}
+ * in the current game instance ({@code myGameInstance}).
+ * <p>
+ * This handler performs the following:
+ * <ul>
+ *   <li>Generates a new UUID for the object on the server side</li>
+ *   <li>Creates the game object asynchronously</li>
+ *   <li>Constructs a "CREATE" response message with the new UUID and original parameters</li>
+ *   <li>Broadcasts the message to all connected clients</li>
+ * </ul>
+ * <p>
+ * The original parameters are expected to include at least:
+ * <ul>
+ *   <li><code>params[0]</code>: name or type of the object</li>
+ *   <li><code>params[1..n]</code>: any additional object-specific data</li>
+ * </ul>
  */
 public class CreateCommandHandler implements CommandHandler {
 
     /**
-     * Generates a unique object UUID, creates the corresponding {@link GameObject}
-     * asynchronously, and broadcasts a "CREATE" response to all clients.
+     * Handles an incoming "CREATE" command by generating a UUID, creating the
+     * {@link GameObject} asynchronously, and broadcasting the result to all clients.
      *
      * @param server         the server instance for accessing game state and broadcasting
      * @param msg            the incoming "CREATE" command message

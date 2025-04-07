@@ -6,6 +6,16 @@ import javafx.scene.canvas.GraphicsContext;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+
+/**
+ * Abstract base class for all game objects within a session.
+ * <p>
+ * Each {@code GameObject} has a unique ID, a reference to its game session,
+ * and supports rendering, updating, and communication via messages.
+ * It also includes basic bounding box methods for collision detection
+ * and command execution via a simple command queue.
+ * </p>
+ */
 public abstract class GameObject {
     private String id = UUID.randomUUID().toString();
     private final String gameId;
@@ -44,10 +54,21 @@ public abstract class GameObject {
     public boolean isMovable() { return movable; }
     public void setMovable(boolean movable) { this.movable = movable; }
 
-    // Message handling.
+
+    // === Messaging ===
+
+    /**
+     * Adds an incoming message to this object’s message queue.
+     *
+     * @param message the message to add
+     */
     public void addIncomingMessage(Message message) {
         incomingMessages.offer(message);
     }
+
+    /**
+     * Processes all queued messages for this object.
+     */
     public void processIncomingMessages() {
         Message msg;
         while ((msg = incomingMessages.poll()) != null) {
@@ -62,7 +83,14 @@ public abstract class GameObject {
     public abstract void draw(GraphicsContext gc);
     public abstract Object[] getConstructorParamValues();
 
-    // Collision detection and resolution.
+    // === Collision ===
+
+    /**
+     * Checks whether this object intersects with another based on bounding boxes.
+     *
+     * @param other the other game object
+     * @return true if the objects intersect
+     */
     public boolean intersects(GameObject other) {
         return this.getX() < other.getX() + other.getWidth() &&
                 this.getX() + this.getWidth() > other.getX() &&
@@ -129,8 +157,11 @@ public abstract class GameObject {
             }
         }
     }
+    // === Commands ===
 
-    // Command interface.
+    /**
+     * Interface for deferred or queued commands related to game logic.
+     */
     public interface Command {
         void execute();
     }
@@ -140,7 +171,10 @@ public abstract class GameObject {
         public void execute() { code.run(); }
     }
 
-    // Messaging helper.
+
+    /**
+     * Simple command wrapper that runs arbitrary {@link Runnable} logic.
+     */
     protected void sendMessage(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed == null || concealed.length < 2) {
@@ -153,6 +187,9 @@ public abstract class GameObject {
         Client.sendMessageStatic(msg);
     }
 
+    /**
+     * Processes all queued commands.
+     */
     public void processCommands() {
         Command cmd;
         while ((cmd = commandQueue.poll()) != null) {
@@ -160,6 +197,12 @@ public abstract class GameObject {
         }
     }
 
+    /**
+     * Extracts the game ID from a message’s concealed parameters.
+     *
+     * @param msg the message
+     * @return the game ID or "UnknownGame" if missing
+     */
     protected String extractGameId(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length > 1) {

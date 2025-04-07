@@ -3,14 +3,25 @@ package ch.unibas.dmi.dbis.cs108.example.chat;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * {@code ChatUIHelper} provides utility methods to integrate and manage a chat panel
+ * within a given {@link JFrame}. It includes a toggle button to show or hide the chat panel
+ * and requests focus appropriately.
+ */
 public class ChatUIHelper {
 
     /**
-     * Installs the chat UI into the provided JFrame.
-     * This method adds a toggle button at the top to show/hide the chat panel.
+     * Installs the chat UI into the provided {@link JFrame}. A toggle button is placed at the
+     * top for showing or hiding the chat panel, which is initially displayed.
      *
-     * @param frame     the main application frame.
-     * @param panel     the chat panel instance to install.
+     * <p>
+     * The provided {@code panel} should ideally be an instance of {@link ChatPanel}. If not,
+     * the singleton {@code ChatPanel} instance is retrieved instead.
+     * </p>
+     *
+     * @param frame The main application frame into which the chat UI will be installed.
+     * @param panel The {@link JPanel} that is presumed to be the chat panel.
+     *              If it is not a {@link ChatPanel}, the singleton instance is used.
      */
     public static void installChatUI(JFrame frame, JPanel panel) {
         // Ensure we use the singleton ChatPanel instance.
@@ -22,7 +33,7 @@ public class ChatUIHelper {
             chatPanel = ChatPanel.getInstance(null);
         }
         //System.out.println("Installing ChatPanel instance: " + chatPanel.hashCode());
-        
+
         // Create a top panel for the toggle button.
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton toggleButton = new JButton("Close Chat"); // Chat is open by default

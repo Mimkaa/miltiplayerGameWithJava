@@ -10,6 +10,20 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 
+/**
+ * Singleton class representing the central graphical unit of the JavaFX-based game.
+ * <p>
+ * This class manages a resizable {@link Canvas} overlaid on a {@link StackPane},
+ * handles global keyboard input events, and provides access to the {@link GraphicsContext}.
+ * </p>
+ *
+ * <p>Responsibilities include:</p>
+ * <ul>
+ *     <li>Providing access to a central drawing surface</li>
+ *     <li>Registering keyboard input via {@link KeyboardState}</li>
+ *     <li>Allowing dynamic resizing and node layering in the game window</li>
+ * </ul>
+ */
 public class CentralGraphicalUnit {
     // Eager initialization: the instance is created immediately.
     private static final CentralGraphicalUnit instance = new CentralGraphicalUnit();

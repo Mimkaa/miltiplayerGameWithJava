@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * The {@code PingManager} class sends periodic "PING" messages to a specified server
  * and maintains a timestamp of the last time a ping was sent. It is useful for
- * measuring round-trip times or simply keeping a connection alive.
+ * measuring round-trip times or keeping a connection alive.
  */
 public class PingManager {
 
@@ -25,32 +25,33 @@ public class PingManager {
     private final InetAddress serverAddress;
 
     /**
-     * The destination port on the server for the pings.
+     * The port on the server that receives pings.
      */
     private final int serverPort;
 
     /**
-     * The {@link ScheduledExecutorService} that schedules periodic ping tasks.
+     * A {@link ScheduledExecutorService} that schedules the periodic ping tasks.
      */
     private final ScheduledExecutorService scheduler;
 
     /**
-     * The period (in milliseconds) between consecutive pings.
+     * The interval (in milliseconds) between consecutive pings.
      */
     private final long periodMillis;
 
     /**
      * The timestamp (in milliseconds) of the last time a ping was enqueued.
+     * Initially set to 0 until the first ping is sent.
      */
     private volatile long lastPingTime = 0;
 
     /**
      * Constructs a new {@code PingManager} for sending periodic ping messages.
      *
-     * @param outgoingQueue  the queue to which ping messages will be offered
-     * @param serverAddress  the destination server's {@link InetAddress}
-     * @param serverPort     the destination server's port
-     * @param periodMillis   the period between consecutive pings, in milliseconds
+     * @param outgoingQueue  The queue to which ping messages will be offered.
+     * @param serverAddress  The destination server's {@link InetAddress}.
+     * @param serverPort     The destination server's port number.
+     * @param periodMillis   The interval between consecutive pings, in milliseconds.
      */
     public PingManager(ConcurrentLinkedQueue<Message> outgoingQueue,
                        InetAddress serverAddress, int serverPort,
@@ -63,8 +64,8 @@ public class PingManager {
     }
 
     /**
-     * Starts the periodic ping process, scheduling ping messages to be sent
-     * at fixed intervals defined by {@link #periodMillis}.
+     * Starts the periodic ping process. The scheduler enqueues ping messages at
+     * fixed intervals defined by {@link #periodMillis}.
      */
     public void start() {
         scheduler.scheduleAtFixedRate(() -> {
@@ -79,7 +80,7 @@ public class PingManager {
 
     /**
      * Stops the periodic ping process by shutting down the scheduler.
-     * Any ongoing or future ping tasks are halted.
+     * Any ongoing or future ping tasks are canceled.
      */
     public void stop() {
         scheduler.shutdownNow();
@@ -87,12 +88,12 @@ public class PingManager {
 
     /**
      * Constructs and enqueues a "PING" message, storing the current system time
-     * as the last ping timestamp. This method is called by the periodic scheduler.
+     * as the {@link #lastPingTime}. This method is triggered by the periodic scheduler.
      *
      * @throws IOException if there is an error creating or enqueuing the ping message
      */
     private void sendPing() throws IOException {
-        Message pingMessage = new Message("PING", new Object[] { System.currentTimeMillis() }, "REQUEST");
+        Message pingMessage = new Message("PING", new Object[]{ System.currentTimeMillis() }, "REQUEST");
         Client.sendMessageStatic(pingMessage);
         System.out.println(pingMessage);
         lastPingTime = System.currentTimeMillis();
@@ -102,7 +103,7 @@ public class PingManager {
      * Returns the elapsed time in milliseconds since the last ping was enqueued.
      * If no ping has been sent yet, this value may be the time since object creation.
      *
-     * @return the time difference in milliseconds as an integer
+     * @return The time difference in milliseconds as an {@code int}.
      */
     public int getTimeDifferenceMillis() {
         long currentTime = System.currentTimeMillis();

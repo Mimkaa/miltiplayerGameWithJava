@@ -14,6 +14,15 @@ import javafx.scene.control.TextField;
 import java.util.Random;
 import java.util.UUID;
 
+/**
+ * Test class to demonstrate the usage of a custom {@link MessageHogger}
+ * and interaction with the JavaFX-based UI via {@link CentralGraphicalUnit}.
+ * <p>
+ * This class initializes a simple UI with input and display components,
+ * processes incoming "CHECK" messages to update the UI and draw randomly on the canvas,
+ * and periodically sends messages from a background thread.
+ * </p>
+ */
 public class MessageHoggerTest {
 
     // Declare the hogger as an instance attribute.
@@ -22,6 +31,14 @@ public class MessageHoggerTest {
     // Local instance of UIManager.
     private final UIManager uiManager = new UIManager();
 
+
+    /**
+     * Constructs the test environment:
+     * - Initializes UI components using {@link CentralGraphicalUnit}
+     * - Registers all components in {@link UIManager}
+     * - Sets up a MessageHogger that listens for "CHECK" messages
+     *   and performs UI updates and canvas drawing accordingly.
+     */
     public MessageHoggerTest() {
         // Start the UI initialization listener.
         // Wait for CentralGraphicalUnit and initialize the UI with custom initialization.
@@ -88,8 +105,10 @@ public class MessageHoggerTest {
             }
         };
     }
-
-    // Method to start sending messages on a separate thread.
+    /**
+     * Starts a background thread that sends a "CHECK" message once per second.
+     * The message contains a random UUID string as its content.
+     */
     public void startSending() {
         Thread senderThread = new Thread(() -> {
             while (true) {
@@ -107,10 +126,12 @@ public class MessageHoggerTest {
         senderThread.start();
     }
 
-    
 
-    
-
+    /**
+     * Main entry point to start the MessageHoggerTest.
+     *
+     * @param args command-line arguments (not used)
+     */
     public static void main(String[] args) {
         MessageHoggerTest test = new MessageHoggerTest();
         test.startSending();

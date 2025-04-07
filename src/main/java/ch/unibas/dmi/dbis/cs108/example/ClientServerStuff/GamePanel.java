@@ -8,21 +8,22 @@ import java.awt.*;
 /**
  * The {@code GamePanel} class is a custom Swing {@link JPanel} that renders an array of
  * {@link GameObject}s and displays a ping indicator in the top-left corner.
- * It provides methods to update the displayed game objects and the current ping value
- * (e.g., network latency or any custom measurement).
+ * <p>
+ * Use {@link #updateGameObjects(GameObject[])} to update the objects rendered on this panel,
+ * and {@link #setPingIndicator(int)} to change the displayed ping value.
+ * </p>
  */
 public class GamePanel extends JPanel {
 
     /**
      * An array of {@link GameObject} instances to be drawn on this panel.
-     * It is updated via {@link #updateGameObjects(GameObject[])}.
+     * Updated via {@link #updateGameObjects(GameObject[])}.
      */
     private GameObject[] gameObjects;
 
     /**
-     * A simple integer value representing a ping indicator, which is displayed
-     * in the top-left corner of the panel. It is initialized to a random integer
-     * between 0 and 99.
+     * An integer representing a ping indicator, displayed in the top-left corner.
+     * Initialized to a random integer between 0 and 99.
      */
     private int pingIndicator = (int) (Math.random() * 100);
 
@@ -61,9 +62,9 @@ public class GamePanel extends JPanel {
     }
 
     /**
-     * Overrides the {@link JPanel#paintComponent(Graphics)} method to draw the updated
-     * array of game objects and the current ping indicator. The method is synchronized to
-     * ensure consistent drawing if updates occur from multiple threads.
+     * Overrides the {@link JPanel#paintComponent(Graphics)} method to draw the current
+     * array of game objects and the ping indicator. This method is synchronized for
+     * consistent drawing if updates occur from multiple threads.
      *
      * @param g The {@link Graphics} context used to draw the panel's content.
      */
@@ -71,8 +72,7 @@ public class GamePanel extends JPanel {
     protected synchronized void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-       
-
+        // Draw the ping indicator
         Font originalFont = g.getFont();
         Font bigFont = originalFont.deriveFont(Font.BOLD, originalFont.getSize() * 2.0f);
         g.setFont(bigFont);

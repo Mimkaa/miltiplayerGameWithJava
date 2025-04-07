@@ -7,20 +7,51 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 /**
- * Handles the "CHANGENAME" command, which renames a game object and updates
- * the internal {@code clientsMap} if necessary. Afterwards, it broadcasts
- * the change to all connected clients.
+ * Handles the "CHANGENAME" command which allows renaming of game objects.
+ *
+ * <p>This handler performs the following operations:
+ * <ol>
+ *   <li>Validates the incoming request parameters</li>
+ *   <li>Locates the specified game session and object</li>
+ *   <li>Generates a unique name if the requested name is taken</li>
+ *   <li>Updates the object's name and broadcasts the change</li>
+ * </ol>
+ *
+ * <p>The expected message format is:
+ * <pre>
+ * {
+ *   "messageType": "CHANGENAME",
+ *   "parameters": ["gameSessionId", "objectUUID", "requestedName"],
+ *   "option": "REQUEST"
+ * }
+ * </pre>
  */
 public class ChangeNameCommandHandler implements CommandHandler {
 
     /**
-     * Renames an existing game object (if found) to a unique name,
-     * updates the {@code clientsMap}, and broadcasts the updated
-     * name information to all users.
+     * Processes a CHANGENAME request to rename a game object.
      *
-     * @param server         the server instance providing access to game state, etc.
-     * @param msg            the incoming "CHANGENAME" request
-     * @param senderUsername the username of the client sending this command
+     * <p>The method:
+     * <ul>
+     *   <li>Verifies parameter count and validity</li>
+     *   <li>Finds the target game session and object</li>
+     *   <li>Generates a unique variant if name is taken</li>
+     *   <li>Updates the object and notifies all clients</li>
+     * </ul>
+     *
+     * <p>Error cases handled:
+     * <ul>
+     *   <li>Missing/invalid parameters</li>
+     *   <li>Nonexistent game session</li>
+     *   <li>Nonexistent game object</li>
+     * </ul>
+     *
+     * @param server         the server instance providing access to game state and utilities
+     * @param msg            the incoming CHANGENAME message containing rename parameters
+     * @param senderUsername the username of the client requesting the change
+     *
+     * @see Server#findUniqueName(String)
+     * @see Server#broadcastMessageToAll(Message)
      */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
@@ -69,6 +100,5 @@ public class ChangeNameCommandHandler implements CommandHandler {
 
         Message responseMsg = new Message("CHANGENAME", responseParams, "RESPONSE");
         server.broadcastMessageToAll(responseMsg);
-
     }
 }

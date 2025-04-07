@@ -24,103 +24,141 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * The {@code Client} class represents a networked game client that communicates
  * with a server via UDP, sending and receiving messages related to gameplay and chat.
- * <p>
- * This class contains:
+ *
+ * <p><strong>Main responsibilities include:</strong></p>
  * <ul>
- *   <li>A {@link Game} instance responsible for game logic.</li>
- *   <li>A {@code ChatManager.ClientChatManager} for handling chat functionality.</li>
- *   <li>Static queues for outgoing and incoming {@link Message} objects.</li>
- *   <li>Reliable and best-effort UDP message sending through {@link ReliableUDPSender}.</li>
- *   <li>An {@link AckProcessor} for handling acknowledgments (ACKs).</li>
- *   <li>An optional {@link PingManager} for tracking round-trip times (disabled by default in this code).</li>
+ *   <li>Managing a {@link Game} instance responsible for local game logic.</li>
+ *   <li>Handling chat functionality through a {@link ChatManager.ClientChatManager}.</li>
+ *   <li>Queuing and sending outgoing {@link Message} objects via {@link #outgoingQueue}.</li>
+ *   <li>Receiving incoming {@link Message} objects via {@link #incomingQueue} and dispatching them to handlers.</li>
+ *   <li>Providing reliable and best-effort UDP message sending through {@link ReliableUDPSender}.</li>
+ *   <li>Handling acknowledgments (ACKs) for messages using an {@link AckProcessor}.</li>
+ *   <li>Optionally tracking round-trip times (ping) via a {@link PingManager} (disabled by default in this code).</li>
  * </ul>
  *
- * <p>
- * Typical usage for running the client might look like this:
+ * <p>Usage example for running the client might include:</p>
  * <ol>
  *   <li>Create an instance of {@code Client} with a desired game session name.</li>
- *   <li>Optionally customize the client username.</li>
- *   <li>Initialize chat via {@link #initChatManager()}.</li>
- *   <li>Set up the game UI using .</li>
- *   <li>Start console reading via {@link #startConsoleReaderLoop()}.</li>
- *   <li>Run the main loop in a separate thread via {@link #run()}.</li>
- *   <li>Use {@link #login()} to join the game session on the server.</li>
+ *   <li>Set the client's username (e.g., {@link #setUsername(String)}).</li>
+ *   <li>Initialize chat with {@link #initChatManager()} (optional, if chat is used).</li>
+ *   <li>Configure the game UI (e.g., 2D or 3D viewport).</li>
+ *   <li>Start console reading via {@link #startConsoleReaderLoop()} if needed.</li>
+ *   <li>Run the main loop in a separate thread using {@link #run()}.</li>
+ *   <li>Use {@link #login()} to send a login request to the server.</li>
  * </ol>
  *
  * <p>
- * A singleton instance is maintained and can be retrieved with {@link #getInstance()}.
+ * This class maintains a singleton instance accessible via {@link #getInstance()}.
+ * </p>
  */
 @Getter
 public class Client {
 
-    /** The default server address (localhost). */
+    /**
+     * The default server address, set to "localhost" by default.
+     */
     public static String SERVER_ADDRESS = "localhost";
-    /** The default server port (9876). */
+
+    /**
+     * The default server port, set to 9876 by default.
+     */
     public static int SERVER_PORT = 9876;
 
-    /** Manages chat functionality for this client. */
+    /**
+     * Manages all chat functionality on the client side.
+     */
     public ChatManager.ClientChatManager clientChatManager;
 
-    /** Static queue for outgoing messages. */
+    /**
+     * A thread-safe queue for outgoing messages to be sent to the server or other clients.
+     * This queue is processed in a background loop.
+     */
     private static final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
-    /** Static queue for incoming messages. */
+
+    /**
+     * A thread-safe queue for incoming messages received from the server or other clients.
+     * This queue is processed in a background loop.
+     */
     private static final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
 
-    /** Game logic object for this client. */
+    /**
+     * The {@link Game} instance handling local game logic, such as objects and event responses.
+     */
     private Game game;
 
-    /** Console input scanner for reading commands. */
+    /**
+     * A {@link Scanner} for reading commands from the console (if available).
+     */
     private final Scanner scanner = new Scanner(System.in);
 
+    /**
+     * A unique string identifier for this client, randomly generated.
+     */
     private final String clientId = UUID.randomUUID().toString();
 
-    /** The client's username, stored as an AtomicReference for thread safety. */
+    /**
+     * The client's username, stored in an {@link AtomicReference} for thread-safe updates.
+     */
     private final AtomicReference<String> username = new AtomicReference<>(clientId);
 
-    /** A reliable UDP sender instance. */
+    /**
+     * A reliable UDP sender used for messages requiring reliable delivery.
+     */
     private ReliableUDPSender myReliableUDPSender;
-    /** A processor for handling incoming ACK messages and dispatching ACKs. */
+
+    /**
+     * The acknowledgment processor responsible for receiving and sending ACK messages.
+     */
     private AckProcessor ackProcessor;
 
-    /** The UDP socket used by this client. */
+    /**
+     * The underlying UDP socket used by this client for sending and receiving data.
+     */
     private DatagramSocket clientSocket;
 
-    /** Tracks ping (round-trip time) data; left unused unless explicitly started. */
+    /**
+     * Tracks ping (round-trip time) data if started. Inactive by default.
+     */
     private PingManager pingManager;
 
-    /** The singleton client instance. */
+    /**
+     * The singleton instance of this client.
+     */
     private static Client instance;
 
-     // We add a MessageHub field to route incoming messages.
+    /**
+     * A {@link MessageHub} for dispatching incoming messages to appropriate handlers.
+     */
     private final MessageHub messageHub = MessageHub.getInstance();
 
     /**
-     * Constructs a new {@code Client} with the given game session name and
-     * initializes the associated {@link Game} object.
-     *
-     * // @param gameSessionName the name of the game session
+     * Constructs a new {@code Client} and initializes the singleton instance.
      */
     public Client() {
-        instance = this;  // Set the singleton instance.
+        instance = this;  // Set the singleton instance
     }
 
     /**
      * Returns the singleton {@code Client} instance.
      *
-     * @return the singleton client instance
+     * @return The singleton {@code Client}.
      */
     public static Client getInstance() {
         return instance;
     }
 
+    /**
+     * Retrieves the client's unique identifier.
+     *
+     * @return The client UUID as a {@link String}.
+     */
     public static String getMyClientId() {
         return ThinkOutsideTheRoom.client.getClientId();
     }
 
-
     /**
-     * Initializes the client chat manager. Must be called <strong>before</strong>
-     * setting up the UI to ensure {@code clientChatManager} is not null.
+     * Initializes the client chat manager. This should be called before
+     * setting up the UI so that {@link #clientChatManager} is available.
      */
     public void initChatManager() {
         this.clientChatManager = new ChatManager.ClientChatManager(
@@ -132,27 +170,24 @@ public class Client {
     }
 
     /**
-     * Retrieves the chat panel UI component from the chat manager.
+     * Retrieves the chat panel UI component from the client chat manager.
      *
-     * @return the {@link ChatPanel} for the client
+     * @return The {@link ChatPanel} used for displaying and sending chat messages.
      */
     public ChatPanel getChatPanel() {
         return this.clientChatManager.getChatPanel();
     }
 
-
-
     /**
-     * Main entry point for the client's networking logic, including:
+     * The core networking loop for the client. This method:
      * <ul>
-     *   <li>Opening a {@link DatagramSocket}.</li>
-     *   <li>Starting a {@link ReliableUDPSender} and {@link AckProcessor}.</li>
-     *   <li>Starting background loops for receiving and sending messages.</li>
+     *   <li>Opens a {@link DatagramSocket}.</li>
+     *   <li>Starts the {@link ReliableUDPSender} and {@link AckProcessor}.</li>
+     *   <li>Begins background loops for receiving and sending messages.</li>
+     *   <li>Blocks the main thread indefinitely (via {@link Thread#join()}).</li>
      * </ul>
      *
-     * <p>
-     * This method blocks the current thread (using {@code join()}) to keep
-     * the client alive indefinitely.
+     * <p>Call this in its own thread to avoid blocking the UI or other processes.</p>
      */
     public void run() {
         try {
@@ -165,16 +200,6 @@ public class Client {
             // Initialize the AckProcessor using the same socket.
             ackProcessor = new AckProcessor(clientSocket);
             ackProcessor.start();
-
-            // IMPORTANT: Initialize chat manager BEFORE starting the UI.
-            //initChatManager();
-
-            // Start processing loops for player commands (optional, depends on Game logic).
-            //game.startPlayersCommandProcessingLoop();
-
-            // Optionally, we could start ping tracking here (commented out for demonstration).
-            // pingManager = new PingManager(outgoingQueue, InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT, 300);
-            // pingManager.start();
 
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
             AsyncManager.runLoop(() -> {
@@ -191,6 +216,7 @@ public class Client {
                 }
             });
 
+            // Process incoming messages.
             AsyncManager.runLoop(() -> {
                 try {
                     Message msg = incomingQueue.poll();
@@ -204,14 +230,15 @@ public class Client {
                                 System.out.println("Received ACK with no parameters.");
                             }
                         } else {
-                            // For non-ACK messages, if the message has a UUID and option is not "GAME",
+                            // For non-ACK messages, if the message has a UUID and option != "GAME",
                             // add it to the ACK processor.
                             if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                                 InetSocketAddress dest = new InetSocketAddress(
-                                    InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                        InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT
+                                );
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
-                            // Now dispatch the message via the MessageHub.
+                            // Dispatch the message via the MessageHub.
                             messageHub.dispatch(msg);
                         }
                     }
@@ -233,7 +260,6 @@ public class Client {
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
-
                         } else if ("CLIENT".equalsIgnoreCase(msg.getOption())) {
                             // Perform local client state updates
                             AsyncManager.run(() -> updateLocalClientState(msg));
@@ -244,7 +270,6 @@ public class Client {
                             // System.out.println("Reliable sent: " + MessageCodec.encode(msg));
                         }
                     } catch (Exception e) {
-                        e.printStackTrace();
                         e.printStackTrace();
                     }
                 }
@@ -258,17 +283,17 @@ public class Client {
     }
 
     /**
-     * A static utility to send a {@link Message} by appending the current username
-     * to the concealed parameters, then enqueuing it for sending.
+     * Sends a {@link Message} in a static context by updating its concealed parameters
+     * with the current username, then enqueuing it for sending.
      *
-     * @param msg the {@link Message} to be sent
+     * @param msg The {@link Message} to be sent.
      */
     public static void sendMessageStatic(Message msg) {
         // Access the singleton instance's username.
         String currentUsername = instance.username.get();
         String[] concealed = msg.getConcealedParameters();
         if (concealed == null) {
-            concealed = new String[] { currentUsername };
+            concealed = new String[]{ currentUsername };
         } else {
             String[] newConcealed = new String[concealed.length + 1];
             System.arraycopy(concealed, 0, newConcealed, 0, concealed.length);
@@ -282,10 +307,10 @@ public class Client {
     }
 
     /**
-     * Handles client-specific state updates based on certain message types.
-     * E.g., a change of username or fast login trigger.
+     * Handles certain local client state updates based on message content.
+     * For example, updating the client's username or triggering a quick login.
      *
-     * @param msg the message containing state update instructions
+     * @param msg The {@link Message} instructing state updates.
      */
     private void updateLocalClientState(Message msg) {
         if ("CHANGE_USERNAME".equalsIgnoreCase(msg.getMessageType())) {
@@ -300,7 +325,8 @@ public class Client {
     }
 
     /**
-     * Process server response messages. Common types include:
+     * Processes server responses not related to ACK.
+     * Common types include:
      * <ul>
      *   <li>PONG: For ping results.</li>
      *   <li>CREATE: Add a new game object to the client's {@link Game}.</li>
@@ -311,12 +337,12 @@ public class Client {
      *   <li>EXIT: Command the client to shut down.</li>
      * </ul>
      *
-     * @param msg the response message to process
+     * @param msg The response {@link Message} from the server.
      */
     private void processServerResponse(Message msg) {
         if ("PONG".equalsIgnoreCase(msg.getMessageType())) {
             if (pingManager != null) {
-                //game.updatePingIndicator(pingManager.getTimeDifferenceMillis());
+                // game.updatePingIndicator(pingManager.getTimeDifferenceMillis());
             }
             return;
         }
@@ -365,10 +391,9 @@ public class Client {
                 if (gameObject.getId().equals(assignedUUID)) {
                     // Rebind local input handling to the newly confirmed object
                     SwingUtilities.invokeLater(() -> {
-                        //game.rebindKeyListeners(gameObject.getName());
+                        // game.rebindKeyListeners(gameObject.getName());
                         instance.username.set(gameObject.getName());
-                        //game.updateGamePanel();
-
+                        // game.updateGamePanel();
                     });
                 }
             }
@@ -394,7 +419,6 @@ public class Client {
                     break;
                 }
             }
-
         }
 
         if ("CREATEGAME".equalsIgnoreCase(msg.getMessageType())) {
@@ -409,8 +433,7 @@ public class Client {
                 // Update the client's game reference.
                 this.game = newGame;
                 System.out.println("CREATEGAME response received. New game created: "
-                                   + newGameName + " with UUID: " + newGameUuid);
-
+                        + newGameName + " with UUID: " + newGameUuid);
             } else {
                 System.err.println("CREATEGAME response missing required parameters!");
             }
@@ -419,59 +442,65 @@ public class Client {
     }
 
     /**
-     * Continuously reads commands from the console and enqueues them as Messages.
-     * Type "exit" (without quotes) to stop reading from the console.
+     * Continuously reads commands from the system console (if available) and enqueues
+     * them as messages. Type "exit" (without quotes) to stop reading from the console.
+     * <p>
+     * Each command line is expected to be a parsable string containing message data,
+     * which will be converted into a {@link Message} via {@link MessageCodec#decode(String)}.
+     * If a command lacks the '|' separator, a default "||" is appended.
+     * </p>
      */
     public void startConsoleReaderLoop() {
-            // Prüfe, ob eine Konsole vorhanden ist
-            if (System.console() == null) {
-                System.out.println("No console available. Skipping console input loop.");
-                return;
-            }
-
-            AsyncManager.runLoop(() -> {
-                try {
-                    System.out.print("Command> ");
-                    if (!scanner.hasNextLine()) {
-                        System.out.println("No input. Exiting input loop.");
-                        return;
-                    }
-
-                    String command = scanner.nextLine();
-                    if ("exit".equalsIgnoreCase(command)) {
-                        System.out.println("Exiting console reader...");
-                        Thread.currentThread().interrupt();
-                        return;
-                    }
-                    if (!command.contains("|")) {
-                        command = command + "||";
-                    }
-                    try {
-                        Message msg = MessageCodec.decode(command);
-                        String[] concealedParams = { "something1", "something2" };
-                        msg.setConcealedParameters(concealedParams);
-                        sendMessageStatic(msg);
-                    } catch (Exception e) {
-                        System.out.println("Invalid message format: " + command);
-                    }
-                } catch (NoSuchElementException e) {
-                    System.out.println("Scanner closed or no input available.");
-                }
-            });
+        // Check if a console is available
+        if (System.console() == null) {
+            System.out.println("No console available. Skipping console input loop.");
+            return;
         }
 
+        AsyncManager.runLoop(() -> {
+            try {
+                System.out.print("Command> ");
+                if (!scanner.hasNextLine()) {
+                    System.out.println("No input. Exiting input loop.");
+                    return;
+                }
+
+                String command = scanner.nextLine();
+                if ("exit".equalsIgnoreCase(command)) {
+                    System.out.println("Exiting console reader...");
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                if (!command.contains("|")) {
+                    command = command + "||";
+                }
+                try {
+                    Message msg = MessageCodec.decode(command);
+                    String[] concealedParams = { "something1", "something2" };
+                    msg.setConcealedParameters(concealedParams);
+                    sendMessageStatic(msg);
+                } catch (Exception e) {
+                    System.out.println("Invalid message format: " + command);
+                }
+            } catch (NoSuchElementException e) {
+                System.out.println("Scanner closed or no input available.");
+            }
+        });
+    }
+
     /**
-     * Changes the username for this client.
+     * Changes the username for this client instance.
      *
-     * @param newUsername the desired new username
+     * @param newUsername The desired new username.
      */
     public void setUsername(String newUsername) {
         username.set(newUsername);
     }
 
     /**
-     * Sends many CREATE messages in quick succession for testing or debugging.
-     * Each message creates a "Player" object at incrementally spaced coordinates.
+     * Sends multiple CREATE messages in quick succession, each creating a "Player"
+     * object at incrementally spaced coordinates. Useful for testing or debugging.
+     * This operation does not interrupt the main client loop.
      */
     public void sendBulkCreateMessages() {
         AsyncManager.run(() -> {
@@ -492,9 +521,8 @@ public class Client {
     }
 
     /**
-     * Performs a minimal "login" sequence by sending a CREATE (to spawn a Player)
-     * followed by a LOGIN request. This simply demonstrates the initial handshake
-     * that might be needed to join a game session.
+     * Performs a minimal "login" sequence by sending a CREATE message to spawn a Player,
+     * followed by a LOGIN request. This demonstrates a basic handshake to join a game session.
      */
     public void login() {
         try {
@@ -518,27 +546,34 @@ public class Client {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Sets the server address to which this client will connect.
+     *
+     * @param host The new server host name or IP address.
+     */
     public void setServerAddress(String host) {
         this.SERVER_ADDRESS = host;
     }
 
+    /**
+     * Sets the server port to which this client will connect.
+     *
+     * @param port The new server port number.
+     */
     public void setServerPort(int port) {
         this.SERVER_PORT = port;
     }
 
     /**
-     * Main method for launching the client as a standalone application.
-     * Prompts for a username (or auto-generates one), then:
-     * <ul>
-     *   <li>Sets the username</li>
-     *   <li>Initializes chat</li>
-     *   <li>Starts the game UI</li>
-     *   <li>Begins console input reading</li>
-     *   <li>Runs the client's main network loop in a background thread</li>
-     *   <li>Issues a login request</li>
-     * </ul>
+     * The main method for launching this client application in a standalone context.
+     * <p>
+     * It prompts for a username (with a suggested nickname), sets the client's username,
+     * optionally starts console reading, and begins the client's main loop in a new thread.
+     * After a short delay, it can also initiate the login sequence if desired.
+     * </p>
      *
-     * @param args ignored
+     * @param args Command-line arguments (ignored).
      */
     public static void main(String[] args) {
         try {
@@ -547,7 +582,7 @@ public class Client {
             System.out.println("Suggested Nickname: " + suggestedNickname);
             System.out.println("Please enter to use suggested name, or type your own: ");
             String userName = inputScanner.nextLine();
-            System.out.println("entered nick:" + userName);
+            System.out.println("Entered nick: " + userName);
             if (userName.isEmpty()) {
                 userName = suggestedNickname;
             }
@@ -556,14 +591,14 @@ public class Client {
             client.setUsername(userName);
             System.out.println("Set client username: " + userName);
 
-            //client.initChatManager();
-            //client.startGraphicsStuff();
+            // client.initChatManager();
+            // client.startGraphicsStuff();  // Hypothetical UI method
             client.startConsoleReaderLoop();
 
             new Thread(client::run).start();
             Thread.sleep(1000);
 
-            //client.login();
+            // client.login();  // Uncomment if you want to login automatically
         } catch (Exception e) {
             e.printStackTrace();
         }
