@@ -226,10 +226,10 @@ public class Server {
      *
      * @param port The port number to listen on
      */
-    public void start(int port) {
+    public void start(String address, int port) {
         SERVER_PORT = port;
         try {
-            InetAddress ipAddress = InetAddress.getByName("localhost");
+            InetAddress ipAddress = InetAddress.getByName(address);
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
@@ -294,7 +294,7 @@ public class Server {
      * Starts the server on the default port (9876).
      */
     public void start() {
-        start(SERVER_PORT);
+        start("localhost", SERVER_PORT);
     }
 
     // ================================
@@ -528,16 +528,17 @@ public class Server {
      * @param args Command line arguments (optional port number)
      */
     public static void main(String[] args) {
-        if (args.length == 1) {
+        if (args.length == 2) {
             try {
-                int port = Integer.parseInt(args[0]);
-                Server.getInstance().start(port);
+                String address = args[0];
+                int port = Integer.parseInt(args[1]);
+                Server.getInstance().start(address, port);
             } catch (NumberFormatException e) {
-                System.err.println("Invalid port number: " + args[0]);
+                System.err.println("Invalid port number: " + args[1]);
             }
         } else {
-            Server.getInstance().start(9876);
-            System.out.println("Server started at Port: " + 9876);
+            Server.getInstance().start("localhost", 9876);
+            System.out.println("Server started at localhost:9876 (default)");
         }
     }
 }

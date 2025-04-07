@@ -7,7 +7,6 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 
 /**
  * Entry point class for starting the application in different modes:
@@ -47,12 +46,18 @@ public class ThinkOutsideTheRoom {
         switch (mode) {
             case "server":
                 if (args.length != 2) {
-                    System.err.println("Usage: server <port>");
+                    System.err.println("Usage: server <host:port>");
                     return;
                 }
-                startServer(args[1]);
+                String[] hostPort = args[1].split(":");
+                if (hostPort.length != 2) {
+                    System.err.println("Invalid host:port format.");
+                    return;
+                }
+                String serverAddress = hostPort[0];
+                String serverPort = hostPort[1];
+                startServer(serverAddress, serverPort);
                 break;
-
             case "client":
                 if (args.length < 2 || args.length > 3) {
                     System.err.println("Usage: client <host:port> [username]");
@@ -73,19 +78,33 @@ public class ThinkOutsideTheRoom {
 
             case "both":
                 if (args.length < 2 || args.length > 3) {
-                    System.err.println("Usage: both <port> [username]");
+                    System.err.println("Usage: both <host:port> [username]");
                     return;
                 }
-                int bothPort = Integer.parseInt(args[1]);
+
+                String[] bothParts = args[1].split(":");
+                if (bothParts.length != 2) {
+                    System.err.println("Invalid host:port format.");
+                    return;
+                }
+
+                String bothHost = bothParts[0];
+                int bothPort;
+                try {
+                    bothPort = Integer.parseInt(bothParts[1]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid port: " + bothParts[1]);
+                    return;
+                }
+
                 String bothUsername = args.length == 3 ? args[2] : null;
 
-                startServer(String.valueOf(bothPort));
+                startServer(bothHost, String.valueOf(bothPort));
                 try {
                     Thread.sleep(1000); // Wait until the server is ready
                 } catch (InterruptedException ignored) {}
 
-                System.out.println("Debug: Username from args = " + bothUsername + " to args = " + args[2]);
-                prepareClientAndContext("localhost", bothPort, bothUsername);
+                prepareClientAndContext(bothHost, bothPort, bothUsername);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
 
@@ -109,8 +128,8 @@ public class ThinkOutsideTheRoom {
      *
      * @param port The port number to bind the server to.
      */
-    private static void startServer(String port) {
-        new Thread(() -> Server.main(new String[]{port})).start();
+    private static void startServer(String address, String port) {
+        new Thread(() -> Server.main(new String[]{address , port})).start();
     }
 
     /**
