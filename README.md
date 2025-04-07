@@ -78,7 +78,7 @@ Members: William Tran, Illia Solohub, Senanur Ates, Aiysha Frutiger
 </html>
 
 ## Documents
-[Requirementanalysis](docs/requirementAnalysis.md)
+[Requirement Analysis](docs/requirementAnalysis.md)
 
 [Game Concept](docs/gameConcept.md)
 
