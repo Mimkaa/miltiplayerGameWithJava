@@ -1,5 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
+import java.util.Arrays;
+
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
@@ -23,7 +25,7 @@ public class Player2 extends GameObject {
     // ---------------------------------
     // Constants matching the Python snippet
     // ---------------------------------
-    private static final float PLAYER_ACC = 2.5f;      // Acceleration magnitude when pressing left/right
+    private static final float PLAYER_ACC = 1.5f;      // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
     private static final float JUMP_FORCE = -15;
     private static final float SCREEN_WIDTH = 800;
@@ -177,8 +179,24 @@ public class Player2 extends GameObject {
                 }
                 System.out.println("Processed KEY_PRESS for " + getName() + ": " + keyString);
             }
+        }else if ("MOVE".equals(msg.getMessageType())) {
+            // Expecting two parameters: the new position (e.g., x and y coordinates).
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 2) {
+                try {
+                    float newX = Float.parseFloat(params[0].toString());
+                    float newY = Float.parseFloat(params[1].toString());
+                    // Set the player's position.
+                    pos.x = newX;
+                    pos.y = newY;
+                    System.out.println("Processed MOVE for " + getName() + ": pos=(" + newX + ", " + newY + ")");
+                } catch (NumberFormatException ex) {
+                    System.out.println("Error processing MOVE message parameters: " + Arrays.toString(params));
+                }
+            }
         }
     }
+    
 
     // ---------------------------------
     // Drawing the rectangle & name.

@@ -66,6 +66,7 @@ public class GameContext {
 
     // Add a field to store the last frame time (in milliseconds)
     private long lastFrameTime = 0;
+    private Set<KeyCode> prevPressedKeys = new HashSet<>();
 
 
 
@@ -586,32 +587,65 @@ public class GameContext {
     
      public void update() {
         long now = System.currentTimeMillis();
-        if (now - lastFrameTime < 30) {  // Approximately 60fps (1000ms / 60 ≈ 16.67 ms)
+        // Throttle updates to roughly 40 fps or so (adjust as needed)
+        if (now - lastFrameTime < 25) {
             return;  // Not enough time has passed, so skip this update.
         }
         lastFrameTime = now;
         
         // Get the current set of pressed keys.
         Set<KeyCode> currentPressedKeys = KeyboardState.getPressedKeys();
-    
-        // For each key currently pressed, send a KEY_PRESS message.
+        
+        // Send KEY_PRESS messages for every key currently pressed.
         for (KeyCode key : currentPressedKeys) {
             Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ key.toString() }, "GAME");
-    
-            // Set concealed parameters (using your GameContext's methods).
+        
+            // Set concealed parameters (using your GameContext’s helper methods).
             String[] concealed = keyPressMsg.getConcealedParameters();
             if (concealed == null || concealed.length < 2) {
                 concealed = new String[2];
             }
-            concealed[0] = getSelectedGameObjectId();  // Implement this method to return the current game object's ID.
-            concealed[1] = getCurrentGameId();           // Implement this method to return the current game/session ID.
+            concealed[0] = getSelectedGameObjectId();  // Your method to obtain selected game object's ID.
+            concealed[1] = getCurrentGameId();           // Your method to obtain current game session ID.
             keyPressMsg.setConcealedParameters(concealed);
-    
+        
             Client.sendMessageStatic(keyPressMsg);
         }
-    
+        
+        // Determine keys that have been released since the last update.
+        Set<KeyCode> newlyReleased = new HashSet<>(prevPressedKeys);
+        newlyReleased.removeAll(currentPressedKeys);
+        
+        // If at least one key was released, send a MOVE message with the current position.
+        if (!newlyReleased.isEmpty()) {
+            Game currentGame = gameSessionManager.getGameSession(getCurrentGameId());
+            GameObject selectedObject = null;
+            for (GameObject go : currentGame.getGameObjects()) {
+                if (go.getId().equals(getSelectedGameObjectId())) {
+                    selectedObject = go;
+                    break;
+                }
+            }
+            // Assume getX() and getY() return the current position of the selected game object.
+            Message moveMsg = new Message("MOVE", new Object[]{ selectedObject.getX(), selectedObject.getY(), }, "GAME");
+        
+            String[] concealed = moveMsg.getConcealedParameters();
+            if (concealed == null || concealed.length < 2) {
+                concealed = new String[2];
+            }
+            concealed[0] = getSelectedGameObjectId();
+            concealed[1] = getCurrentGameId();
+            moveMsg.setConcealedParameters(concealed);
+        
+            Client.sendMessageStatic(moveMsg);
+        }
+        
+        // Update the previous key set for the next update cycle.
+        prevPressedKeys = new HashSet<>(currentPressedKeys);
+        
         // (Other game state update logic can follow here.)
     }
+    
 
 
     /**
