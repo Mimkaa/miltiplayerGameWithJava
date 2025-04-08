@@ -122,43 +122,45 @@ public class Game {
     public void startPlayersCommandProcessingLoop() {
         final long[] lastUpdate = { System.nanoTime() };
         AsyncManager.runLoop(() -> {
+            // Wait for 10 milliseconds before processing the next update
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            
             long now = System.nanoTime();
-            float deltaTime = (now - lastUpdate[0]) / 1_000_000_000f; // convert nanoseconds to seconds
+            float deltaTime = (now - lastUpdate[0]) / 1_000_000_000f; // Convert nanoseconds to seconds
             lastUpdate[0] = now;
-
+    
             // 1) Process each object's messages, commands, and update with deltaTime.
             for (GameObject go : gameObjects) {
                 go.processIncomingMessages();
                 go.processCommands();
                 go.myUpdateLocal(deltaTime);
             }
-
-            // 2) Check and resolve collisions among collidable objects (no setCollisionDetected calls).
+    
+            // 2) Check and resolve collisions among collidable objects.
             for (int i = 0; i < gameObjects.size(); i++) {
                 GameObject a = gameObjects.get(i);
                 if (!a.isCollidable()) continue;
-
                 for (int j = i + 1; j < gameObjects.size(); j++) {
                     GameObject b = gameObjects.get(j);
                     if (!b.isCollidable()) continue;
-
-                    // If they intersect, resolve the collision
+    
                     if (a.intersects(b)) {
                         a.resolveCollision(b);
-                        // Removed any calls to setCollisionDetected(...) here
                         if (a instanceof Player2 && b instanceof Platform) {
-                                // 'a' is the player
-                                ((Player2) a).getVel().y = 0;
-                            } else if (b instanceof Player2 && a instanceof Platform) {
-                                // 'b' is the player
-                                ((Player2) b).getVel().y = 0;
-                            
-                            }
+                            ((Player2) a).getVel().y = 0;
+                        } else if (b instanceof Player2 && a instanceof Platform) {
+                            ((Player2) b).getVel().y = 0;
+                        }
                     }
                 }
             }
         });
     }
+    
 
     /**
      * Draws all game objects onto the provided JavaFX GraphicsContext.

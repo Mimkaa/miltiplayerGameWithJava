@@ -359,7 +359,7 @@ public class Server {
     private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
         try {
             for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-                if (!entry.getValue().equals(senderSocket)) {
+                //if (!entry.getValue().equals(senderSocket)) {
                     InetAddress dest = entry.getValue().getAddress();
                     int port = entry.getValue().getPort();
                     String encoded = MessageCodec.encode(msg);
@@ -367,7 +367,7 @@ public class Server {
                     DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
                     serverSocket.send(packet);
                     System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
-                }
+                //}
             }
         } catch (Exception e) {
             e.printStackTrace();

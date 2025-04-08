@@ -1,6 +1,9 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
@@ -113,23 +116,60 @@ public class CentralGraphicalUnit {
         return customBox;
     }
 
-    // Setup keyboard event handlers so that the container receives focus and key events.
     private void setupKeyboardHandlers() {
-        // Ensure the container is focusTraversable.
+        // Ensure the container is focus traversable and request focus.
         mainContainer.setFocusTraversable(true);
-        // Request focus (this works once the container is added to a scene).
         mainContainer.requestFocus();
-
-        // When a key is pressed, update the global KeyboardState.
+    
+        // When a key is pressed, update KeyboardState and send a KEY_PRESS message.
         mainContainer.setOnKeyPressed((KeyEvent event) -> {
             System.out.println("CentralGraphicalUnit - Key pressed: " + event.getCode());
             KeyboardState.keyPressed(event.getCode());
+            if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
+            {
+                // Create and send a KEY_PRESS message that contains only the key type.
+                Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ event.getCode().toString() }, "GAME");
+                // Retrieve the concealed parameters; if null or too short, allocate a new array.
+                String[] concealed = keyPressMsg.getConcealedParameters();
+                if (concealed == null || concealed.length < 2) {
+                    concealed = new String[2];
+                }
+                // Fill the concealed parameters with the selected game object ID and current game ID
+                concealed[0] = GameContext.getSelectedGameObjectId();
+                concealed[1] = GameContext.getCurrentGameId();
+                
+                // Set the concealed parameters back to the message.
+                keyPressMsg.setConcealedParameters(concealed);
+                
+                // Send the message to the server (or appropriate recipient)
+                Client.sendMessageStatic(keyPressMsg);
+            }
         });
-
-        // When a key is released, update the global KeyboardState.
+    
+        // When a key is released, update KeyboardState and send a KEY_RELEASE message.
         mainContainer.setOnKeyReleased((KeyEvent event) -> {
             System.out.println("CentralGraphicalUnit - Key released: " + event.getCode());
             KeyboardState.keyReleased(event.getCode());
+            
+            // Create and send a KEY_RELEASE message that contains only the key type.
+            if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
+            {
+                Message keyReleaseMsg = new Message("KEY_RELEASE", new Object[]{ event.getCode().toString() }, "GAME");
+                // Retrieve the concealed parameters; if null or too short, allocate a new array.
+                String[] concealed = keyReleaseMsg.getConcealedParameters();
+                if (concealed == null || concealed.length < 2) {
+                    concealed = new String[2];
+                }
+                // Fill the concealed parameters with the selected game object ID and current game ID
+                concealed[0] = GameContext.getSelectedGameObjectId();
+                concealed[1] = GameContext.getCurrentGameId();
+                
+                // Set the concealed parameters back to the message.
+                keyReleaseMsg.setConcealedParameters(concealed);
+                
+                // Send the message to the server (or appropriate recipient)
+                Client.sendMessageStatic(keyReleaseMsg);
+            }
         });
     }
-}
+}    
