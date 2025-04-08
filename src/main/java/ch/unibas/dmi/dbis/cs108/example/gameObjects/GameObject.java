@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import javafx.scene.canvas.GraphicsContext;
 import java.util.UUID;
@@ -12,6 +13,10 @@ public abstract class GameObject {
     protected String name;
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
+    private Game parentGame;
+    
+    // NEW: Selected flag.
+    private boolean selected = false;
 
     // Collision properties.
     private boolean collidable = true;
@@ -32,6 +37,23 @@ public abstract class GameObject {
     public abstract void setY(float y);
     public abstract void setWidth(float width);
     public abstract void setHeight(float height);
+
+    public Game getParentGame() {
+        return parentGame;
+    }
+
+    public void setParentGame(Game parentGame) {
+        this.parentGame = parentGame;
+    }
+    
+    // NEW: Getter and Setter for the selected flag.
+    public boolean isSelected() {
+        return selected;
+    }
+    
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+    }
 
     // Getters and setters.
     public String getId() { return id; }

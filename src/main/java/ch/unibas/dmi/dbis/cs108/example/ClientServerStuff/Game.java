@@ -3,6 +3,8 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObjectFactory;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Platform;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
@@ -29,7 +31,6 @@ public class Game {
 
     // Creates a concurrent Set<String> backed by a ConcurrentHashMap
     private final Set<String> users = ConcurrentHashMap.newKeySet();
-
 
     public Game(String gameId, String gameName) {
         this.gameId = gameId;
@@ -63,13 +64,11 @@ public class Game {
         startPlayersCommandProcessingLoop();
     }
 
-    public void setStartedFlag(boolean state)
-    {
+    public void setStartedFlag(boolean state) {
         startedFlag = state;
     }
 
-    public boolean getStartedFlag()
-    {
+    public boolean getStartedFlag() {
         return startedFlag;
     }
 
@@ -108,6 +107,7 @@ public class Game {
             GameObject newObject = GameObjectFactory.create(type, params);
             newObject.setId(uuid);
             gameObjects.add(newObject);
+            newObject.setParentGame(this);
             return newObject;
         });
     }
@@ -117,7 +117,7 @@ public class Game {
      * - Drains inbound messages for each object
      * - Processes commands for each object
      * - Performs local updates
-     * - Checks and resolves collisions among collidable objects
+     * - Then checks and resolves collisions among collidable objects
      */
     public void startPlayersCommandProcessingLoop() {
         final long[] lastUpdate = { System.nanoTime() };
@@ -126,43 +126,40 @@ public class Game {
             float deltaTime = (now - lastUpdate[0]) / 1_000_000_000f; // convert nanoseconds to seconds
             lastUpdate[0] = now;
 
-            // Process each object's messages, commands, and update with deltaTime.
+            // 1) Process each object's messages, commands, and update with deltaTime.
             for (GameObject go : gameObjects) {
                 go.processIncomingMessages();
                 go.processCommands();
-                go.myUpdateLocal(deltaTime); // now deltaTime is defined!
+                go.myUpdateLocal(deltaTime);
             }
 
-            // Then check and resolve collisions among collidable objects.
+            // 2) Check and resolve collisions among collidable objects (no setCollisionDetected calls).
             for (int i = 0; i < gameObjects.size(); i++) {
                 GameObject a = gameObjects.get(i);
                 if (!a.isCollidable()) continue;
-                // Reset collision flag for visual feedback if applicable.
-                if (a instanceof Player) {
-                    ((Player) a).setCollisionDetected(false);
-                }
+
                 for (int j = i + 1; j < gameObjects.size(); j++) {
                     GameObject b = gameObjects.get(j);
                     if (!b.isCollidable()) continue;
-                    if (b instanceof Player) {
-                        ((Player) b).setCollisionDetected(false);
-                    }
+
+                    // If they intersect, resolve the collision
                     if (a.intersects(b)) {
-                        // Resolve the collision (push objects apart).
                         a.resolveCollision(b);
-                        // Mark collision so that drawing can change colors.
-                        if (a instanceof Player) {
-                            ((Player) a).setCollisionDetected(true);
-                        }
-                        if (b instanceof Player) {
-                            ((Player) b).setCollisionDetected(true);
-                        }
-                        // System.out.println("Collision resolved between " + a.getName() + " and " + b.getName());
+                        // Removed any calls to setCollisionDetected(...) here
+                        if (a instanceof Player2 && b instanceof Platform) {
+                                // 'a' is the player
+                                ((Player2) a).getVel().y = 0;
+                            } else if (b instanceof Player2 && a instanceof Platform) {
+                                // 'b' is the player
+                                ((Player2) b).getVel().y = 0;
+                            
+                            }
                     }
                 }
             }
         });
     }
+
     /**
      * Draws all game objects onto the provided JavaFX GraphicsContext.
      */
@@ -170,6 +167,15 @@ public class Game {
         for (GameObject go : gameObjects) {
             go.draw(gc);
         }
+    }
+
+    public String getSelectedGameObjectId() {
+        for (GameObject go : gameObjects) {
+            if (go.isSelected()) {
+                return go.getId();
+            }
+        }
+        return null;
     }
 
     /**

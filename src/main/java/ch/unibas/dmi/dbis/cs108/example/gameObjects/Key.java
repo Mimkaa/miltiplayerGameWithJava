@@ -2,8 +2,6 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import javafx.application.Platform;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
@@ -26,7 +24,6 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     // Grab/Carry fields.
     private boolean isGrabbed = false;
     private String grabbedBy = null;
-
     // Friction factor to reduce horizontal sliding when on ground.
     private final float frictionFactor = 0.8f;
 
@@ -55,7 +52,9 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         return mass;
     }
 
-    // IGrabbable implementation.
+    // -------------------------
+    // IGrabbable Implementation
+    // -------------------------
     @Override
     public void onGrab(String playerId) {
         isGrabbed = true;
@@ -63,7 +62,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         vx = 0;
         vy = 0;
         // Attach key to the grabbing player's position.
-        Game currentGame = Server.getInstance().getGameSessionManager().getGameSession(getGameId());
+        Game currentGame = getParentGame(); // Use the parent game reference.
         if (currentGame != null) {
             for (GameObject obj : currentGame.getGameObjects()) {
                 if (obj.getId().equals(playerId) && obj instanceof Player) {
@@ -96,7 +95,9 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         return grabbedBy;
     }
 
-    // IThrowable implementation.
+    // -------------------------
+    // IThrowable Implementation
+    // -------------------------
     @Override
     public void throwObject(float throwVx, float throwVy) {
         vx = throwVx;
@@ -107,7 +108,9 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         sendMessage(throwMsg);
     }
 
-    // IGravityAffected implementation.
+    // -------------------------
+    // IGravityAffected Implementation
+    // -------------------------
     @Override
     public void applyGravity(float deltaTime) {
         if (!onGround && !isGrabbed) {
@@ -129,7 +132,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
      * Also checks if the key touches a Door, which triggers the win condition.
      */
     private void resolveCollisions() {
-        Game currentGame = GameContext.getGameById(getGameId());
+        // Use the parent game reference instead of GameContext.
+        Game currentGame = getParentGame();
         if (currentGame == null) return;
         final float tolerance = 5.0f;
         for (GameObject other : currentGame.getGameObjects()) {
@@ -146,12 +150,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                     System.out.println("Key " + getName() + " touched a Door. You won the game!");
                     Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, null);
                     sendMessage(winMsg);
-                    // Optionally, display an overlay message:
                     Platform.runLater(() -> {
-                        // For example, add a Label to CentralGraphicalUnit's container.
-                        // Label winLabel = new Label("You won the game!");
-                        // winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: green; -fx-background-color: rgba(255,255,255,0.8);");
-                        // CentralGraphicalUnit.getInstance().addNode(winLabel);
+                        // Optionally, add a win overlay message (e.g., display a label).
                     });
                 }
                 // Simple landing check.
@@ -167,8 +167,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     public void myUpdateLocal(float deltaTime) {
         long now = System.nanoTime();
         if (isGrabbed) {
-            // Follow grabbing player's position.
-            Game currentGame = GameContext.getGameById(getGameId());
+            // Follow the grabbing player's position.
+            Game currentGame = getParentGame();
             if (currentGame != null) {
                 for (GameObject obj : currentGame.getGameObjects()) {
                     if (obj.getId().equals(grabbedBy) && obj instanceof Player) {
@@ -176,8 +176,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                         setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
                         setY(p.getY() - getHeight());
                         // Send frequent sync updates (every 0.1 sec).
-                        if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-                            if (now - lastSyncTime >= 100_000_000) {
+                        if (ownerId != null && ownerId.equals(currentGame.getSelectedGameObjectId())) {
+                            if (now - lastSyncTime >= 100_000_000L) {
                                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                                 sendMessage(syncMsg);
                                 lastSyncTime = now;
@@ -200,8 +200,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
             }
         }
         // Send periodic sync updates when not grabbed.
-        if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-            if (now - lastSyncTime >= 1_000_000_000) {
+        if (ownerId != null && ownerId.equals(getParentGame().getSelectedGameObjectId())) {
+            if (now - lastSyncTime >= 1_000_000_000L) {
                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                 sendMessage(syncMsg);
                 lastSyncTime = now;
