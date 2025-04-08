@@ -65,7 +65,6 @@ public class Level {
                 100.0f,       // y-coordinate
                 30.0f,        // width
                 30.0f,        // height
-                100.0f,
                 sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));

@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -17,6 +18,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -29,9 +31,16 @@ import lombok.Getter;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Set;
 
@@ -54,6 +63,9 @@ public class GameContext {
 
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
+
+    // Add a field to store the last frame time (in milliseconds)
+    private long lastFrameTime = 0;
 
 
 
@@ -569,18 +581,38 @@ public class GameContext {
      * Updates the game state.
      * This method is called once per frame by the game loop.
      */
-    private void update() {
-        String gameId = currentGameId.get();
-        if (gameId == null) {
-            return;
+
+     
+    
+     public void update() {
+        long now = System.currentTimeMillis();
+        if (now - lastFrameTime < 30) {  // Approximately 60fps (1000ms / 60 ≈ 16.67 ms)
+            return;  // Not enough time has passed, so skip this update.
         }
-        Game game = gameSessionManager.getGameSession(gameId);
-        if (game == null) {
-            return;
+        lastFrameTime = now;
+        
+        // Get the current set of pressed keys.
+        Set<KeyCode> currentPressedKeys = KeyboardState.getPressedKeys();
+    
+        // For each key currently pressed, send a KEY_PRESS message.
+        for (KeyCode key : currentPressedKeys) {
+            Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ key.toString() }, "GAME");
+    
+            // Set concealed parameters (using your GameContext's methods).
+            String[] concealed = keyPressMsg.getConcealedParameters();
+            if (concealed == null || concealed.length < 2) {
+                concealed = new String[2];
+            }
+            concealed[0] = getSelectedGameObjectId();  // Implement this method to return the current game object's ID.
+            concealed[1] = getCurrentGameId();           // Implement this method to return the current game/session ID.
+            keyPressMsg.setConcealedParameters(concealed);
+    
+            Client.sendMessageStatic(keyPressMsg);
         }
-        // Update all game objects if there is at least one.
-        // game.updateAllObjects();
+    
+        // (Other game state update logic can follow here.)
     }
+
 
     /**
      * Draws the current game state on the provided GraphicsContext.

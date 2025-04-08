@@ -23,7 +23,7 @@ public class Player2 extends GameObject {
     // ---------------------------------
     // Constants matching the Python snippet
     // ---------------------------------
-    private static final float PLAYER_ACC = 0.5f;      // Acceleration magnitude when pressing left/right
+    private static final float PLAYER_ACC = 2.5f;      // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
     private static final float JUMP_FORCE = -15;
     private static final float SCREEN_WIDTH = 800;
@@ -121,6 +121,8 @@ public class Player2 extends GameObject {
         if (isSelected()) {
             //updateFromKeyboardInput();
         }
+        // 1) Reset acceleration each frame to (0,0) and apply gravity on the y-axis.
+        acc.y = 0.5f;
 
         // 2) Apply friction: acceleration is modified by the x component of velocity.
         acc.x += vel.x * PLAYER_FRICTION;
@@ -144,9 +146,7 @@ public class Player2 extends GameObject {
                 }
             }
         }
-        // 1) Reset acceleration each frame to (0,0) and apply gravity on the y-axis.
         acc.x = 0;
-        acc.y = 0.5f;
 
         
     }
@@ -166,9 +166,9 @@ public class Player2 extends GameObject {
                 String keyString = params[0].toString();
                 // React exactly as in updateFromKeyboardInput()
                 if (KeyCode.LEFT.toString().equals(keyString)) {
-                    acc.x = -PLAYER_ACC;
+                    acc.x += -PLAYER_ACC;
                 } else if (KeyCode.RIGHT.toString().equals(keyString)) {
-                    acc.x = PLAYER_ACC;
+                    acc.x += PLAYER_ACC;
                 } else if (KeyCode.UP.toString().equals(keyString)) {
                     if (!jumped) {
                         vel.y += JUMP_FORCE;
