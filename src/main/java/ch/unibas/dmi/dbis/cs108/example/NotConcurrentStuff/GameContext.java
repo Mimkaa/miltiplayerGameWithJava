@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -17,6 +18,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -29,9 +31,16 @@ import lombok.Getter;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Set;
 
@@ -55,28 +64,12 @@ public class GameContext {
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
 
-    /**
-     * The GameContext class serves as the central coordinator for managing game sessions,
-     * processing messages, handling the game loop, and updating the UI in a JavaFX-based game.
-     *
-     * <p>This class is implemented as a singleton and provides global access to shared game state,</p>
-     * including the current game session, selected game object, and various user interface components.
-     *
-     * <p>Responsibilities include:</p>
-     * <ul>
-     *   <li>Managing game sessions through the GameSessionManager</li>
-     *   <li>Handling incoming server messages via a custom MessageHogger</li>
-     *   <li>Rendering the UI using JavaFX</li>
-     *   <li>Maintaining the game update and rendering loop</li>
-     * </ul>
-     */
+    // Add a field to store the last frame time (in milliseconds)
+    private long lastFrameTime = 0;
+    private Set<KeyCode> prevPressedKeys = new HashSet<>();
 
-// ... (your code unchanged, with Javadoc comments like below before each public method or field)
 
-    /**
-     * Returns the singleton instance of the GameContext.
-     * @return the shared GameContext instance
-     */
+
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
@@ -173,7 +166,9 @@ public class GameContext {
                         }
                     });
 
-                } else if ("SELECTGO".equals(type)) {
+                } 
+                else if ("SELECTGO".equals(type)) 
+                {
                     System.out.println("Processing SELECTGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 1) {
                         System.out.println("SELECTGO message missing target GameObject id.");
@@ -187,10 +182,18 @@ public class GameContext {
                     }
                     Game game = gameSessionManager.getGameSession(gameId);
                     if (game != null) {
+                        // First, clear the selected flag in all game objects.
+                        for (GameObject go : game.getGameObjects()) {
+                            go.setSelected(false);
+                        }
+                        
                         boolean found = false;
                         for (GameObject go : game.getGameObjects()) {
                             if (go.getId().equals(targetGameObjectId)) {
+                                // Set the global selected object id.
                                 selectedGameObjectId.set(go.getId());
+                                // Mark this game object as selected.
+                                go.setSelected(true);
                                 found = true;
                                 System.out.println("Selected game object with id: " + go.getId());
                                 break;
@@ -202,8 +205,8 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + gameId);
                     }
-
-                } else if ("CREATEGO".equals(type)) {
+                }
+                else if ("CREATEGO".equals(type)) {
                     System.out.println("Processing CREATEGO response");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
                         System.out.println("CREATEGO message missing required parameters. Expected at least 3 parameters.");
@@ -483,26 +486,15 @@ public class GameContext {
         };
     }
 
-    /**
-     * Returns the ID of the currently selected game session.
-     * @return the current game ID, or null if not set
-     */
+    // Static getters for the game ID and selected game object ID.
     public static String getCurrentGameId() {
         return currentGameId.get();
     }
 
-    /**
-     * Returns the ID of the currently selected game object.
-     * @return the selected game object ID, or null if not set
-     */
     public static String getSelectedGameObjectId() {
         return selectedGameObjectId.get();
     }
 
-    /**
-     * Returns the GameSessionManager managing all active sessions.
-     * @return the GameSessionManager
-     */
     public GameSessionManager getGameSessionManager() {
         return gameSessionManager;
     }
@@ -590,22 +582,76 @@ public class GameContext {
      * Updates the game state.
      * This method is called once per frame by the game loop.
      */
-    private void update() {
-        String gameId = currentGameId.get();
-        if (gameId == null) {
-            return;
-        }
-        Game game = gameSessionManager.getGameSession(gameId);
-        if (game == null) {
-            return;
-        }
-        // Update all game objects if there is at least one.
-        // game.updateAllObjects();
-    }
 
-     /**
-     * Draws the current game state to the screen.
-     * @param gc the GraphicsContext used for rendering
+     
+    
+     public void update() {
+        long now = System.currentTimeMillis();
+        // Throttle updates to roughly 40 fps or so (adjust as needed)
+        if (now - lastFrameTime < 25) {
+            return;  // Not enough time has passed, so skip this update.
+        }
+        lastFrameTime = now;
+        
+        // Get the current set of pressed keys.
+        Set<KeyCode> currentPressedKeys = KeyboardState.getPressedKeys();
+        
+        // Send KEY_PRESS messages for every key currently pressed.
+        for (KeyCode key : currentPressedKeys) {
+            Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ key.toString() }, "GAME");
+        
+            // Set concealed parameters (using your GameContext’s helper methods).
+            String[] concealed = keyPressMsg.getConcealedParameters();
+            if (concealed == null || concealed.length < 2) {
+                concealed = new String[2];
+            }
+            concealed[0] = getSelectedGameObjectId();  // Your method to obtain selected game object's ID.
+            concealed[1] = getCurrentGameId();           // Your method to obtain current game session ID.
+            keyPressMsg.setConcealedParameters(concealed);
+        
+            Client.sendMessageStatic(keyPressMsg);
+        }
+        
+        // Determine keys that have been released since the last update.
+        Set<KeyCode> newlyReleased = new HashSet<>(prevPressedKeys);
+        newlyReleased.removeAll(currentPressedKeys);
+        
+        // If at least one key was released, send a MOVE message with the current position.
+        if (!newlyReleased.isEmpty()) {
+            Game currentGame = gameSessionManager.getGameSession(getCurrentGameId());
+            GameObject selectedObject = null;
+            for (GameObject go : currentGame.getGameObjects()) {
+                if (go.getId().equals(getSelectedGameObjectId())) {
+                    selectedObject = go;
+                    break;
+                }
+            }
+            // Assume getX() and getY() return the current position of the selected game object.
+            Message moveMsg = new Message("MOVE", new Object[]{ selectedObject.getX(), selectedObject.getY(), }, "GAME");
+        
+            String[] concealed = moveMsg.getConcealedParameters();
+            if (concealed == null || concealed.length < 2) {
+                concealed = new String[2];
+            }
+            concealed[0] = getSelectedGameObjectId();
+            concealed[1] = getCurrentGameId();
+            moveMsg.setConcealedParameters(concealed);
+        
+            Client.sendMessageStatic(moveMsg);
+        }
+        
+        // Update the previous key set for the next update cycle.
+        prevPressedKeys = new HashSet<>(currentPressedKeys);
+        
+        // (Other game state update logic can follow here.)
+    }
+    
+
+
+    /**
+     * Draws the current game state on the provided GraphicsContext.
+     *
+     * @param gc The GraphicsContext to draw on.
      */
     private void draw(GraphicsContext gc) {
         String gameId = currentGameId.get();
@@ -627,19 +673,16 @@ public class GameContext {
         game.draw(gc);
     }
 
-    /**
-     * Gets the Game instance associated with a given ID.
-     * @param gameId the ID of the game session
-     * @return the Game instance, or null if not found
-     */
+
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
     }
 
-    /**
-     * Entry point for launching the application.
-     * @param args command-line arguments (unused)
-     */
+/*
+    public static String getLocalClientId() {
+        return ThinkOutsideTheRoom.client.getClientId();
+    }
+*/
 
     public static void main(String[] args) {
         // Create the game context.

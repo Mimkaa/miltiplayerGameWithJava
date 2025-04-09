@@ -29,6 +29,8 @@ public class Platform extends GameObject {
         this.y = y;
         this.width = width;
         this.height = height;
+        setCollidable(true);
+        setMovable(false);
     }
 
     /**

@@ -65,7 +65,6 @@ public class Level {
                 100.0f,       // y-coordinate
                 30.0f,        // width
                 30.0f,        // height
-                100.0f,
                 sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
@@ -73,9 +72,15 @@ public class Level {
         // Create two players: Alfred and Gerald.
         // Expected parameter order (for Player):
         // [sessionId, objectType, objectName, x, y, width, height]
+
+        try {
+            Thread.sleep(5000);  // Delay of 5000 milliseconds
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
         Object[] alfredParams = new Object[] {
                 sessionId,    // game session id
-                "Player",     // object type
+                "Player2",     // object type
                 "Alfred",     // object name
                 200.0f,        // x-coordinate
                 200.0f,       // y-coordinate
@@ -88,7 +93,7 @@ public class Level {
 
         Object[] geraldParams = new Object[] {
                 sessionId,    // game session id
-                "Player",     // object type
+                "Player2",     // object type
                 "Gerald",     // object name
                 150.0f,       // x-coordinate
                 200.0f,       // y-coordinate

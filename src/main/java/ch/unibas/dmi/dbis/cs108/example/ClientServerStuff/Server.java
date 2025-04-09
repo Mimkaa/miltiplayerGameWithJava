@@ -382,16 +382,20 @@ public class Server {
      */
     private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
         try {
+            // Check if the message type contains "KEY"
+            boolean isKeyMessage = msg.getMessageType().contains("KEY");
             for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-                if (!entry.getValue().equals(senderSocket)) {
-                    InetAddress dest = entry.getValue().getAddress();
-                    int port = entry.getValue().getPort();
-                    String encoded = MessageCodec.encode(msg);
-                    byte[] data = encoded.getBytes();
-                    DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
-                    serverSocket.send(packet);
-                    System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
+                // If it's not a key message, then skip sending to the sender
+                if (!isKeyMessage && entry.getValue().equals(senderSocket)) {
+                    continue;
                 }
+                InetAddress dest = entry.getValue().getAddress();
+                int port = entry.getValue().getPort();
+                String encoded = MessageCodec.encode(msg);
+                byte[] data = encoded.getBytes();
+                DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
+                serverSocket.send(packet);
+                System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
             }
         } catch (Exception e) {
             e.printStackTrace();

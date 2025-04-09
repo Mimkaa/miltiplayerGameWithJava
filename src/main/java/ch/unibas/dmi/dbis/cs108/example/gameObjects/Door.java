@@ -2,8 +2,6 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -30,7 +28,7 @@ public class Door extends GameObject {
     public void myUpdateLocal(float deltaTime) {
         // A static door never changes its position.
         // Instead, check for the win condition.
-        Game currentGame = Server.getInstance().getGameSessionManager().getGameSession(getGameId());
+        Game currentGame = getParentGame(); // Use the parent game reference.
         if (currentGame == null) return;
         for (GameObject go : currentGame.getGameObjects()) {
             if (go instanceof Key) {
@@ -79,19 +77,35 @@ public class Door extends GameObject {
     }
 
     @Override
-    public float getX() { return x; }
+    public float getX() { 
+        return x; 
+    }
     @Override
-    public float getY() { return y; }
+    public float getY() { 
+        return y; 
+    }
     @Override
-    public float getWidth() { return width; }
+    public float getWidth() { 
+        return width; 
+    }
     @Override
-    public float getHeight() { return height; }
+    public float getHeight() { 
+        return height; 
+    }
     @Override
-    public void setX(float x) { this.x = x; }
+    public void setX(float x) { 
+        this.x = x; 
+    }
     @Override
-    public void setY(float y) { this.y = y; }
+    public void setY(float y) { 
+        this.y = y; 
+    }
     @Override
-    public void setWidth(float width) { this.width = width; }
+    public void setWidth(float width) { 
+        this.width = width; 
+    }
     @Override
-    public void setHeight(float height) { this.height = height; }
+    public void setHeight(float height) { 
+        this.height = height; 
+    }
 }

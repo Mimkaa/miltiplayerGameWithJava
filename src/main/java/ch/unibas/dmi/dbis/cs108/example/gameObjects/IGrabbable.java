@@ -5,4 +5,6 @@ public interface IGrabbable {
     void onRelease();
     boolean isGrabbed();
     String getGrabbedBy();
+
+    String getName();
 }
