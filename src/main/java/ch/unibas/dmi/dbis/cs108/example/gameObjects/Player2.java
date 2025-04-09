@@ -10,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
+import org.dyn4j.geometry.Vector2;
 
 /**
  * A JavaFX-based translation of the Pygame Player snippet:
@@ -20,7 +21,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class Player2 extends GameObject {
+public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     // ---------------------------------
     // Constants matching the Python snippet
@@ -61,6 +62,12 @@ public class Player2 extends GameObject {
 
     // Ground collision flag.
     private boolean onGround = false;
+
+    private Player2 grabbedGuy = null;
+
+    private static final float GRAB_RADIUS = 50.0f;
+
+    public boolean iAmGrabbed = false;
 
     /**
      * Simple constructor: place player in the middle of the screen with a fixed size.
@@ -145,49 +152,10 @@ public class Player2 extends GameObject {
         // Update ground collision status.
         checkGroundCollision();
         // We no longer need to check for someone on top.
-    }
-
-    /**
-     * We are not using this method in this snippet.
-     */
-    @Override
-    public void myUpdateLocal() { }
-
-    @Override
-    protected void myUpdateGlobal(Message msg) {
-        if ("KEY_PRESS".equals(msg.getMessageType())) {
-            // Expecting one parameter: the name of the key (e.g., "LEFT", "RIGHT", "UP")
-            Object[] params = msg.getParameters();
-            if (params != null && params.length >= 1) {
-                String keyString = params[0].toString();
-                // React exactly as in updateFromKeyboardInput()
-                if (KeyCode.LEFT.toString().equals(keyString)) {
-                    acc.x += -PLAYER_ACC;
-                } else if (KeyCode.RIGHT.toString().equals(keyString)) {
-                    acc.x += PLAYER_ACC;
-                } else if (KeyCode.UP.toString().equals(keyString)) {
-                    if (!jumped && onGround) {
-                        vel.y += JUMP_FORCE;
-                        jumped = true;
-                    }
-                }
-                System.out.println("Processed KEY_PRESS for " + getName() + ": " + keyString);
-            }
-        } else if ("MOVE".equals(msg.getMessageType())) {
-            // Expecting two parameters: the new position (e.g., x and y coordinates).
-            Object[] params = msg.getParameters();
-            if (params != null && params.length >= 2) {
-                try {
-                    float newX = Float.parseFloat(params[0].toString());
-                    float newY = Float.parseFloat(params[1].toString());
-                    // Set the player's position.
-                    pos.x = newX;
-                    pos.y = newY;
-                    System.out.println("Processed MOVE for " + getName() + ": pos=(" + newX + ", " + newY + ")");
-                } catch (NumberFormatException ex) {
-                    System.out.println("Error processing MOVE message parameters: " + Arrays.toString(params));
-                }
-            }
+        // Define a grabbing radius constant.
+        if(grabbedGuy!=null)
+        {
+            grabbedGuy.setPos(this.pos);
         }
     }
 
@@ -220,6 +188,103 @@ public class Player2 extends GameObject {
             }
         }
     }
+
+
+
+    /**
+     * We are not using this method in this snippet.
+     */
+    @Override
+    public void myUpdateLocal() {
+    }
+
+    @Override
+protected void myUpdateGlobal(Message msg) {
+    if (!iAmGrabbed) {
+        if ("KEY_PRESS".equals(msg.getMessageType())) {
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 1) {
+                String keyString = params[0].toString();
+
+                if (KeyCode.LEFT.toString().equals(keyString)) {
+                    acc.x += -PLAYER_ACC;
+                } else if (KeyCode.RIGHT.toString().equals(keyString)) {
+                    acc.x += PLAYER_ACC;
+                } else if (KeyCode.UP.toString().equals(keyString)) {
+                    if (!jumped && onGround) {
+                        vel.y += JUMP_FORCE;
+                        jumped = true;
+                    }
+                } else if (KeyCode.E.toString().equals(keyString)) {
+                    // If an object is already grabbed, release it and return.
+                    if (grabbedGuy != null && grabbedGuy.iAmGrabbed) {
+                        grabbedGuy.iAmGrabbed = false;
+                        System.out.println("Player " + getName() + " released grabbed player: " + grabbedGuy.getName());
+                        grabbedGuy = null;
+                        return;
+                    }
+
+                    // Otherwise, search for the closest grabbable Player2
+                    Game parentGame = getParentGame();
+                    if (parentGame != null) {
+                        Player2 closest = null;
+                        double minDistance = Double.MAX_VALUE;
+                        float myCenterX = getX() + getWidth() / 2;
+                        float myCenterY = getY() + getHeight() / 2;
+
+                        for (GameObject obj : parentGame.getGameObjects()) {
+                            if (obj.getId().equals(getId())) continue;
+                            if (!(obj instanceof Player2)) continue;
+                            Player2 candidate = (Player2) obj;
+                            if (candidate.iAmGrabbed) continue;
+
+                            float candidateCenterX = candidate.getX() + candidate.getWidth() / 2;
+                            float candidateCenterY = candidate.getY() + candidate.getHeight() / 2;
+                            double dx = myCenterX - candidateCenterX;
+                            double dy = myCenterY - candidateCenterY;
+                            double distance = Math.sqrt(dx * dx + dy * dy);
+
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closest = candidate;
+                            }
+                        }
+
+                        if (closest != null && minDistance <= GRAB_RADIUS) {
+                            grabbedGuy = closest;
+                            grabbedGuy.iAmGrabbed = true;
+                            System.out.println("Player " + getName() + " grabbed player: "
+                                    + grabbedGuy.getName() + " at distance " + minDistance);
+                        } else {
+                            System.out.println("No player found within grab radius (" + GRAB_RADIUS + ").");
+                        }
+                    }
+                }
+
+                System.out.println("Processed KEY_PRESS for " + getId() + ": " + keyString);
+            }
+        } else if ("MOVE".equals(msg.getMessageType())) {
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 2) {
+                try {
+                    float newX = Float.parseFloat(params[0].toString());
+                    float newY = Float.parseFloat(params[1].toString());
+                    pos.x = newX;
+                    pos.y = newY;
+                    System.out.println("Processed MOVE for " + getId() + ": pos=(" + newX + ", " + newY + ")");
+                } catch (NumberFormatException ex) {
+                    System.out.println("Error processing MOVE message parameters: " + Arrays.toString(params));
+                }
+            }
+        } else {
+            System.out.println("Unknown message type: " + msg.getMessageType());
+        }
+    }
+}
+
+
+
+
 
     // ---------------------------------
     // Drawing the rectangle & name.
@@ -283,6 +348,31 @@ public class Player2 extends GameObject {
     @Override
     public Object[] getConstructorParamValues() {
         return new Object[]{ getName(), pos.x, pos.y, width, height, getGameId() };
+    }
+
+    @Override
+    public void throwObject(float throwVx, float throwVy) {
+
+    }
+
+    @Override
+    public void onGrab(String playerId) {
+
+    }
+
+    @Override
+    public void onRelease() {
+
+    }
+
+    @Override
+    public boolean isGrabbed() {
+        return false;
+    }
+
+    @Override
+    public String getGrabbedBy() {
+        return "";
     }
 
     // ---------------------------------
