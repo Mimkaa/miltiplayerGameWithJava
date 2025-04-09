@@ -139,25 +139,25 @@ public class CentralGraphicalUnit {
         mainContainer.setOnKeyPressed((KeyEvent event) -> {
             System.out.println("CentralGraphicalUnit - Key pressed: " + event.getCode());
             KeyboardState.keyPressed(event.getCode());
-            if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
-            {
+            //if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
+            //{
                 // Create and send a KEY_PRESS message that contains only the key type.
-                Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ event.getCode().toString() }, "GAME");
+            //    Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ event.getCode().toString() }, "GAME");
                 // Retrieve the concealed parameters; if null or too short, allocate a new array.
-                String[] concealed = keyPressMsg.getConcealedParameters();
-                if (concealed == null || concealed.length < 2) {
-                    concealed = new String[2];
-                }
+            //    String[] concealed = keyPressMsg.getConcealedParameters();
+            //    if (concealed == null || concealed.length < 2) {
+            //        concealed = new String[2];
+            //    }
                 // Fill the concealed parameters with the selected game object ID and current game ID
-                concealed[0] = GameContext.getSelectedGameObjectId();
-                concealed[1] = GameContext.getCurrentGameId();
+            //    concealed[0] = GameContext.getSelectedGameObjectId();
+            //    concealed[1] = GameContext.getCurrentGameId();
                 
                 // Set the concealed parameters back to the message.
-                keyPressMsg.setConcealedParameters(concealed);
+            //    keyPressMsg.setConcealedParameters(concealed);
                 
                 // Send the message to the server (or appropriate recipient)
-                Client.sendMessageStatic(keyPressMsg);
-            }
+            //    Client.sendMessageStatic(keyPressMsg);
+            //}
         });
     
         // When a key is released, update KeyboardState and send a KEY_RELEASE message.
@@ -166,24 +166,24 @@ public class CentralGraphicalUnit {
             KeyboardState.keyReleased(event.getCode());
             
             // Create and send a KEY_RELEASE message that contains only the key type.
-            if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
-            {
-                Message keyReleaseMsg = new Message("KEY_RELEASE", new Object[]{ event.getCode().toString() }, "GAME");
+            //if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
+            //{
+             //   Message keyReleaseMsg = new Message("KEY_RELEASE", new Object[]{ event.getCode().toString() }, "GAME");
                 // Retrieve the concealed parameters; if null or too short, allocate a new array.
-                String[] concealed = keyReleaseMsg.getConcealedParameters();
-                if (concealed == null || concealed.length < 2) {
-                    concealed = new String[2];
-                }
+             //   String[] concealed = keyReleaseMsg.getConcealedParameters();
+             //   if (concealed == null || concealed.length < 2) {
+             //       concealed = new String[2];
+             //   }
                 // Fill the concealed parameters with the selected game object ID and current game ID
-                concealed[0] = GameContext.getSelectedGameObjectId();
-                concealed[1] = GameContext.getCurrentGameId();
+             //   concealed[0] = GameContext.getSelectedGameObjectId();
+           //     concealed[1] = GameContext.getCurrentGameId();
                 
                 // Set the concealed parameters back to the message.
-                keyReleaseMsg.setConcealedParameters(concealed);
+             //   keyReleaseMsg.setConcealedParameters(concealed);
                 
                 // Send the message to the server (or appropriate recipient)
-                Client.sendMessageStatic(keyReleaseMsg);
-            }
+             //   Client.sendMessageStatic(keyReleaseMsg);
+           // }
         });
     }
 }    
