@@ -1,7 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import java.util.Arrays;
-
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
@@ -59,6 +59,9 @@ public class Player2 extends GameObject {
     // ---------------------------------
     private float moveMsgTimer = 0;
 
+    // Ground collision flag.
+    private boolean onGround = false;
+
     /**
      * Simple constructor: place player in the middle of the screen with a fixed size.
      */
@@ -88,40 +91,27 @@ public class Player2 extends GameObject {
         // If left arrow is pressed:
         if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
             acc.x = -PLAYER_ACC;
-            // Send a KEY_PRESS message for the LEFT key
-            //Message leftKeyMsg = new Message("KEY_PRESS", new Object[]{KeyCode.LEFT.toString()}, null);
-            //sendMessage(leftKeyMsg);
         }
-        
+
         // If right arrow is pressed:
         if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
             acc.x = PLAYER_ACC;
-            // Send a KEY_PRESS message for the RIGHT key
-            //Message rightKeyMsg = new Message("KEY_PRESS", new Object[]{KeyCode.RIGHT.toString()}, null);
-            //sendMessage(rightKeyMsg);
         }
-        
+
         // Process jump (up arrow) input:
         if (KeyboardState.isKeyPressed(KeyCode.UP)) {
-            if (!jumped) {
+            if (!jumped && onGround) {  // Allow jump as long as the player is on ground.
                 vel.y += JUMP_FORCE;
                 jumped = true;
-                // Send a KEY_PRESS message for the UP key (without position)
-                //Message upKeyMsg = new Message("KEY_PRESS", new Object[]{KeyCode.UP.toString()}, null);
-                //sendMessage(upKeyMsg);
-                
-                
             }
         }
     }
-    
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        
-
         if (isSelected()) {
-            //updateFromKeyboardInput();
+            // Optionally process keyboard input when selected.
+            // updateFromKeyboardInput();
         }
         // 1) Reset acceleration each frame to (0,0) and apply gravity on the y-axis.
         acc.y = 0.5f;
@@ -139,10 +129,12 @@ public class Player2 extends GameObject {
         // if (pos.x > SCREEN_WIDTH) { pos.x = 0; }
         // else if (pos.x < 0) { pos.x = SCREEN_WIDTH; }
 
-        // 5) Check for collision with a Platform to reset the jump flag.
+        // 5) Check for collision with a Platform (or any collidable object) to reset the jump flag.
         if (jumped && getParentGame() != null) {
             for (GameObject obj : getParentGame().getGameObjects()) {
-                if (obj instanceof Platform && this.intersects(obj)) {
+                // Here we only check for collision with, say, Platforms (or any desired objects)
+                // that allow you to reset the jump flag.
+                if ((obj instanceof Platform || obj instanceof Player2) && this.intersects(obj)) {
                     jumped = false;
                     break;
                 }
@@ -150,7 +142,9 @@ public class Player2 extends GameObject {
         }
         acc.x = 0;
 
-        
+        // Update ground collision status.
+        checkGroundCollision();
+        // We no longer need to check for someone on top.
     }
 
     /**
@@ -172,14 +166,14 @@ public class Player2 extends GameObject {
                 } else if (KeyCode.RIGHT.toString().equals(keyString)) {
                     acc.x += PLAYER_ACC;
                 } else if (KeyCode.UP.toString().equals(keyString)) {
-                    if (!jumped) {
+                    if (!jumped && onGround) {
                         vel.y += JUMP_FORCE;
                         jumped = true;
                     }
                 }
                 System.out.println("Processed KEY_PRESS for " + getName() + ": " + keyString);
             }
-        }else if ("MOVE".equals(msg.getMessageType())) {
+        } else if ("MOVE".equals(msg.getMessageType())) {
             // Expecting two parameters: the new position (e.g., x and y coordinates).
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 2) {
@@ -196,7 +190,36 @@ public class Player2 extends GameObject {
             }
         }
     }
-    
+
+    /**
+     * Checks if this player is "on the ground" by testing collision below (with a tolerance).
+     * In this version, any collidable object (platforms, players, etc.) supporting the player
+     * will set the onGround flag to true.
+     */
+    private void checkGroundCollision() {
+        Game currentGame = getParentGame();
+        if (currentGame == null) return;
+
+        final float tolerance = 10.0f;
+        float bottom = getY() + getHeight();
+        onGround = false;
+        for (GameObject other : currentGame.getGameObjects()) {
+            if (other == this || !other.isCollidable()) continue;
+            float otherTop = other.getY();
+            float myLeft = getX();
+            float myRight = getX() + getWidth();
+            float otherLeft = other.getX();
+            float otherRight = other.getX() + other.getWidth();
+            boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
+            if (vel.y >= 0 && horizontalOverlap && bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
+                // Align this player's bottom with the supporting object's top.
+                setY(otherTop - getHeight());
+                vel.y = 0;
+                onGround = true;
+                break;
+            }
+        }
+    }
 
     // ---------------------------------
     // Drawing the rectangle & name.

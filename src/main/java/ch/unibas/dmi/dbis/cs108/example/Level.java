@@ -72,6 +72,12 @@ public class Level {
         // Create two players: Alfred and Gerald.
         // Expected parameter order (for Player):
         // [sessionId, objectType, objectName, x, y, width, height]
+
+        try {
+            Thread.sleep(5000);  // Delay of 5000 milliseconds
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
         Object[] alfredParams = new Object[] {
                 sessionId,    // game session id
                 "Player2",     // object type
