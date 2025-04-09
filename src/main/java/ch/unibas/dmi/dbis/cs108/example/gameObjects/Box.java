@@ -2,12 +2,13 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
+/**
+ * A Box that can be grabbed, thrown, and affected by gravity.
+ */
 public class Box extends GameObject implements IGravityAffected, IGrabbable, IThrowable {
 
     // Bounding box and physics fields.
@@ -20,9 +21,9 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
     private float mass;
     private float vy = 0.0f;                   // Vertical velocity (pixels/second)
     private float vx = 0.0f;                   // Horizontal velocity (pixels/second)
-    private float terminalVelocity = 600.0f;     // Maximum falling speed
+    private float terminalVelocity = 600.0f;   // Maximum falling speed
 
-    // Time tracking.
+    // Time tracking for updates.
     private long lastUpdateNano = System.nanoTime();
 
     // Throttle time for sending sync updates.
@@ -77,8 +78,9 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
         // Stop any movement.
         vx = 0;
         vy = 0;
+
         // Immediately update the position to the player's position.
-        Game currentGame = GameContext.getGameById(getGameId());
+        Game currentGame = getParentGame(); // Now using the parent game reference.
         if (currentGame != null) {
             for (GameObject obj : currentGame.getGameObjects()) {
                 if (obj.getId().equals(playerId) && obj instanceof Player) {
@@ -157,17 +159,24 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
      * sets onGround if the box is landing.
      */
     private void resolveCollisionsUsingParent() {
-        Game currentGame = Server.getInstance().getGameSessionManager().getGameSession(getGameId());
+        Game currentGame = getParentGame();  // Using the parent game reference.
         if (currentGame == null) return;
+
         final float tolerance = 5.0f;
         for (GameObject other : currentGame.getGameObjects()) {
             if (other == this || !other.isCollidable()) continue;
+
             if (this.intersects(other)) {
                 this.resolveCollision(other);
+
+                // If we collide with a Player & don't yet have an owner, set owner.
                 if (other instanceof Player && ownerId == null) {
                     ownerId = other.getId();
                     System.out.println("Box " + getName() + " is now owned by player " + ownerId);
                 }
+
+                // Check if we landed on top of 'other'
+                // (if the difference between the bottom of the box and the top of other is within tolerance and velocity is downward)
                 if (Math.abs((this.getY() + this.getHeight()) - other.getY()) < tolerance && vy >= 0) {
                     onGround = true;
                     vy = 0;
@@ -187,9 +196,9 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
     public void myUpdateLocal(float deltaTime) {
         long now = System.nanoTime();
 
+        // If grabbed, follow the player's position.
         if (isGrabbed) {
-            // If grabbed, update position to follow the player.
-            Game currentGame = GameContext.getGameById(getGameId());
+            Game currentGame = getParentGame(); // Using parent reference.
             if (currentGame != null) {
                 for (GameObject obj : currentGame.getGameObjects()) {
                     if (obj.getId().equals(grabbedBy) && obj instanceof Player) {
@@ -197,8 +206,9 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
                         setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
                         setY(p.getY() - getHeight());
                         // Send frequent SYNC updates (every 0.1 second) so others see the carried position.
-                        if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-                            if (now - lastSyncTime >= 100_000_000) { // 0.1 second
+                        // Replace GameContext.getSelectedGameObjectId() with parent's selected object if available.
+                        if (ownerId != null && ownerId.equals(getParentGame().getSelectedGameObjectId())) {
+                            if (now - lastSyncTime >= 100_000_000L) { // 0.1 second in nanoseconds.
                                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                                 sendMessage(syncMsg);
                                 lastSyncTime = now;
@@ -213,15 +223,15 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
         // Not grabbed: reset ground state.
         onGround = false;
 
-        // Apply gravity (which updates both x and y).
+        // Apply gravity.
         if (!onGround) {
             applyGravity(deltaTime);
         }
 
-        // Resolve collisions.
+        // Resolve collisions with other objects.
         resolveCollisionsUsingParent();
 
-        // If the box is on the ground, apply friction to reduce horizontal sliding.
+        // If on ground, apply friction to horizontal velocity.
         if (onGround) {
             float frictionFactor = 0.8f; // Adjust friction as needed.
             vx *= frictionFactor;
@@ -231,8 +241,8 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
         }
 
         // Send less frequent SYNC updates when not grabbed (every 1 second).
-        if (ownerId != null && ownerId.equals(GameContext.getSelectedGameObjectId())) {
-            if (now - lastSyncTime >= 1_000_000_000) { // 1 second
+        if (ownerId != null && ownerId.equals(getParentGame().getSelectedGameObjectId())) {
+            if (now - lastSyncTime >= 1_000_000_000L) { // 1 second.
                 Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
                 sendMessage(syncMsg);
                 lastSyncTime = now;
@@ -242,7 +252,7 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
 
     @Override
     public void myUpdateLocal() {
-        // Not used; update method with deltaTime is preferred.
+        // Not used; the deltaTime version is preferred.
     }
 
     /**
@@ -255,7 +265,8 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
     @Override
     protected void myUpdateGlobal(Message msg) {
         // If the box is grabbed by the controlling client, skip global SYNC updates.
-        if (isGrabbed && grabbedBy != null && grabbedBy.equals(GameContext.getSelectedGameObjectId())) {
+        if (isGrabbed && grabbedBy != null &&
+            grabbedBy.equals(getParentGame().getSelectedGameObjectId())) {
             return;
         }
         if ("SYNC".equals(msg.getMessageType())) {
@@ -267,7 +278,8 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
                     setX(newX);
                     setY(newY);
                 }
-                System.out.println("Processed SYNC for " + getName() + ": new position x=" + newX + ", y=" + newY);
+                System.out.println("Processed SYNC for " + getName() +
+                        ": new position x=" + newX + ", y=" + newY);
             } else {
                 System.out.println("SYNC message received with insufficient parameters.");
             }
@@ -280,7 +292,8 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
                     vx = newVx;
                     vy = newVy;
                 }
-                System.out.println("Processed THROW for " + getName() + ": new velocity (" + vx + ", " + vy + ")");
+                System.out.println("Processed THROW for " + getName() +
+                        ": new velocity (" + vx + ", " + vy + ")");
             }
         } else {
             System.out.println("Unhandled message type: " + msg.getMessageType());

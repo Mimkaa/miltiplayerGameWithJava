@@ -173,7 +173,9 @@ public class GameContext {
                         }
                     });
 
-                } else if ("SELECTGO".equals(type)) {
+                } 
+                else if ("SELECTGO".equals(type)) 
+                {
                     System.out.println("Processing SELECTGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 1) {
                         System.out.println("SELECTGO message missing target GameObject id.");
@@ -187,10 +189,18 @@ public class GameContext {
                     }
                     Game game = gameSessionManager.getGameSession(gameId);
                     if (game != null) {
+                        // First, clear the selected flag in all game objects.
+                        for (GameObject go : game.getGameObjects()) {
+                            go.setSelected(false);
+                        }
+                        
                         boolean found = false;
                         for (GameObject go : game.getGameObjects()) {
                             if (go.getId().equals(targetGameObjectId)) {
+                                // Set the global selected object id.
                                 selectedGameObjectId.set(go.getId());
+                                // Mark this game object as selected.
+                                go.setSelected(true);
                                 found = true;
                                 System.out.println("Selected game object with id: " + go.getId());
                                 break;
@@ -202,8 +212,8 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + gameId);
                     }
-
-                } else if ("CREATEGO".equals(type)) {
+                }
+                else if ("CREATEGO".equals(type)) {
                     System.out.println("Processing CREATEGO response");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 3) {
                         System.out.println("CREATEGO message missing required parameters. Expected at least 3 parameters.");

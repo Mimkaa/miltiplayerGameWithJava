@@ -28,6 +28,7 @@ public class GameObjectFactory {
         registry.put("Box", Box.class);
         registry.put("Door", Door.class);
         registry.put("Key", Key.class);
+        registry.put("Player2", Player2.class);
 
     }
 

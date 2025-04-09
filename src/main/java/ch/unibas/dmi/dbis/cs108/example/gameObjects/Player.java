@@ -2,151 +2,149 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 
-
+/**
+ * A Player that has no collision handling and uses Vector2 for position and velocity.
+ * The update follows basic physics:
+ *   velocity += acceleration * dt   (gravity)
+ *   position += velocity * dt
+ */
 @Getter
 @Setter
 public class Player extends GameObject implements IGravityAffected {
 
-    private float x;
-    private float y;
+    // Position & velocity in 2D
+    private Vector2 position;
+    private Vector2 velocity;
+
+    // Dimensions of the Player (still stored as floats)
     private float width;
     private float height;
 
+    // Horizontal speed when pressing A/D
     private float speed = 5.0f;
-    private float vy = 0.0f;
+    // Mass (unused except for interface reference)
     private float mass = 70.0f;
 
-    private boolean onGround = false;
-    private boolean collisionDetected = false;
-    private boolean canJump = true;
+    // Gravity constant (downward)
+    private static final float GRAVITY = 50f;
 
-    // Jump impulse (tuned for your game)
-    private float jumpingImpulse = 900f;
+    // Jump impulse
+    private float jumpingImpulse = 40f;
 
-    // For time-based updates.
+    // Throwing / Grabbing
+    private boolean isThrowing = false;
+    private float throwAngle = 90f;    
+    private boolean fPreviouslyPressed = false; // for edge detection on 'F'
+    private boolean ePreviouslyPressed = false; // for edge detection on 'E'
+
+    // For time-based updates if needed
     private long lastUpdateTime;
 
-    // Fields for throwing mode.
-    private boolean isThrowing = false;  // Are we in throwing mode?
-    private float throwAngle = 90f;        // In degrees; default is upward.
-    private boolean fPreviouslyPressed = false; // For edge detection on F key.
-
-    // For edge detection on grab key E.
-    private boolean ePreviouslyPressed = false;
-
-    // Throw vector fields (will be computed when throwing)
-    // (We compute these on F key release.)
-
+    /**
+     * Constructs a Player at (x, y) with a default square size (side x side).
+     */
     public Player(String name, double x, double y, double side, String gameId) {
         this(name, (float) x, (float) y, (float) side, (float) side, gameId);
-        this.lastUpdateTime = System.nanoTime();
     }
 
+    /**
+     * Constructs a Player at (x, y) with custom width & height.
+     */
     public Player(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
-        this.x = x;
-        this.y = y;
+        this.position = new Vector2(x, y);
+        this.velocity = new Vector2(0, 0);
         this.width = width;
         this.height = height;
         this.lastUpdateTime = System.nanoTime();
+        setCollidable(true);
+        setMovable(true);
     }
 
-    // --- Local Gravity & Collision ---
+    // ---------------------------------
+    // Gravity & Movement (no collisions)
+    // ---------------------------------
 
+    /**
+     * Physics step for gravity:
+     *   velocity += (gravity * dt)
+     *   position += (velocity * dt)
+     */
     @Override
     public void applyGravity(float deltaTime) {
-        if (!onGround) {
-            vy += GravityEngine.GRAVITY * deltaTime;
-            setY(getY() + vy * deltaTime);
-        }
+        // Add gravity to velocity (gravity is downward, so +y)
+        velocity.y += GRAVITY * deltaTime;
+        // Then add velocity to position
+        position.x += velocity.x * deltaTime;
+        position.y += velocity.y * deltaTime;
     }
 
-    private void checkGroundCollision() {
-        Game currentGame = GameContext.getGameById(getGameId());
-        if (currentGame == null) return;
-        final float tolerance = 10.0f;
-        float bottom = getY() + getHeight();
-        onGround = false;
-        for (GameObject other : currentGame.getGameObjects()) {
-            if (other == this || !other.isCollidable()) continue;
-            float otherTop = other.getY();
-            float myLeft = getX();
-            float myRight = getX() + getWidth();
-            float otherLeft = other.getX();
-            float otherRight = other.getX() + other.getWidth();
-            boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
-            if (vy >= 0 && horizontalOverlap &&
-                    bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
-                setY(otherTop - getHeight());
-                vy = 0;
-                onGround = true;
-                break;
-            }
-        }
-    }
-
-    private void checkIfSomeoneOnTop() {
-        Game currentGame = GameContext.getGameById(getGameId());
-        if (currentGame == null) return;
-        final float tolerance = 10.0f;
-        float myTop = getY();
-        canJump = onGround;
-        for (GameObject other : currentGame.getGameObjects()) {
-            if (other == this || !(other instanceof Player)) continue;
-            float otherBottom = other.getY() + other.getHeight();
-            if (otherBottom >= myTop - tolerance && otherBottom <= myTop + tolerance) {
-                canJump = false;
-                break;
-            }
-        }
-    }
-
-    // -------------------------
-    // Modular Keyboard Input Methods
-    // -------------------------
+    /**
+     * Jump anytime W is pressed (no ground checks).
+     */
     private void handleJumpInput() {
-        if (KeyboardState.isKeyPressed(KeyCode.W) && onGround && canJump) {
-            vy = -jumpingImpulse;
-            onGround = false;
-            Message jumpMsg = new Message("JUMP", new Object[]{vy}, null);
+        if (KeyboardState.isKeyPressed(KeyCode.W)) {
+            // Impulse: upward = negative y direction
+            velocity.y = -jumpingImpulse;
+            // Send a "JUMP" message for synchronization
+            Message jumpMsg = new Message("JUMP", new Object[]{ velocity.y }, null);
             sendMessage(jumpMsg);
         }
     }
 
+    /**
+     * Move left/right with A/D, send a "MOVE" message if position changes.
+     * In this example, we directly alter the player's x-position by speed each frame,
+     * rather than adjusting velocity.x. (You can do it either way.)
+     */
     private void handleMovementInput() {
+        float oldX = position.x;
+
         if (KeyboardState.isKeyPressed(KeyCode.A)) {
-            setX(getX() - speed);
+            position.x -= speed;
         }
         if (KeyboardState.isKeyPressed(KeyCode.D)) {
-            setX(getX() + speed);
+            position.x += speed;
+        }
+
+        // If we moved horizontally, send a MOVE message
+        if (position.x != oldX) {
+            Message moveMsg = new Message("MOVE", new Object[]{ position.x }, null);
+            sendMessage(moveMsg);
         }
     }
 
+    /**
+     * Grab or release objects with E (edge-detect).
+     * (No collision checks here.)
+     */
     private void handleGrabInput() {
-        Game currentGame = GameContext.getGameById(getGameId());
+        // Use the parent game instead of GameContext.
+        Game currentGame = getParentGame();
         if (currentGame == null) return;
+
         boolean ePressed = KeyboardState.isKeyPressed(KeyCode.E);
         if (ePressed && !ePreviouslyPressed) {
-            // On edge: attempt to grab any nearby grabbable object.
+            // On press: attempt to grab
             for (GameObject go : currentGame.getGameObjects()) {
                 if (go instanceof IGrabbable) {
                     IGrabbable grabbable = (IGrabbable) go;
-                    if (!grabbable.isGrabbed() && this.intersects(go)) {
+                    if (!grabbable.isGrabbed()) {
                         grabbable.onGrab(this.getId());
                     }
                 }
             }
-        } else if (!ePressed && ePreviouslyPressed) {
-            // On release of E: release any object grabbed by this player.
+        }
+        else if (!ePressed && ePreviouslyPressed) {
+            // On release, if we are the grabber
             for (GameObject go : currentGame.getGameObjects()) {
                 if (go instanceof IGrabbable) {
                     IGrabbable grabbable = (IGrabbable) go;
@@ -159,38 +157,42 @@ public class Player extends GameObject implements IGravityAffected {
         ePreviouslyPressed = ePressed;
     }
 
+    /**
+     * Throw objects in "throwing mode" with F.
+     * (No collision checks here.)
+     */
     private void handleThrowInput() {
-        // When F is pressed, enter throwing mode.
         boolean fPressed = KeyboardState.isKeyPressed(KeyCode.F);
         if (fPressed && !fPreviouslyPressed) {
-            // Start throwing mode.
+            // Enter throwing mode
             isThrowing = true;
-            throwAngle = 90f; // default upward.
+            throwAngle = 90f;
         }
         if (isThrowing) {
-            // Adjust the throw angle with left/right arrow keys.
+            // Adjust angle with LEFT/RIGHT
             if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
-                throwAngle -= 2; // adjust by 2 degrees per frame (tweak as needed)
+                throwAngle -= 2;
             }
             if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
                 throwAngle += 2;
             }
-            // Optional: clamp the angle (for example, between 30 and 150 degrees).
+            // Optional clamp
             if (throwAngle < 30) throwAngle = 30;
             if (throwAngle > 150) throwAngle = 150;
         }
-        // When F is released, perform the throw.
         if (!fPressed && fPreviouslyPressed && isThrowing) {
-            // Determine the throw vector.
-            float magnitude = 400f; // adjust force magnitude as needed
+            // Perform the throw
+            float magnitude = 400f;
             double rad = Math.toRadians(throwAngle);
             float throwVx = (float) (magnitude * Math.cos(rad));
             float throwVy = (float) (magnitude * Math.sin(rad));
-            // Adjust for coordinate system (if y increases downward, a throw upward is negative vy)
+            // Flip vertical to account for downward positive
             throwVy = -throwVy;
-            // Now, throw any grabbed throwable object.
-            Game currentGame = GameContext.getGameById(getGameId());
+
+            // Use the parent game reference instead of GameContext.
+            Game currentGame = getParentGame();
             if (currentGame != null) {
+                // Throw any object we are grabbing.
                 for (GameObject go : currentGame.getGameObjects()) {
                     if (go instanceof IThrowable) {
                         IThrowable throwable = (IThrowable) go;
@@ -206,43 +208,35 @@ public class Player extends GameObject implements IGravityAffected {
     }
 
     /**
-     * Combines all keyboard input handling.
+     * Consolidates all keyboard inputs in one call.
      */
     private void handleKeyboardInput() {
-                handleJumpInput();
-                handleMovementInput();
-                handleGrabInput();
-                handleThrowInput();
-        }
+        handleMovementInput();
+        handleJumpInput();
+        handleGrabInput();
+        handleThrowInput();
+    }
 
+    // ---------------------------------
+    // Update Methods
+    // ---------------------------------
 
-    // --- Update Method ---
     @Override
     public void myUpdateLocal(float deltaTime) {
-        // Only process keyboard input if this player is the selected one on this client.
-        if (!this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            // Not controlled locally – update physics only.
+        // Use parent game to determine selected object instead of GameContext.
+        if (!this.getId().equals(getParentGame().getSelectedGameObjectId())) {
+            // Not the locally controlled player: only apply gravity.
             applyGravity(deltaTime);
-            checkGroundCollision();
-            checkIfSomeoneOnTop();
             return;
         }
-
-        // Otherwise, process full input:
-        float oldX = getX();
+        // Local player: apply gravity, then handle inputs.
         applyGravity(deltaTime);
-        checkGroundCollision();
-        checkIfSomeoneOnTop();
         handleKeyboardInput();
-        if (getX() != oldX) {
-            Message moveMsg = new Message("MOVE", new Object[]{getX()}, null);
-            sendMessage(moveMsg);
-        }
     }
 
     @Override
     public void myUpdateLocal() {
-        // Not used; we always use myUpdateLocal(deltaTime)
+        // Not used; we always do time-based update.
     }
 
     @Override
@@ -251,87 +245,132 @@ public class Player extends GameObject implements IGravityAffected {
             Object[] params = msg.getParameters();
             if (params.length >= 1) {
                 float newX = Float.parseFloat(params[0].toString());
-                synchronized (this) {
-                    setX(newX);
-                }
-                System.out.println("Processed MOVE for " + getName() + ": new position x=" + newX);
+                position.x = newX;
+                System.out.println("Processed MOVE for " + getName() + ": x=" + newX);
             }
-        } else if ("JUMP".equals(msg.getMessageType())) {
+        } 
+        else if ("JUMP".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
             if (params.length >= 1) {
                 float newVy = Float.parseFloat(params[0].toString());
-                synchronized (this) {
-                    vy = newVy;
-                }
-                System.out.println("Processed JUMP for " + getName() + ": new velocity vy=" + newVy);
+                velocity.y = newVy;
+                System.out.println("Processed JUMP for " + getName() + ": vy=" + newVy);
             }
         }
     }
 
+    // ---------------------------------
+    // Rendering
+    // ---------------------------------
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw the player rectangle.
-        gc.setFill(collisionDetected ? Color.GREEN : Color.BLUE);
-        gc.fillRect(getX(), getY(), getWidth(), getHeight());
-        // Draw the player name.
+        // Always draw in blue (no collision feedback here)
+        gc.setFill(Color.BLUE);
+        gc.fillRect(position.x, position.y, width, height);
+
+        // Draw player name above
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         double textWidth = text.getLayoutBounds().getWidth();
-        gc.fillText(getName(), getX() + getWidth() / 2 - textWidth / 2, getY() - 5);
-        // If in throwing mode and this is the controlled player, draw the throw arrow.
-        if (isThrowing && this.getId().equals(GameContext.getSelectedGameObjectId())) {
-            double centerX = getX() + getWidth() / 2.0;
-            double centerY = getY() + getHeight() / 2.0;
-            double arrowLength = 50; // length of arrow in pixels
+        gc.fillText(getName(), position.x + width / 2 - textWidth / 2, position.y - 5);
+
+        // If in throwing mode and this is the local player, draw the aim arrow.
+        if (isThrowing && this.getId().equals(getParentGame().getSelectedGameObjectId())) {
+            double centerX = position.x + width / 2.0;
+            double centerY = position.y + height / 2.0;
+            double arrowLength = 50;
             double rad = Math.toRadians(throwAngle);
             double endX = centerX + arrowLength * Math.cos(rad);
             double endY = centerY - arrowLength * Math.sin(rad);
+
             gc.setStroke(Color.RED);
             gc.strokeLine(centerX, centerY, endX, endY);
         }
     }
 
+    // ---------------------------------
+    // Object Construction
+    // ---------------------------------
     @Override
     public Object[] getConstructorParamValues() {
-        return new Object[]{getName(), getX(), getY(), getWidth(), getHeight(), getGameId()};
+        // Must match: (String name, float x, float y, float width, float height, String gameId)
+        return new Object[]{
+            getName(), position.x, position.y, width, height, getGameId()
+        };
     }
 
-    // --- Bounding Box Methods ---
-    @Override
-    public float getX() {
-        return x;
-    }
-    @Override
-    public float getY() {
-        return y;
-    }
-    @Override
-    public float getWidth() {
-        return width;
-    }
-    @Override
-    public float getHeight() {
-        return height;
-    }
-    @Override
-    public void setX(float x) {
-        this.x = x;
-    }
-    @Override
-    public void setY(float y) {
-        this.y = y;
-    }
-    @Override
-    public void setWidth(float width) {
-        this.width = width;
-    }
-    @Override
-    public void setHeight(float height) {
-        this.height = height;
-    }
-
+    // ---------------------------------
+    // IGravityAffected
+    // ---------------------------------
     @Override
     public float getMass() {
         return mass;
     }
+
+    /**
+     * A simple 2D vector class for position, velocity, etc.
+     */
+    public static class Vector2 {
+        public float x;
+        public float y;
+
+        public Vector2(float x, float y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public Vector2() {
+            this(0, 0);
+        }
+
+        /** Adds another Vector2 to this Vector2. */
+        public void add(Vector2 other) {
+            this.x += other.x;
+            this.y += other.y;
+        }
+
+        /** Adds scalar multiples of x and y to this Vector2. */
+        public void add(float dx, float dy) {
+            this.x += dx;
+            this.y += dy;
+        }
+
+        /** Multiplies both components of this Vector2 by a scalar. */
+        public void scl(float scalar) {
+            this.x *= scalar;
+            this.y *= scalar;
+        }
+
+        /** Sets this vector to the given x and y. */
+        public void set(float x, float y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + x + ", " + y + ")";
+        }
+        
+    }
+    @Override
+    public float getX() {
+        return position.x;
+    }
+
+    @Override
+    public float getY() {
+        return position.y;
+    }
+
+    @Override
+    public void setX(float x) {
+        position.x = x;
+    }
+
+    @Override
+    public void setY(float y) {
+        position.y = y;
+    }
+    
 }
