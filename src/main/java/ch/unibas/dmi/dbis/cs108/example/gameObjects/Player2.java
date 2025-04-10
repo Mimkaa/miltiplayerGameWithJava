@@ -23,12 +23,20 @@ import org.dyn4j.geometry.Vector2;
 @Setter
 public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
+    // Constant for throwing mode and its parameters
+    private boolean isThrowing = false;
+    private float throwAngle = 90f;
+    private float throwAngleDelta = 3.0f;
+    private static final float MIN_THROW_ANGLE = 0f;
+    private static final float MAX_THROW_ANGLE = 180f;
+    private float throwMagnitude = 20f;
+
     // ---------------------------------
     // Constants matching the Python snippet
     // ---------------------------------
     private static final float PLAYER_ACC = 1.5f;      // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
-    private static final float JUMP_FORCE = -15;
+    private static final float JUMP_FORCE = -15; // the lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
     private static final float SCREEN_HEIGHT = 600; // Height is stored even though vertical wrap isn't used
 
@@ -63,10 +71,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // Ground collision flag.
     private boolean onGround = false;
 
+    // Reference to the grabbed player, if any.
     private Player2 grabbedGuy = null;
-
     private static final float GRAB_RADIUS = 50.0f;
-
     public boolean iAmGrabbed = false;
 
     /**
@@ -91,78 +98,52 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         setMovable(true);
     }
 
-    // ---------------------------------
-    // Process keyboard input (update acceleration) but do NOT send MOVE message here.
-    // ---------------------------------
-    private void updateFromKeyboardInput() {
-        // If left arrow is pressed:
-        if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
-            acc.x = -PLAYER_ACC;
-        }
-
-        // If right arrow is pressed:
-        if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
-            acc.x = PLAYER_ACC;
-        }
-
-        // Process jump (up arrow) input:
-        if (KeyboardState.isKeyPressed(KeyCode.UP)) {
-            if (!jumped && onGround) {  // Allow jump as long as the player is on ground.
-                vel.y += JUMP_FORCE;
-                jumped = true;
-            }
-        }
-    }
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        if (isSelected()) {
-            // Optionally process keyboard input when selected.
-            // updateFromKeyboardInput();
+        if (iAmGrabbed) {
+            updateMovement();
+            return;
         }
-        // 1) Reset acceleration each frame to (0,0) and apply gravity on the y-axis.
+        // 1) Reset acceleration and apply gravity.
         acc.y = 0.5f;
-
-        // 2) Apply friction: acceleration is modified by the x component of velocity.
         acc.x += vel.x * PLAYER_FRICTION;
 
-        // 3) Equations of motion: update velocity then update position.
+        // 2) Update velocity.
         vel.x += acc.x;
         vel.y += acc.y;
+
+        // 3) Update position.
         pos.x += vel.x + 0.5f * acc.x;
         pos.y += vel.y + 0.5f * acc.y;
 
-        // 4) (Optional) Wrap around the screen horizontally.
-        // if (pos.x > SCREEN_WIDTH) { pos.x = 0; }
-        // else if (pos.x < 0) { pos.x = SCREEN_WIDTH; }
-
-        // 5) Check for collision with a Platform (or any collidable object) to reset the jump flag.
-        if (jumped && getParentGame() != null) {
-            for (GameObject obj : getParentGame().getGameObjects()) {
-                // Here we only check for collision with, say, Platforms (or any desired objects)
-                // that allow you to reset the jump flag.
-                if ((obj instanceof Platform || obj instanceof Player2) && this.intersects(obj)) {
-                    jumped = false;
-                    break;
-                }
-            }
-        }
+        // 4) Reset horizontal acceleration.
         acc.x = 0;
 
-        // Update ground collision status.
+        // 5) Check for collision and update ground collision status.
         checkGroundCollision();
-        // We no longer need to check for someone on top.
-        // Define a grabbing radius constant.
-        if(grabbedGuy!=null)
-        {
-            grabbedGuy.setPos(this.pos);
+
+        // Update the position of the grabbed object so it stays attached.
+        if (grabbedGuy != null) {
+            grabbedGuy.setPos(new Vector2(this.pos.x, this.pos.y - grabbedGuy.getHeight()));
+        }
+
+        // 6) If in throwing mode, update the throw angle with a windshield-wiper oscillation.
+        if (isThrowing) {
+            throwAngle += throwAngleDelta;
+            if (throwAngle < MIN_THROW_ANGLE) {
+                throwAngle = MIN_THROW_ANGLE;
+                throwAngleDelta = -throwAngleDelta;
+            } else if (throwAngle > MAX_THROW_ANGLE) {
+                throwAngle = MAX_THROW_ANGLE;
+                throwAngleDelta = -throwAngleDelta;
+            }
         }
     }
 
     /**
      * Checks if this player is "on the ground" by testing collision below (with a tolerance).
-     * In this version, any collidable object (platforms, players, etc.) supporting the player
-     * will set the onGround flag to true.
+     * When colliding with a supporting platform (or player), reset the jump flag.
      */
     private void checkGroundCollision() {
         Game currentGame = getParentGame();
@@ -179,131 +160,189 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             float otherLeft = other.getX();
             float otherRight = other.getX() + other.getWidth();
             boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
-            if (vel.y >= 0 && horizontalOverlap && bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
-                // Align this player's bottom with the supporting object's top.
+            if (vel.y >= 0 && horizontalOverlap &&
+                    bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
                 setY(otherTop - getHeight());
                 vel.y = 0;
                 onGround = true;
+                jumped = false;  // Reset jump flag on landing.
                 break;
             }
         }
     }
 
-
-
     /**
-     * We are not using this method in this snippet.
+     * Not used in this snippet.
      */
     @Override
     public void myUpdateLocal() {
     }
 
     @Override
-protected void myUpdateGlobal(Message msg) {
-    if (!iAmGrabbed) {
-        if ("KEY_PRESS".equals(msg.getMessageType())) {
-            Object[] params = msg.getParameters();
-            if (params != null && params.length >= 1) {
-                String keyString = params[0].toString();
+    protected void myUpdateGlobal(Message msg) {
+        if (!iAmGrabbed) {
+            if ("KEY_PRESS".equals(msg.getMessageType())) {
+                Object[] params = msg.getParameters();
+                if (params != null && params.length >= 1) {
+                    String keyString = params[0].toString();
 
-                if (KeyCode.LEFT.toString().equals(keyString)) {
-                    acc.x += -PLAYER_ACC;
-                } else if (KeyCode.RIGHT.toString().equals(keyString)) {
-                    acc.x += PLAYER_ACC;
-                } else if (KeyCode.UP.toString().equals(keyString)) {
-                    if (!jumped && onGround) {
-                        vel.y += JUMP_FORCE;
-                        jumped = true;
-                    }
-                } else if (KeyCode.E.toString().equals(keyString)) {
-                    // If an object is already grabbed, release it and return.
-                    if (grabbedGuy != null && grabbedGuy.iAmGrabbed) {
-                        grabbedGuy.iAmGrabbed = false;
-                        System.out.println("Player " + getName() + " released grabbed player: " + grabbedGuy.getName());
-                        grabbedGuy = null;
-                        return;
-                    }
+                    if (KeyCode.LEFT.toString().equals(keyString)) {
+                        acc.x += -PLAYER_ACC;
+                    } else if (KeyCode.RIGHT.toString().equals(keyString)) {
+                        acc.x += PLAYER_ACC;
+                    } else if (KeyCode.UP.toString().equals(keyString)) {
+                        // Jump logic: if carrying an object, use half the jump force.
+                        if (!jumped && onGround) {
+                            if (grabbedGuy != null) {
+                                vel.y += JUMP_FORCE / 2;
+                            } else {
+                                vel.y += JUMP_FORCE;
+                            }
+                            jumped = true;
+                        }
+                    } else if (KeyCode.E.toString().equals(keyString)) {
+                        // Grabbing logic:
+                        if (grabbedGuy != null && grabbedGuy.iAmGrabbed) {
+                            grabbedGuy.iAmGrabbed = false;
+                            System.out.println("Player " + getName() + " released grabbed player: " +
+                                    grabbedGuy.getName());
+                            grabbedGuy = null;
+                            return;
+                        }
+                        Game parentGame = getParentGame();
+                        if (parentGame != null) {
+                            Player2 closest = null;
+                            double minDistance = Double.MAX_VALUE;
+                            float myCenterX = getX() + getWidth() / 2;
+                            float myCenterY = getY() + getHeight() / 2;
 
-                    // Otherwise, search for the closest grabbable Player2
-                    Game parentGame = getParentGame();
-                    if (parentGame != null) {
-                        Player2 closest = null;
-                        double minDistance = Double.MAX_VALUE;
-                        float myCenterX = getX() + getWidth() / 2;
-                        float myCenterY = getY() + getHeight() / 2;
+                            for (GameObject obj : parentGame.getGameObjects()) {
+                                if (obj.getId().equals(getId())) continue;
+                                if (!(obj instanceof Player2)) continue;
+                                Player2 candidate = (Player2) obj;
+                                if (candidate.iAmGrabbed) continue;
 
-                        for (GameObject obj : parentGame.getGameObjects()) {
-                            if (obj.getId().equals(getId())) continue;
-                            if (!(obj instanceof Player2)) continue;
-                            Player2 candidate = (Player2) obj;
-                            if (candidate.iAmGrabbed) continue;
+                                float candidateCenterX = candidate.getX() + candidate.getWidth() / 2;
+                                float candidateCenterY = candidate.getY() + candidate.getHeight() / 2;
+                                double dx = myCenterX - candidateCenterX;
+                                double dy = myCenterY - candidateCenterY;
+                                double distance = Math.sqrt(dx * dx + dy * dy);
 
-                            float candidateCenterX = candidate.getX() + candidate.getWidth() / 2;
-                            float candidateCenterY = candidate.getY() + candidate.getHeight() / 2;
-                            double dx = myCenterX - candidateCenterX;
-                            double dy = myCenterY - candidateCenterY;
-                            double distance = Math.sqrt(dx * dx + dy * dy);
+                                if (distance < minDistance) {
+                                    minDistance = distance;
+                                    closest = candidate;
+                                }
+                            }
 
-                            if (distance < minDistance) {
-                                minDistance = distance;
-                                closest = candidate;
+                            if (closest != null && minDistance <= GRAB_RADIUS) {
+                                grabbedGuy = closest;
+                                grabbedGuy.iAmGrabbed = true;
+                                System.out.println("Player " + getName() + " grabbed player: "
+                                        + grabbedGuy.getName() + " at distance " + minDistance);
+                            } else {
+                                System.out.println("No player found within grab radius (" + GRAB_RADIUS + ").");
                             }
                         }
-
-                        if (closest != null && minDistance <= GRAB_RADIUS) {
-                            grabbedGuy = closest;
-                            grabbedGuy.iAmGrabbed = true;
-                            System.out.println("Player " + getName() + " grabbed player: "
-                                    + grabbedGuy.getName() + " at distance " + minDistance);
+                    } else if (KeyCode.F.toString().equals(keyString)) {
+                        // F key: toggle throwing mode.
+                        if (!isThrowing) {
+                            // First F press: enter throwing mode.
+                            isThrowing = true;
+                            throwAngle = 90f;          // Initialize at 90°.
+                            throwAngleDelta = 3.0f;      // Set the oscillation rate.
+                            System.out.println("Entered throwing mode. Throw angle set to " + throwAngle);
                         } else {
-                            System.out.println("No player found within grab radius (" + GRAB_RADIUS + ").");
+                            // Already in throwing mode: cancel throwing mode.
+                            isThrowing = false;
+                            System.out.println("Exiting throwing mode.");
+                        }
+                    } else if (KeyCode.R.toString().equals(keyString)) {
+                        // R key: execute the throw if in throwing mode.
+                        if (isThrowing) {
+                            double rad = Math.toRadians(throwAngle);
+                            float throwVx = (float) (throwMagnitude * Math.cos(rad));
+                            float throwVy = (float) (throwMagnitude * Math.sin(rad));
+                            throwVy = -throwVy;  // Adjust vertical sign if necessary.
+
+                            if (grabbedGuy != null) {
+                                throwObject(throwVx, throwVy);
+                                System.out.println("Threw grabbed player with angle " + throwAngle + " degrees.");
+                            } else {
+                                System.out.println("No grabbed player to throw.");
+                            }
+                            isThrowing = false;  // Exit throwing mode after executing the throw.
                         }
                     }
+                    System.out.println("Processed KEY_PRESS for " + getId() + ": " + keyString);
                 }
-
-                System.out.println("Processed KEY_PRESS for " + getId() + ": " + keyString);
-            }
-        } else if ("MOVE".equals(msg.getMessageType())) {
-            Object[] params = msg.getParameters();
-            if (params != null && params.length >= 2) {
-                try {
-                    float newX = Float.parseFloat(params[0].toString());
-                    float newY = Float.parseFloat(params[1].toString());
-                    pos.x = newX;
-                    pos.y = newY;
-                    System.out.println("Processed MOVE for " + getId() + ": pos=(" + newX + ", " + newY + ")");
-                } catch (NumberFormatException ex) {
-                    System.out.println("Error processing MOVE message parameters: " + Arrays.toString(params));
+            } else if ("MOVE".equals(msg.getMessageType())) {
+                Object[] params = msg.getParameters();
+                if (params != null && params.length >= 2) {
+                    try {
+                        float newX = Float.parseFloat(params[0].toString());
+                        float newY = Float.parseFloat(params[1].toString());
+                        pos.x = newX;
+                        pos.y = newY;
+                        System.out.println("Processed MOVE for " + getId() + ": pos=(" + newX + ", " + newY + ")");
+                    } catch (NumberFormatException ex) {
+                        System.out.println("Error processing MOVE message parameters: " + Arrays.toString(params));
+                    }
                 }
+            } else {
+                System.out.println("Unknown message type: " + msg.getMessageType());
             }
-        } else {
-            System.out.println("Unknown message type: " + msg.getMessageType());
         }
     }
-}
 
+    @Override
+    public void throwObject(float throwVx, float throwVy) {
+        if (grabbedGuy != null) {
+            // Apply the throw velocity to the grabbed player.
+            grabbedGuy.setVelocity(throwVx, throwVy);
+            System.out.println("Player " + getName() + " threw " + grabbedGuy.getName() +
+                    " with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
+            // Clear the grabbed state.
+            grabbedGuy.iAmGrabbed = false;
+            grabbedGuy = null;
+        }
+    }
 
+    public void setVelocity(float vx, float vy) {
+        this.vel.x = vx;
+        this.vel.y = vy;
+    }
 
+    public void updateMovement() {
+        // Update the position based on velocity.
+        this.pos.x += this.vel.x;
+        this.pos.y += this.vel.y;
+    }
 
-
-    // ---------------------------------
-    // Drawing the rectangle & name.
-    // ---------------------------------
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.YELLOW);
+        // Draw the player rectangle.
+        gc.setFill(Color.MEDIUMPURPLE);
         gc.fillRect(pos.x, pos.y, width, height);
 
-        // Draw player name above the rectangle.
+        // Draw the player's name above the rectangle.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         double textWidth = text.getLayoutBounds().getWidth();
         gc.fillText(getName(), pos.x + width / 2 - textWidth / 2, pos.y - 5);
+
+        // If in throwing mode, draw an indicator for the throw angle.
+        if (isThrowing) {
+            double centerX = pos.x + width / 2;
+            double centerY = pos.y + height / 2;
+            double indicatorLength = 50;  // Length of the throw indicator line.
+            double rad = Math.toRadians(throwAngle);
+            double endX = centerX + Math.cos(rad) * indicatorLength;
+            double endY = centerY - Math.sin(rad) * indicatorLength; // Adjust if Y increases downward.
+            gc.setStroke(Color.RED);
+            gc.strokeLine(centerX, centerY, endX, endY);
+        }
     }
 
-    // ---------------------------------
-    // Required methods from GameObject.
-    // ---------------------------------
     @Override
     public float getX() {
         return pos.x;
@@ -344,25 +383,20 @@ protected void myUpdateGlobal(Message msg) {
         this.height = height;
     }
 
-    // For reflection-based object creation:
     @Override
     public Object[] getConstructorParamValues() {
         return new Object[]{ getName(), pos.x, pos.y, width, height, getGameId() };
     }
 
     @Override
-    public void throwObject(float throwVx, float throwVy) {
-
-    }
-
-    @Override
     public void onGrab(String playerId) {
-
+        // When grabbed, mark the player as grabbed.
+        grabbedGuy.iAmGrabbed = true;
     }
 
     @Override
     public void onRelease() {
-
+        // Can be implemented if needed.
     }
 
     @Override
