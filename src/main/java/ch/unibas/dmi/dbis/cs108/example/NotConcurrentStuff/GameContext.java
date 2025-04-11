@@ -609,7 +609,7 @@ public class GameContext {
             concealed[1] = getCurrentGameId();           // Your method to obtain current game session ID.
             keyPressMsg.setConcealedParameters(concealed);
         
-            Client.sendMessageStatic(keyPressMsg);
+            Client.sendMessageBestEffort(keyPressMsg);
         }
         
         // Determine keys that have been released since the last update.
@@ -637,7 +637,7 @@ public class GameContext {
             concealed[1] = getCurrentGameId();
             moveMsg.setConcealedParameters(concealed);
         
-            Client.sendMessageStatic(moveMsg);
+            Client.sendMessageBestEffort(moveMsg);
         }
         
         // Update the previous key set for the next update cycle.

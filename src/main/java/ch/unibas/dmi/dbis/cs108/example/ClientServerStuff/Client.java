@@ -307,6 +307,46 @@ public class Client {
     }
 
     /**
+     * Sends a message using a best-effort approach.
+     * This method bypasses the outgoing queue and sends the message immediately.
+     *
+     * @param msg The {@link Message} to send.
+     */
+    public static void sendMessageBestEffort(Message msg) {
+        try {
+            // Update the concealed parameters with the current username,
+            // similar to sendMessageStatic.
+            String currentUsername = instance.username.get();
+            String[] concealed = msg.getConcealedParameters();
+            if (concealed == null) {
+                concealed = new String[]{ currentUsername };
+            } else {
+                String[] newConcealed = new String[concealed.length + 1];
+                System.arraycopy(concealed, 0, newConcealed, 0, concealed.length);
+                newConcealed[newConcealed.length - 1] = currentUsername;
+                concealed = newConcealed;
+            }
+            msg.setConcealedParameters(concealed);
+
+            // Prepare the destination using the static SERVER_ADDRESS and SERVER_PORT.
+            InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
+
+            // Encode the message and convert to bytes.
+            String encoded = MessageCodec.encode(msg);
+            byte[] data = encoded.getBytes();
+
+            // Create and send the UDP packet immediately.
+            DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
+            instance.clientSocket.send(packet);
+
+            System.out.println("Best effort sent immediately: " + encoded);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
      * Handles certain local client state updates based on message content.
      * For example, updating the client's username or triggering a quick login.
      *
