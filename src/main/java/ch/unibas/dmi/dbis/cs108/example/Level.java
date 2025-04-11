@@ -90,7 +90,7 @@ public class Level {
                 sessionId,
                 "Platform",
                 "Floor5",
-                1315.0f,  // x-coordinate (far gap)
+                1370.0f,  // x-coordinate (far gap)
                 580.0f,   // y-coordinate
                 150.0f,   // width
                 20.0f,    // height
@@ -106,7 +106,7 @@ public class Level {
                 sessionId,
                 "Door",
                 "Door1",
-                1350.0f,   // x = centered horizontally on the 150-width platform
+                1400.0f,   // x = centered horizontally on the 150-width platform
                 460.0f,    // y = the door's bottom, so door extends up 120 units to 580
                 50.0f,     // width
                 120.0f,    // height
