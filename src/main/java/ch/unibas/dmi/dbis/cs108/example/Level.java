@@ -40,25 +40,25 @@ public class Level {
 
         // --- Create the key (optional) ---
         // If you still want a key for this level, keep this block:
-        Object[] keyParams = new Object[] {
-                sessionId,
-                "Key",
-                "Key1",
-                150.0f,   // x
-                100.0f,   // y
-                30.0f,    // width
-                30.0f,    // height
-                sessionId
-        };
-        Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
+        //Object[] keyParams = new Object[] {
+        //        sessionId,
+        //        "Key",
+        //        "Key1",
+        //        150.0f,   // x
+        //        100.0f,   // y
+        //        30.0f,    // width
+        //        30.0f,    // height
+        //        sessionId
+        //};
+        //Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
 
         // --- Create two players (Alfred and Gerald) ---
         // Delay to ensure server state is ready before adding players.
-        try {
-            Thread.sleep(5000);  // 5-second delay
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-        }
+        //try {
+        //    Thread.sleep(5000);  // 5-second delay
+        //} catch (InterruptedException ex) {
+        //    Thread.currentThread().interrupt();
+        //}
 
         Object[] alfredParams = new Object[] {
                 sessionId,

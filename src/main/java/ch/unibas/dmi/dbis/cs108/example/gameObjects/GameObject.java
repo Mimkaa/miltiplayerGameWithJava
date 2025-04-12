@@ -85,8 +85,14 @@ public abstract class GameObject {
      * @param message the message to add
      */
     public void addIncomingMessage(Message message) {
-        incomingMessages.offer(message);
+        // Only add the message if the current queue size is less than or equal to 5.
+        if (incomingMessages.size() <= 5) {
+            incomingMessages.offer(message);
+        } else {
+            System.out.println("Incoming message queue full for object " + getId() + "; discarding message " + message.getMessageType());
+        }
     }
+    
 
     /**
      * Processes all queued messages for this object.
@@ -104,6 +110,8 @@ public abstract class GameObject {
     protected abstract void myUpdateGlobal(Message msg);
     public abstract void draw(GraphicsContext gc);
     public abstract Object[] getConstructorParamValues();
+
+    public abstract Message createSnapshot();
 
     // === Collision ===
 

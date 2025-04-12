@@ -362,7 +362,7 @@ public class Server {
                 System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
             if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                processMessageBestEffort(msg, senderSocket);
+                //processMessageBestEffort(msg, senderSocket);
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
             } else {
@@ -380,15 +380,15 @@ public class Server {
      * @param msg          the message to broadcast
      * @param senderSocket the socket of the original sender (excluded from broadcast)
      */
-    private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
+    public void sendMessageBestEffort(Message msg) {
         try {
             // Check if the message type contains "KEY"
-            boolean isKeyMessage = msg.getMessageType().contains("KEY");
+            //boolean isKeyMessage = msg.getMessageType().contains("KEY");
             for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
                 // If it's not a key message, then skip sending to the sender
-                if (!isKeyMessage && entry.getValue().equals(senderSocket)) {
-                    continue;
-                }
+                //if (!isKeyMessage && entry.getValue().equals(senderSocket)) {
+                //    continue;
+                //}
                 InetAddress dest = entry.getValue().getAddress();
                 int port = entry.getValue().getPort();
                 String encoded = MessageCodec.encode(msg);

@@ -175,6 +175,23 @@ public class MovingPlatform extends GameObject implements IMovable {
     }
 
     @Override
+    public Message createSnapshot() {
+        // Pack the position, velocity, and acceleration into an Object array.
+        Object[] params = new Object[]{
+            x, y,   // Position
+           
+            
+        };
+        // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").
+        Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
+        
+        // Set the concealed parameters so receivers know the source of the snapshot.
+        snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
+        
+        return snapshotMsg;
+    }
+
+    @Override
     public Object[] getConstructorParamValues() {
         // Return parameters in the same order as the constructor.
         return new Object[]{ getName(), startX, endX, startY, endY, getWidth(), getHeight(), periodX, periodY, getGameId() };

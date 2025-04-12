@@ -167,11 +167,13 @@ public class GameUIComponents {
         mainUIPane.getChildren().add(startLevelButton);
         uiManager.registerComponent("startLevelButton", startLevelButton);
         startLevelButton.setOnAction(e -> {
-            Level level = new Level();
-            level.initializeLevel();
             String gameId = GameContext.getCurrentGameId();
             Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
             Client.sendMessageStatic(msg);
+            Level level = new Level();
+            level.initializeLevel();
+            
+            
             System.out.println("Level started!");
             
         });
