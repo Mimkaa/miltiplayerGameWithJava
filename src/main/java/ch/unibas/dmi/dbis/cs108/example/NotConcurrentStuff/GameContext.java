@@ -617,28 +617,28 @@ public class GameContext {
         newlyReleased.removeAll(currentPressedKeys);
         
         // If at least one key was released, send a MOVE message with the current position.
-        if (!newlyReleased.isEmpty()) {
-            Game currentGame = gameSessionManager.getGameSession(getCurrentGameId());
-            GameObject selectedObject = null;
-            for (GameObject go : currentGame.getGameObjects()) {
-                if (go.getId().equals(getSelectedGameObjectId())) {
-                    selectedObject = go;
-                    break;
-                }
-            }
+        //if (!newlyReleased.isEmpty()) {
+        //    Game currentGame = gameSessionManager.getGameSession(getCurrentGameId());
+        //    GameObject selectedObject = null;
+        //    for (GameObject go : currentGame.getGameObjects()) {
+        //        if (go.getId().equals(getSelectedGameObjectId())) {
+        //            selectedObject = go;
+        //            break;
+        //        }
+        //    }
             // Assume getX() and getY() return the current position of the selected game object.
-            Message moveMsg = new Message("MOVE", new Object[]{ selectedObject.getX(), selectedObject.getY(), }, "GAME");
+        //    Message moveMsg = new Message("MOVE", new Object[]{ selectedObject.getX(), selectedObject.getY(), }, "GAME");
+       
+        //    String[] concealed = moveMsg.getConcealedParameters();
+        //    if (concealed == null || concealed.length < 2) {
+        //        concealed = new String[2];
+        //    }
+        //    concealed[0] = getSelectedGameObjectId();
+        //    concealed[1] = getCurrentGameId();
+        //    moveMsg.setConcealedParameters(concealed);
         
-            String[] concealed = moveMsg.getConcealedParameters();
-            if (concealed == null || concealed.length < 2) {
-                concealed = new String[2];
-            }
-            concealed[0] = getSelectedGameObjectId();
-            concealed[1] = getCurrentGameId();
-            moveMsg.setConcealedParameters(concealed);
-        
-            Client.sendMessageBestEffort(moveMsg);
-        }
+        //    Client.sendMessageBestEffort(moveMsg);
+        //}
         
         // Update the previous key set for the next update cycle.
         prevPressedKeys = new HashSet<>(currentPressedKeys);

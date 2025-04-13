@@ -2,19 +2,23 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObjectFactory;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.Platform;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
+/**
+ * The {@code Game} class manages a collection of {@link GameObject}s within a given
+ * game or session. It provides methods to create, update, and route messages to
+ * these objects.
+ */
 @Getter
 public class Game {
 
@@ -25,23 +29,11 @@ public class Game {
 
     private boolean startedFlag = false;
 
-    // Creates a concurrent Set<String> backed by a ConcurrentHashMap.
+    // Creates a concurrent Set<String> backed by a ConcurrentHashMap
     private final Set<String> users = ConcurrentHashMap.newKeySet();
 
-    // New variable to store the target frames per second.
-    private volatile int targetFps = 60; // Default to 60 FPS
-
-    // Flag for selecting the update mode.
-    private volatile boolean authoritative = false;
-
-    // --- Tick counting and snapshot history ---
-    // This tick counter is incremented on every authoritative update.
-    private volatile long tickCount = 0;
-    // Store snapshots keyed by tick. Each tick maps to a list of snapshots.
-    private final ConcurrentHashMap<Long, List<Message>> snapshotHistory = new ConcurrentHashMap<>();
-
-    // New flag to indicate if any message was received during the current tick.
-    private volatile boolean messageReceivedThisTick = false;
+    // New flag to indicate whether this game is authoritative.
+    private boolean authoritative = false;  // Defaults to non-authoritative.
 
     public Game(String gameId, String gameName) {
         this.gameId = gameId;
@@ -71,19 +63,10 @@ public class Game {
             }
         };
 
-        // Start the main game loop.
+        // Start a single main loop for processing all game objects.
         startPlayersCommandProcessingLoop();
     }
 
-    // Mode setters and getters.
-    public void setAuthoritative(boolean authoritative) {
-        this.authoritative = authoritative;
-    }
-
-    public boolean isAuthoritative() {
-        return authoritative;
-    }
-    
     public void setStartedFlag(boolean state) {
         startedFlag = state;
     }
@@ -91,17 +74,21 @@ public class Game {
     public boolean getStartedFlag() {
         return startedFlag;
     }
-    
-    // Setter for targetFps.
-    public void setTargetFps(int targetFps) {
-        if (targetFps > 0) {
-            this.targetFps = targetFps;
-        }
+
+    /**
+     * Setter for the authoritative flag.
+     * @param authoritative true if this Game is authoritative, otherwise false.
+     */
+    public void setAuthoritative(boolean authoritative) {
+        this.authoritative = authoritative;
     }
 
-    // Getter for targetFps.
-    public int getTargetFps() {
-        return targetFps;
+    /**
+     * Getter for the authoritative flag.
+     * @return true if this Game is authoritative, otherwise false.
+     */
+    public boolean isAuthoritative() {
+        return authoritative;
     }
 
     /**
@@ -113,21 +100,17 @@ public class Game {
     }
 
     /**
-     * Routes the message to the correct GameObject by matching the first concealed parameter 
-     * to the object's UUID.
-     * Also sets the messageReceivedThisTick flag to true.
+     * Routes the message to the correct GameObject by matching the first concealed parameter to the object's UUID.
      */
     private void routeMessageToGameObject(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length > 0) {
-            String targetGameObjectUuid = concealed[0];
+            String targetObjectUuid = concealed[0];
             for (GameObject go : gameObjects) {
-                if (go.getId().equals(targetGameObjectUuid)) {
+                if (go.getId().equals(targetObjectUuid)) {
                     // Directly add to object's message queue.
                     go.addIncomingMessage(msg);
-                    System.out.println("Routed message to GameObject with UUID: " + targetGameObjectUuid);
-                    // Mark that a message was received in this tick.
-                    messageReceivedThisTick = true;
+                    System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
                     return;
                 }
             }
@@ -149,110 +132,49 @@ public class Game {
     }
 
     /**
-     * Resolves collisions among collidable game objects.
-     */
-    private void resolveCollisions() {
-        for (int i = 0; i < gameObjects.size(); i++) {
-            GameObject a = gameObjects.get(i);
-            if (!a.isCollidable()) continue;
-            for (int j = i + 1; j < gameObjects.size(); j++) {
-                GameObject b = gameObjects.get(j);
-                if (!b.isCollidable()) continue;
-                if (a.intersects(b)) {
-                    a.resolveCollision(b);
-                    if (a instanceof Player2 && b instanceof Platform) {
-                        ((Player2) a).getVel().y = 0;
-                    } else if (b instanceof Player2 && a instanceof Platform) {
-                        ((Player2) b).getVel().y = 0;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Performs non-authoritative update:
-     * Processes each game object's messages, commands, applies local updates,
-     * and then resolves collisions.
-     */
-    private void updateNonAuthoritative(float deltaTime) {
-        for (GameObject go : gameObjects) {
-            go.processIncomingMessages();
-            go.processCommands();
-            go.myUpdateLocal(deltaTime);
-        }
-        resolveCollisions();
-    }
-
-    /**
-     * Performs authoritative update:
-     * Processes each game object's messages, commands, applies authoritative updates,
-     * and then resolves collisions.
-     * Additionally, generates snapshots of all game objects and broadcasts them,
-     * but only if at least one message was received during the tick.
-     */
-    private void updateAuthoritative(float deltaTime) {
-        // Process each game object.
-        for (GameObject go : gameObjects) {
-            go.processIncomingMessages();
-            go.processCommands();
-            go.myUpdateLocal(deltaTime);
-        }
-        resolveCollisions();
-
-        // Increment the tick counter.
-        tickCount++;
-
-        // Generate and broadcast snapshots only if a message was received this tick.
-        if (messageReceivedThisTick) {
-            List<Message> snapshots = new ArrayList<>();
-            for (GameObject go : gameObjects) {
-                Message snapshot = go.createSnapshot();
-                if (snapshot != null) {
-                    snapshots.add(snapshot);
-                }
-            }
-            snapshotHistory.put(tickCount, snapshots);
-
-            // Only broadcast snapshots if the outgoing queue is empty.
-            if (Server.getInstance().getOutgoingQueue().isEmpty()) {
-                for (Message snapshot : snapshots) {
-                    Server.getInstance().sendMessageBestEffort(snapshot);
-                }
-            }
-        }
-
-        // Reset the flag for the next tick.
-        messageReceivedThisTick = false;
-    }
-
-    /**
-     * The main loop that processes all objects. It chooses between authoritative 
-     * and non-authoritative update methods based on the 'authoritative' flag.
-     * The loop runs at a fixed rate defined by {@code targetFps}.
+     * The main loop that processes all objects:
+     * - Drains inbound messages for each object
+     * - Processes commands for each object
+     * - Performs local updates
+     * - Then checks and resolves collisions among collidable objects
      */
     public void startPlayersCommandProcessingLoop() {
-        final long[] lastFrameTime = { System.nanoTime() };
-
+        final long[] lastUpdate = { System.nanoTime() };
         AsyncManager.runLoop(() -> {
-            long startFrameTime = System.nanoTime();
-            float deltaTime = (startFrameTime - lastFrameTime[0]) / 1_000_000_000f;
-            lastFrameTime[0] = startFrameTime;
-
-            if (authoritative) {
-                updateAuthoritative(deltaTime);
-            } else {
-                updateNonAuthoritative(deltaTime);
+            // Wait for 10 milliseconds before processing the next update
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
             }
 
-            final long targetFrameTimeNanos = 1_000_000_000L / targetFps;
-            long frameProcessingTime = System.nanoTime() - startFrameTime;
-            long sleepTimeNanos = targetFrameTimeNanos - frameProcessingTime;
-            if (sleepTimeNanos > 0) {
-                try {
-                    Thread.sleep(sleepTimeNanos / 1_000_000, (int)(sleepTimeNanos % 1_000_000));
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
+            long now = System.nanoTime();
+            float deltaTime = (now - lastUpdate[0]) / 1_000_000_000f; // Convert nanoseconds to seconds
+            lastUpdate[0] = now;
+
+            // 1) Process each object's messages, commands, and update with deltaTime.
+            for (GameObject go : gameObjects) {
+                go.processIncomingMessages();
+                go.processCommands();
+                go.myUpdateLocal(deltaTime);
+            }
+
+            // 2) Check and resolve collisions among collidable objects.
+            for (int i = 0; i < gameObjects.size(); i++) {
+                GameObject a = gameObjects.get(i);
+                if (!a.isCollidable()) continue;
+                for (int j = i + 1; j < gameObjects.size(); j++) {
+                    GameObject b = gameObjects.get(j);
+                    if (!b.isCollidable()) continue;
+
+                    if (a.intersects(b)) {
+                        a.resolveCollision(b);
+                        if (a instanceof Player2 && b instanceof Platform) {
+                            ((Player2) a).getVel().y = 0;
+                        } else if (b instanceof Player2 && a instanceof Platform) {
+                            ((Player2) b).getVel().y = 0;
+                        }
+                    }
                 }
             }
         });
@@ -277,7 +199,7 @@ public class Game {
     }
 
     /**
-     * Gracefully shuts down the game by stopping the asynchronous manager.
+     * Gracefully shut down if desired.
      */
     public void shutdown() {
         AsyncManager.shutdown();

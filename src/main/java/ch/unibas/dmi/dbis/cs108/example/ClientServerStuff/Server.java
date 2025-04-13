@@ -363,6 +363,7 @@ public class Server {
             }
             if ("GAME".equalsIgnoreCase(msg.getOption())) {
                 //processMessageBestEffort(msg, senderSocket);
+                AsyncManager.run(() -> sendKeyEvent(msg));
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
             } else {
@@ -372,6 +373,34 @@ public class Server {
             System.out.println("Concealed parameters missing or too short.");
         }
     }
+
+    /**
+     * Sends a key event message to all connected clients in a best-effort manner,
+     * but only if the message type contains "KEY".
+     */
+    public void sendKeyEvent(Message msg) {
+        try {
+            // Check if the message type contains "KEY" (case-insensitive).
+            if (!msg.getMessageType().toUpperCase().contains("KEY")) {
+                //System.out.println("sendKeyEvent: Message type does not contain 'KEY'; skipping key event send.");
+                return;
+            }
+            
+            // Iterate over all connected clients.
+            for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
+                InetAddress dest = entry.getValue().getAddress();
+                int port = entry.getValue().getPort();
+                String encoded = MessageCodec.encode(msg);
+                byte[] data = encoded.getBytes();
+                DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
+                serverSocket.send(packet);
+                System.out.println("Key event sent to " + entry.getKey() + " at " + entry.getValue());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Sends the given {@link Message} to all connected clients except the sender.

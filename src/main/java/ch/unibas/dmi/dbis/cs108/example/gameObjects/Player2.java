@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 import java.util.Arrays;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
@@ -34,11 +35,11 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     // Constants matching the Python snippet
     // ---------------------------------
-    private static final float PLAYER_ACC = 1.5f;      // Acceleration magnitude when pressing left/right
+    private static final float PLAYER_ACC = 1.5f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
-    private static final float JUMP_FORCE = -10; // the lower, the higher player can jump
+    private static final float JUMP_FORCE = -10;         // The lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
-    private static final float SCREEN_HEIGHT = 600; // Height is stored even though vertical wrap isn't used
+    private static final float SCREEN_HEIGHT = 600;      // Height is stored even though vertical wrap isn't used
 
     // ---------------------------------
     // Position, Velocity, Acceleration
@@ -98,10 +99,10 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         setMovable(true);
     }
 
-
     @Override
     public void myUpdateLocal(float deltaTime) {
         if (iAmGrabbed) {
+            // If grabbed, just follow the "grabber" or do minimal update
             updateMovement();
             return;
         }
@@ -142,6 +143,14 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     }
 
     /**
+     * Not used in this snippet but required by GameObject's contract.
+     */
+    @Override
+    public void myUpdateLocal() {
+        // No default logic here.
+    }
+
+    /**
      * Checks if this player is "on the ground" by testing collision below (with a tolerance).
      * When colliding with a supporting platform (or player), reset the jump flag.
      */
@@ -158,10 +167,12 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             float myLeft = getX();
             float myRight = getX() + getWidth();
             float otherLeft = other.getX();
-            float otherRight = other.getX() + other.getWidth();
+            float otherRight = other.getWidth() + other.getX();
             boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
+
             if (vel.y >= 0 && horizontalOverlap &&
-                    bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
+                bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
+
                 setY(otherTop - getHeight());
                 vel.y = 0;
                 onGround = true;
@@ -171,112 +182,122 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
     }
 
-    /**
-     * Not used in this snippet.
-     */
-    @Override
-    public void myUpdateLocal() {
-    }
-
     @Override
     protected void myUpdateGlobal(Message msg) {
-        // Check if this object is not currently grabbed.
-        if (!iAmGrabbed) {
-            String type = msg.getMessageType();
+        if (iAmGrabbed) {
+            // If the player is grabbed, we ignore external commands
+            return;
+        }
 
-            if ("KEY_PRESS".equals(type)) {
-                // Process key press events as before.
-                Object[] params = msg.getParameters();
-                if (params != null && params.length >= 1) {
-                    String keyString = params[0].toString();
+        String type = msg.getMessageType();
+        if ("KEY_PRESS".equals(type)) {
+            // Process key press events as before.
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 1) {
+                String keyString = params[0].toString();
 
-                    if (KeyCode.LEFT.toString().equals(keyString)) {
-                        acc.x += -PLAYER_ACC;
-                    } else if (KeyCode.RIGHT.toString().equals(keyString)) {
-                        acc.x += PLAYER_ACC;
-                    } else if (KeyCode.UP.toString().equals(keyString)) {
-                        if (!jumped && onGround) {
-                            if (grabbedGuy != null) {
-                                vel.y += JUMP_FORCE / 2;
-                            } else {
-                                vel.y += JUMP_FORCE;
-                            }
-                            jumped = true;
-                        }
-                    } else if (KeyCode.E.toString().equals(keyString)) {
-                        // Grabbing logic (as implemented earlier)...
-                        // [ ... existing code ... ]
-                    } else if (KeyCode.F.toString().equals(keyString)) {
-                        // Toggle throwing mode.
-                        if (!isThrowing) {
-                            isThrowing = true;
-                            throwAngle = 90f;
-                            throwAngleDelta = 3.0f;
-                            System.out.println("Entered throwing mode. Throw angle set to " + throwAngle);
+                // Basic movement logic
+                if (KeyCode.LEFT.toString().equals(keyString)) {
+                    acc.x += -PLAYER_ACC;
+                } else if (KeyCode.RIGHT.toString().equals(keyString)) {
+                    acc.x += PLAYER_ACC;
+                } else if (KeyCode.UP.toString().equals(keyString)) {
+                    if (!jumped && onGround) {
+                        if (grabbedGuy != null) {
+                            vel.y += JUMP_FORCE / 2;
                         } else {
-                            isThrowing = false;
-                            System.out.println("Exiting throwing mode.");
+                            vel.y += JUMP_FORCE;
                         }
-                    } else if (KeyCode.R.toString().equals(keyString)) {
-                        // Execute throw logic (as implemented earlier).
-                        if (isThrowing) {
-                            double rad = Math.toRadians(throwAngle);
-                            float throwVx = (float) (throwMagnitude * Math.cos(rad));
-                            float throwVy = (float) (throwMagnitude * Math.sin(rad));
-                            throwVy = -throwVy;
-                            if (grabbedGuy != null) {
-                                throwObject(throwVx, throwVy);
-                                System.out.println("Threw grabbed player with angle " + throwAngle + " degrees.");
-                            } else {
-                                System.out.println("No grabbed player to throw.");
-                            }
-                            isThrowing = false;
+                        jumped = true;
+                    }
+                }
+                // Additional keys for grabbing, throwing, etc.
+                else if (KeyCode.E.toString().equals(keyString)) {
+                    // Grabbing logic...
+                    // [ ... existing code not shown ... ]
+                } else if (KeyCode.F.toString().equals(keyString)) {
+                    // Toggle throwing mode
+                    if (!isThrowing) {
+                        isThrowing = true;
+                        throwAngle = 90f;
+                        throwAngleDelta = 3.0f;
+                        System.out.println("Entered throwing mode. Throw angle set to " + throwAngle);
+                    } else {
+                        isThrowing = false;
+                        System.out.println("Exiting throwing mode.");
+                    }
+                } else if (KeyCode.R.toString().equals(keyString)) {
+                    // Execute throw logic
+                    if (isThrowing) {
+                        double rad = Math.toRadians(throwAngle);
+                        float throwVx = (float) (throwMagnitude * Math.cos(rad));
+                        float throwVy = (float) (throwMagnitude * Math.sin(rad));
+                        throwVy = -throwVy;
+                        if (grabbedGuy != null) {
+                            throwObject(throwVx, throwVy);
+                            System.out.println("Threw grabbed player with angle " + throwAngle + " degrees.");
+                        } else {
+                            System.out.println("No grabbed player to throw.");
                         }
+                        isThrowing = false;
                     }
-                    System.out.println("Processed KEY_PRESS for " + getId() + ": " + keyString);
                 }
-            } else if ("SNAPSHOT".equals(type)) {
-                // Instead of "MOVE", process the SNAPSHOT message.
-                // Expect the snapshot parameters to contain: pos.x, pos.y, vel.x, vel.y, acc.x, acc.y
-                Object[] params = msg.getParameters();
-                if (params != null && params.length >= 6) {
-                    try {
-                        float newX = Float.parseFloat(params[0].toString());
-                        float newY = Float.parseFloat(params[1].toString());
-                        float newVelX = Float.parseFloat(params[2].toString());
-                        float newVelY = Float.parseFloat(params[3].toString());
-                        float newAccX = Float.parseFloat(params[4].toString());
-                        float newAccY = Float.parseFloat(params[5].toString());
-                        
-                        // Update the player's state based on the snapshot.
-                        pos.x = newX;
-                        pos.y = newY;
-                        vel.x = newVelX;
-                        vel.y = newVelY;
-                        acc.x = newAccX;
-                        acc.y = newAccY;
-                        
-                        System.out.println("Processed SNAPSHOT for " + getId() + ": pos=(" + newX + ", " + newY + ")");
-                    } catch (NumberFormatException ex) {
-                        System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
-                    }
-                } else {
-                    System.out.println("SNAPSHOT message does not contain enough parameters.");
+
+                System.out.println("Processed KEY_PRESS for " + getId() + ": " + keyString);
+
+                // If this game is authoritative, broadcast a SNAPSHOT after applying the key.
+                Game parentGame = getParentGame();
+                if (parentGame != null && parentGame.isAuthoritative()) {
+                    Message snapshot = createSnapshot();
+                    // Send best-effort or reliable, up to you:
+                    // For example, using Server.getInstance():
+                    ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server.getInstance()
+                            .sendMessageBestEffort(snapshot);
                 }
-            } else {
-                System.out.println("Unknown message type: " + type);
             }
         }
-    }
+        else if ("SNAPSHOT".equals(type)) {
+            // Instead of "MOVE", we process the SNAPSHOT message, if we are non-authoritative.
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 6) {
+                try {
+                    float newX = Float.parseFloat(params[0].toString());
+                    float newY = Float.parseFloat(params[1].toString());
+                    float newVelX = Float.parseFloat(params[2].toString());
+                    float newVelY = Float.parseFloat(params[3].toString());
+                    float newAccX = Float.parseFloat(params[4].toString());
+                    float newAccY = Float.parseFloat(params[5].toString());
 
+                    // Update the player's state based on the snapshot.
+                    pos.x = newX;
+                    pos.y = newY;
+                    vel.x = newVelX;
+                    vel.y = newVelY;
+                    acc.x = newAccX;
+                    acc.y = newAccY;
+
+                    System.out.println("Processed SNAPSHOT for " + getId()
+                                       + ": pos=(" + newX + ", " + newY + ")");
+                } catch (NumberFormatException ex) {
+                    System.out.println("Error processing SNAPSHOT parameters: "
+                                       + Arrays.toString(params));
+                }
+            } else {
+                System.out.println("SNAPSHOT message does not contain enough parameters.");
+            }
+        }
+        else {
+            System.out.println("Unknown message type: " + type);
+        }
+    }
 
     @Override
     public void throwObject(float throwVx, float throwVy) {
         if (grabbedGuy != null) {
             // Apply the throw velocity to the grabbed player.
             grabbedGuy.setVelocity(throwVx, throwVy);
-            System.out.println("Player " + getName() + " threw " + grabbedGuy.getName() +
-                    " with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
+            System.out.println("Player " + getName() + " threw " + grabbedGuy.getName()
+                               + " with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
             // Clear the grabbed state.
             grabbedGuy.iAmGrabbed = false;
             grabbedGuy = null;
@@ -322,17 +343,18 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     @Override
     public Message createSnapshot() {
         // Pack the position, velocity, and acceleration into an Object array.
-        Object[] params = new Object[]{
+        Object[] params = new Object[] {
             pos.x, pos.y,   // Position
             vel.x, vel.y,   // Velocity
             acc.x, acc.y    // Acceleration
         };
-        // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").
+        // Create a new message with type "SNAPSHOT" and an option of "GAME".
         Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
-        
-        // Set the concealed parameters so receivers know the source of the snapshot.
+
+        // Set the concealed parameters so receivers know the source of the snapshot:
+        // [0] = this object's UUID, [1] = the Game's UUID.
         snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
-        
+
         return snapshotMsg;
     }
 
@@ -378,7 +400,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public Object[] getConstructorParamValues() {
-        return new Object[]{ getName(), pos.x, pos.y, width, height, getGameId() };
+        return new Object[] { getName(), pos.x, pos.y, width, height, getGameId() };
     }
 
     @Override
