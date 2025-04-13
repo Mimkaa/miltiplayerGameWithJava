@@ -65,7 +65,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private boolean jumpKeyPressed = false;
 
     // ---------------------------------
-    // Timer for sending MOVE messages at fixed intervals.
+    // Timer for sending MOVE messages at fixed intervals (not shown in snippet).
     // ---------------------------------
     private float moveMsgTimer = 0;
 
@@ -76,6 +76,15 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private Player2 grabbedGuy = null;
     private static final float GRAB_RADIUS = 50.0f;
     public boolean iAmGrabbed = false;
+
+    // ---------------------------------
+    // INTERPOLATION FIELDS for smoothing out server SNAPSHOT corrections
+    // ---------------------------------
+    private boolean interpolating = false;         // true if we're currently smoothing from old pos -> new pos
+    private Vector2 interpStartPos = new Vector2(); // position at start of interpolation
+    private Vector2 interpEndPos   = new Vector2(); // authoritative position we want to reach
+    private float interpElapsed    = 0f;            // how long we've been interpolating
+    private float interpDuration   = 0.07f;         // 150ms to move from start to end
 
     /**
      * Simple constructor: place player in the middle of the screen with a fixed size.
@@ -101,8 +110,28 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
+        // If we're interpolating from a previous to a new authoritative position, do that now
+        if (interpolating) {
+            // Update elapsed time
+            interpElapsed += deltaTime;
+
+            // Figure out how far (0 to 1) we are along the 150ms interpolation
+            float alpha = interpElapsed / interpDuration;
+            if (alpha >= 1.0f) {
+                alpha = 1.0f;
+                interpolating = false; // Done interpolating
+            }
+
+            // Lerp from interpStartPos to interpEndPos
+            pos.x = lerp(interpStartPos.x, interpEndPos.x, alpha);
+            pos.y = lerp(interpStartPos.y, interpEndPos.y, alpha);
+
+            // Optionally skip normal local updates or partial logic here (like friction, gravity)
+            return;
+        }
+
+        // If not interpolating, do normal local update logic:
         if (iAmGrabbed) {
-            // If grabbed, just follow the "grabber" or do minimal update
             updateMovement();
             return;
         }
@@ -250,9 +279,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 if (parentGame != null && parentGame.isAuthoritative()) {
                     Message snapshot = createSnapshot();
                     // Send best-effort or reliable, up to you:
-                    // For example, using Server.getInstance():
-                    ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server.getInstance()
-                            .sendMessageBestEffort(snapshot);
+                    Server.getInstance().sendMessageBestEffort(snapshot);
                 }
             }
         }
@@ -261,16 +288,23 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 6) {
                 try {
-                    float newX = Float.parseFloat(params[0].toString());
-                    float newY = Float.parseFloat(params[1].toString());
+                    float newX    = Float.parseFloat(params[0].toString());
+                    float newY    = Float.parseFloat(params[1].toString());
                     float newVelX = Float.parseFloat(params[2].toString());
                     float newVelY = Float.parseFloat(params[3].toString());
                     float newAccX = Float.parseFloat(params[4].toString());
                     float newAccY = Float.parseFloat(params[5].toString());
 
-                    // Update the player's state based on the snapshot.
-                    pos.x = newX;
-                    pos.y = newY;
+                    // Instead of snapping to the new position, we start interpolation:
+                    interpStartPos.x = pos.x;
+                    interpStartPos.y = pos.y;
+                    interpEndPos.x   = newX;
+                    interpEndPos.y   = newY;
+                    interpolating    = true;
+                    interpElapsed    = 0f;
+
+                    // We also adopt the new velocity/acc so subsequent frames
+                    // have the correct motion from the server
                     vel.x = newVelX;
                     vel.y = newVelY;
                     acc.x = newAccX;
@@ -449,5 +483,12 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         public String toString() {
             return "(" + x + ", " + y + ")";
         }
+    }
+
+    // ---------------------------------
+    // Simple linear interpolation helper
+    // ---------------------------------
+    private float lerp(float start, float end, float alpha) {
+        return start + (end - start) * alpha;
     }
 }

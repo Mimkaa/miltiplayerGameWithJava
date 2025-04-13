@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -100,7 +101,9 @@ public abstract class GameObject {
     public void processIncomingMessages() {
         Message msg;
         while ((msg = incomingMessages.poll()) != null) {
+            // Instead of processing on this thread:
             myUpdateGlobal(msg);
+            
         }
     }
 
