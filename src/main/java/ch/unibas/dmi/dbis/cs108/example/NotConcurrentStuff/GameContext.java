@@ -49,10 +49,9 @@ import static ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom.client;
 @Getter
 public class GameContext {
 
-    //Singleton instance
+    // Singleton instance.
     @Getter
     private static GameContext instance;
-
 
     private final GameSessionManager gameSessionManager;
     private MessageHogger testHogger;
@@ -64,18 +63,20 @@ public class GameContext {
     // Create a UIManager instance.
     private final UIManager uiManager = new UIManager();
 
-    // Add a field to store the last frame time (in milliseconds)
+    // Add a field to store the last frame time (in milliseconds).
     private long lastFrameTime = 0;
+    
+    // Adjustable FPS fields.
+    private int targetFPS = 10; 
+    private long frameIntervalMs = 1000L / targetFPS; // (For 60 fps, roughly 16 ms per frame)
+
     private Set<KeyCode> prevPressedKeys = new HashSet<>();
-
-
 
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
 
         instance = this;
-
 
         // Initialize the custom MessageHogger.
         testHogger = new MessageHogger() {
@@ -101,7 +102,6 @@ public class GameContext {
                     } else {
                         System.out.println("User joined: " + receivedUsername);
                     }
-                    
                     
                 }
                 
@@ -139,7 +139,6 @@ public class GameContext {
                             if (fieldNode instanceof TextField) {
                                 ((TextField) fieldNode).setText(gameID);
                             }
-
                         });
                     }
 
@@ -149,7 +148,7 @@ public class GameContext {
                         gameSessionManager.getGameSession(prevGameId).getUsers().remove(username);
                     }
 
-                    // Now update the TextArea with the current game info (name and user list).
+                    // Update the TextArea with the current game info.
                     Platform.runLater(() -> {
                         Node usersListNode = uiManager.getComponent("usersListCurrGS");
                         if (usersListNode instanceof TextArea) {
@@ -167,8 +166,7 @@ public class GameContext {
                     });
 
                 } 
-                else if ("SELECTGO".equals(type)) 
-                {
+                else if ("SELECTGO".equals(type)) {
                     System.out.println("Processing SELECTGO command");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 1) {
                         System.out.println("SELECTGO message missing target GameObject id.");
@@ -182,7 +180,7 @@ public class GameContext {
                     }
                     Game game = gameSessionManager.getGameSession(gameId);
                     if (game != null) {
-                        // First, clear the selected flag in all game objects.
+                        // Clear the selected flag in all game objects.
                         for (GameObject go : game.getGameObjects()) {
                             go.setSelected(false);
                         }
@@ -190,9 +188,7 @@ public class GameContext {
                         boolean found = false;
                         for (GameObject go : game.getGameObjects()) {
                             if (go.getId().equals(targetGameObjectId)) {
-                                // Set the global selected object id.
                                 selectedGameObjectId.set(go.getId());
-                                // Mark this game object as selected.
                                 go.setSelected(true);
                                 found = true;
                                 System.out.println("Selected game object with id: " + go.getId());
@@ -309,7 +305,7 @@ public class GameContext {
 
                 } else if ("GETUSERS".equals(type)) {
                     Platform.runLater(() -> {
-                        // --- (Optionally) update your TextArea ---
+                        // Update the TextArea.
                         Node oldListNode = uiManager.getComponent("usersList");
                         if (oldListNode instanceof TextArea) {
                             TextArea usersListArea = (TextArea) oldListNode;
@@ -320,19 +316,19 @@ public class GameContext {
                             }
                         }
 
-                        // --- Update the ComboBox for whispering ---
+                        // Update the ComboBox for whispering.
                         Node comboNode = uiManager.getComponent("whisperUserSelect");
                         if (comboNode instanceof ComboBox) {
                             @SuppressWarnings("unchecked")
                             ComboBox<String> userSelect = (ComboBox<String>) comboNode;
 
-                            // Clear existing items
+                            // Clear existing items.
                             userSelect.getItems().clear();
 
-                            // Get the current client’s username
+                            // Get the current client’s username.
                             String currentUser = Client.getInstance().getUsername().get();
 
-                            // Add each user except this client
+                            // Add each user except this client.
                             for (Object param : receivedMessage.getParameters()) {
                                 String user = param.toString();
                                 if (!user.equals(currentUser)) {
@@ -349,21 +345,16 @@ public class GameContext {
                         String message = receivedMessage.getParameters()[1].toString();
 
                         Platform.runLater(() -> {
-                            // Look up the VBox where we place the whisper messages
                             Node chatNode = uiManager.getComponent("whisperChatMessagesBox");
                             if (chatNode instanceof VBox) {
                                 VBox messagesBox = (VBox) chatNode;
-
-                                // Create a new label for the incoming whisper
                                 Label msgLabel = new Label(sender + ": " + message);
                                 msgLabel.setWrapText(true);
                                 msgLabel.setStyle("-fx-background-color: #eeeeee; -fx-padding: 5; "
                                         + "-fx-border-radius: 5; -fx-background-radius: 5;");
-                                // Add the label to the VBox
                                 messagesBox.getChildren().add(msgLabel);
                             }
 
-                            // Now scroll to the bottom of the whisper chat
                             Node scrollNode = uiManager.getComponent("whisperChatScroll");
                             if (scrollNode instanceof ScrollPane) {
                                 ((ScrollPane) scrollNode).setVvalue(1.0);
@@ -371,11 +362,9 @@ public class GameContext {
                         });
                     }
                 }
-                // --- NEW: Catch CHATLOBBY messages ---
                 else if ("CHATLOBBY".equals(type)) {
                     System.out.println("Processing CHATLOBBY message: " + receivedMessage);
                     if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length >= 3) {
-                        // Expected parameters: [0] = sender, [1] = gameId, [2] = message text
                         String sender = receivedMessage.getParameters()[0].toString();
                         String gameId = receivedMessage.getParameters()[1].toString();
                         String message = receivedMessage.getParameters()[2].toString();
@@ -397,28 +386,20 @@ public class GameContext {
                         });
                     }
                 }
-
                 else if ("STARTGAME".equals(type)) {
                     System.out.println("Processing STARTGAME message: " + receivedMessage);
                     if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length > 0) {
                         String gameId = receivedMessage.getParameters()[0].toString();
                         Game toggledGame = gameSessionManager.getGameSession(gameId);
                         if (toggledGame != null) {
-                            // Toggle the started flag for the specific game
                             toggledGame.setStartedFlag(!toggledGame.getStartedFlag());
                             System.out.println("Game " + gameId + " started flag toggled. New value: " + toggledGame.getStartedFlag());
 
                             Platform.runLater(() -> {
-                                // 1) Retrieve the TextArea from your UI manager
                                 Node gameStateNode = uiManager.getComponent("gameStateShow");
                                 if (gameStateNode instanceof TextArea) {
                                     TextArea gameStateShow = (TextArea) gameStateNode;
-
-                                    // 2) Fetch ALL games from the GameSessionManager
-                                    //    (Replace with the actual method your manager provides)
                                     Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals();
-
-                                    // 3) Build a string listing every game’s details
                                     StringBuilder sb = new StringBuilder();
 
                                     if (allGames.isEmpty()) {
@@ -432,11 +413,9 @@ public class GameContext {
                                             for (String user : g.getUsers()) {
                                                 sb.append("  - ").append(user).append("\n");
                                             }
-                                            sb.append("\n"); // Blank line between games
+                                            sb.append("\n");
                                         }
                                     }
-
-                                    // 4) Set the text of the TextArea to our info
                                     gameStateShow.setText(sb.toString());
                                 }
                             });
@@ -448,25 +427,16 @@ public class GameContext {
                         System.out.println("STARTGAME message missing required parameters.");
                     }
                 }
-
-                
-                
-
                 else if ("SYNCGP".equals(type)) {
                     System.out.println("Processing SYNCGP message");
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
                         System.out.println("SYNCGP message missing required parameters.");
                         return;
                     }
-                    // Extract the game ID from the first parameter.
                     String gameID = receivedMessage.getParameters()[0].toString();
-
-                    // Retrieve the game session by its ID.
                     Game game = gameSessionManager.getGameSession(gameID);
                     if (game != null) {
-                        // Clear the current user list.
                         game.getUsers().clear();
-                        // Loop through each parameter (starting at index 1) and add as a user.
                         for (int i = 1; i < receivedMessage.getParameters().length; i++) {
                             String user = receivedMessage.getParameters()[i].toString();
                             game.getUsers().add(user);
@@ -486,7 +456,6 @@ public class GameContext {
         };
     }
 
-    // Static getters for the game ID and selected game object ID.
     public static String getCurrentGameId() {
         return currentGameId.get();
     }
@@ -499,13 +468,11 @@ public class GameContext {
         return gameSessionManager;
     }
 
-
     /**
      * Starts the client operations and the game loop.
      */
     public void start() {
         uiManager.waitForCentralUnitAndInitialize(() -> {
-            // 1) Create & register the existing panes
             Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
             uiManager.registerComponent("mainUIPane", mainUIPane);
 
@@ -518,11 +485,9 @@ public class GameContext {
             Pane whisperChatPane = GameUIComponents.createWhisperChatPane(uiManager, gameSessionManager);
             uiManager.registerComponent("whisperChatUIPane", whisperChatPane);
 
-            // 2) Create & register the new Lobby Chat pane
             Pane lobbyChatPane = GameUIComponents.createLobbyChatPane(uiManager, gameSessionManager);
             uiManager.registerComponent("lobbyChatUIPane", lobbyChatPane);
 
-            // 3) Add all these panes to a StackPane
             StackPane layeredRoot = new StackPane();
             layeredRoot.getChildren().addAll(
                     mainUIPane,
@@ -532,27 +497,24 @@ public class GameContext {
                     lobbyChatPane
             );
 
-            // 4) Set the initial visibility
             mainUIPane.setVisible(true);
             chatPane.setVisible(false);
             adminPane.setVisible(false);
             whisperChatPane.setVisible(false);
             lobbyChatPane.setVisible(false);
 
-            // 5) Create & add the ComboBox for switching between panes
             ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
             StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
             guiInterfaces.setTranslateX(10);
             guiInterfaces.setTranslateY(10);
             layeredRoot.getChildren().add(guiInterfaces);
 
-            // 6) Finally, add this StackPane to the CentralGraphicalUnit
             CentralGraphicalUnit.getInstance().addNode(layeredRoot);
 
             System.out.println("All UI components have been added via GameUIComponents.");
         });
 
-        // register the client on the server
+        // Register the client on the server.
         Message registrationMsg = new Message(
                 "REGISTER",
                 new Object[] {},
@@ -563,8 +525,7 @@ public class GameContext {
 
     /**
      * Starts the game loop for updating and drawing the game state.
-     * This example uses JavaFX's AnimationTimer and retrieves the GraphicsContext
-     * from the CentralGraphicalUnit singleton.
+     * Uses JavaFX's AnimationTimer to continuously update and draw.
      */
     public void startGameLoop() {
         AnimationTimer timer = new AnimationTimer() {
@@ -580,87 +541,50 @@ public class GameContext {
 
     /**
      * Updates the game state.
-     * This method is called once per frame by the game loop.
+     * Throttles updates to the configured FPS (60 FPS by default).
      */
-
-     
-    
-     public void update() {
+    public void update() {
         long now = System.currentTimeMillis();
-        // Throttle updates to roughly 40 fps or so (adjust as needed)
-        if (now - lastFrameTime < 25) {
-            return;  // Not enough time has passed, so skip this update.
+        // Use the adjustable frame interval (target FPS).
+        if (now - lastFrameTime < frameIntervalMs) {
+            return;  // Not enough time has passed.
         }
         lastFrameTime = now;
         
-        // Get the current set of pressed keys.
         Set<KeyCode> currentPressedKeys = KeyboardState.getPressedKeys();
         
-        // Send KEY_PRESS messages for every key currently pressed.
+        // Send KEY_PRESS messages for each key pressed.
         for (KeyCode key : currentPressedKeys) {
             Message keyPressMsg = new Message("KEY_PRESS", new Object[]{ key.toString() }, "GAME");
         
-            // Set concealed parameters (using your GameContext’s helper methods).
             String[] concealed = keyPressMsg.getConcealedParameters();
             if (concealed == null || concealed.length < 2) {
                 concealed = new String[2];
             }
-            concealed[0] = getSelectedGameObjectId();  // Your method to obtain selected game object's ID.
-            concealed[1] = getCurrentGameId();           // Your method to obtain current game session ID.
+            concealed[0] = getSelectedGameObjectId();
+            concealed[1] = getCurrentGameId();
             keyPressMsg.setConcealedParameters(concealed);
         
             Client.sendMessageBestEffort(keyPressMsg);
         }
         
-        // Determine keys that have been released since the last update.
         Set<KeyCode> newlyReleased = new HashSet<>(prevPressedKeys);
         newlyReleased.removeAll(currentPressedKeys);
         
-        // If at least one key was released, send a MOVE message with the current position.
-        //if (!newlyReleased.isEmpty()) {
-        //    Game currentGame = gameSessionManager.getGameSession(getCurrentGameId());
-        //    GameObject selectedObject = null;
-        //    for (GameObject go : currentGame.getGameObjects()) {
-        //        if (go.getId().equals(getSelectedGameObjectId())) {
-        //            selectedObject = go;
-        //            break;
-        //        }
-        //    }
-            // Assume getX() and getY() return the current position of the selected game object.
-        //    Message moveMsg = new Message("MOVE", new Object[]{ selectedObject.getX(), selectedObject.getY(), }, "GAME");
-       
-        //    String[] concealed = moveMsg.getConcealedParameters();
-        //    if (concealed == null || concealed.length < 2) {
-        //        concealed = new String[2];
-        //    }
-        //    concealed[0] = getSelectedGameObjectId();
-        //    concealed[1] = getCurrentGameId();
-        //    moveMsg.setConcealedParameters(concealed);
-        
-        //    Client.sendMessageBestEffort(moveMsg);
-        //}
-        
-        // Update the previous key set for the next update cycle.
-        prevPressedKeys = new HashSet<>(currentPressedKeys);
-        
         // (Other game state update logic can follow here.)
+        
+        prevPressedKeys = new HashSet<>(currentPressedKeys);
     }
     
-
-
     /**
      * Draws the current game state on the provided GraphicsContext.
-     *
-     * @param gc The GraphicsContext to draw on.
      */
     private void draw(GraphicsContext gc) {
         String gameId = currentGameId.get();
         if (gameId == null || gameId.isEmpty()) {
-            // No game chosen, do nothing
-            return;
+            return;  // No game chosen.
         }
 
-        // Clear the background
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
 
@@ -669,33 +593,21 @@ public class GameContext {
             return;
         }
 
-        // Otherwise, draw the game
         game.draw(gc);
     }
-
 
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
     }
 
-/*
-    public static String getLocalClientId() {
-        return ThinkOutsideTheRoom.client.getClientId();
-    }
-*/
-
     public static void main(String[] args) {
-        // Create the game context.
         GameContext context = new GameContext();
-        // Start the context on a separate thread.
         new Thread(() -> {
             context.start();
             Platform.runLater(context::startGameLoop);
         }).start();
 
-        // Launch the JavaFX GUI (this call blocks until the GUI exits).
         System.out.println("Launching JavaFX...");
         Application.launch(GUI.class, args);
-
     }
 }

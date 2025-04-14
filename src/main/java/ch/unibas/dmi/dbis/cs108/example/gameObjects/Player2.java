@@ -35,7 +35,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     // Constants matching the Python snippet
     // ---------------------------------
-    private static final float PLAYER_ACC = 1.5f;       // Acceleration magnitude when pressing left/right
+    private static final float PLAYER_ACC = 3.5f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
     private static final float JUMP_FORCE = -10;         // The lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
@@ -80,11 +80,24 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     // INTERPOLATION FIELDS for smoothing out server SNAPSHOT corrections
     // ---------------------------------
-    private boolean interpolating = false;         // true if we're currently smoothing from old pos -> new pos
-    private Vector2 interpStartPos = new Vector2(); // position at start of interpolation
-    private Vector2 interpEndPos   = new Vector2(); // authoritative position we want to reach
-    private float interpElapsed    = 0f;            // how long we've been interpolating
-    private float interpDuration   = 0.07f;         // 150ms to move from start to end
+    private boolean interpolating = false;         // true if we're currently smoothing from an old state to a new state
+    private Vector2 interpStartPos = new Vector2();  // starting position
+    private Vector2 interpEndPos   = new Vector2();  // target position
+
+    // --- New: interpolation fields for velocity ---
+    private Vector2 interpStartVel = new Vector2();  // starting velocity
+    private Vector2 interpEndVel   = new Vector2();  // target velocity
+
+    // --- New: interpolation fields for acceleration ---
+    private Vector2 interpStartAcc = new Vector2();  // starting acceleration
+    private Vector2 interpEndAcc   = new Vector2();  // target acceleration
+
+    private float interpElapsed  = 0f;              // time elapsed during interpolation
+    private float interpDuration = 0.05f;            // duration (in seconds) over which to interpolate
+
+    private int syncCounter = 0;
+    private static final int SYNC_THRESHOLD = 0;     // only send snapshot every 50 KEY_PRESS messages
+
 
     /**
      * Simple constructor: place player in the middle of the screen with a fixed size.
@@ -110,27 +123,34 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        // If we're interpolating from a previous to a new authoritative position, do that now
+        // If we're interpolating from a previous state to a new authoritative state, interpolate position, velocity, and acceleration.
         if (interpolating) {
             // Update elapsed time
             interpElapsed += deltaTime;
 
-            // Figure out how far (0 to 1) we are along the 150ms interpolation
+            // Compute the fraction of interpolation completed (0 to 1)
             float alpha = interpElapsed / interpDuration;
             if (alpha >= 1.0f) {
                 alpha = 1.0f;
-                interpolating = false; // Done interpolating
+                interpolating = false; // Finished interpolation
             }
 
-            // Lerp from interpStartPos to interpEndPos
+            // Interpolate position.
             pos.x = lerp(interpStartPos.x, interpEndPos.x, alpha);
             pos.y = lerp(interpStartPos.y, interpEndPos.y, alpha);
 
-            // Optionally skip normal local updates or partial logic here (like friction, gravity)
+            // Interpolate velocity.
+            vel.x = lerp(interpStartVel.x, interpEndVel.x, alpha);
+            vel.y = lerp(interpStartVel.y, interpEndVel.y, alpha);
+
+            // --- New: interpolate acceleration ---
+            acc.x = lerp(interpStartAcc.x, interpEndAcc.x, alpha);
+            acc.y = lerp(interpStartAcc.y, interpEndAcc.y, alpha);
+
             return;
         }
 
-        // If not interpolating, do normal local update logic:
+        // If not interpolating, execute normal local update logic:
         if (iAmGrabbed) {
             updateMovement();
             return;
@@ -167,6 +187,18 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             } else if (throwAngle > MAX_THROW_ANGLE) {
                 throwAngle = MAX_THROW_ANGLE;
                 throwAngleDelta = -throwAngleDelta;
+            }
+        }
+
+        if (parentGame.isAuthoritative()) {
+            syncCounter++;
+            if (syncCounter >= SYNC_THRESHOLD) {
+                // Broadcast a snapshot.
+                Message snapshot = createSnapshot();
+                Server.getInstance().sendMessageBestEffort(snapshot);
+
+                // Reset the counter.
+                syncCounter = 0;
             }
         }
     }
@@ -214,18 +246,18 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     @Override
     protected void myUpdateGlobal(Message msg) {
         if (iAmGrabbed) {
-            // If the player is grabbed, we ignore external commands
+            // If the player is grabbed, ignore external commands.
             return;
         }
 
         String type = msg.getMessageType();
         if ("KEY_PRESS".equals(type)) {
-            // Process key press events as before.
+            // Process key press events.
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 1) {
                 String keyString = params[0].toString();
 
-                // Basic movement logic
+                // Basic movement logic.
                 if (KeyCode.LEFT.toString().equals(keyString)) {
                     acc.x += -PLAYER_ACC;
                 } else if (KeyCode.RIGHT.toString().equals(keyString)) {
@@ -245,7 +277,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     // Grabbing logic...
                     // [ ... existing code not shown ... ]
                 } else if (KeyCode.F.toString().equals(keyString)) {
-                    // Toggle throwing mode
+                    // Toggle throwing mode.
                     if (!isThrowing) {
                         isThrowing = true;
                         throwAngle = 90f;
@@ -256,7 +288,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                         System.out.println("Exiting throwing mode.");
                     }
                 } else if (KeyCode.R.toString().equals(keyString)) {
-                    // Execute throw logic
+                    // Execute throw logic.
                     if (isThrowing) {
                         double rad = Math.toRadians(throwAngle);
                         float throwVx = (float) (throwMagnitude * Math.cos(rad));
@@ -273,18 +305,10 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 }
 
                 System.out.println("Processed KEY_PRESS for " + getId() + ": " + keyString);
-
-                // If this game is authoritative, broadcast a SNAPSHOT after applying the key.
-                Game parentGame = getParentGame();
-                if (parentGame != null && parentGame.isAuthoritative()) {
-                    Message snapshot = createSnapshot();
-                    // Send best-effort or reliable, up to you:
-                    Server.getInstance().sendMessageBestEffort(snapshot);
-                }
             }
         }
         else if ("SNAPSHOT".equals(type)) {
-            // Instead of "MOVE", we process the SNAPSHOT message, if we are non-authoritative.
+            // Process SNAPSHOT messages for non-authoritative clients.
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 6) {
                 try {
@@ -295,26 +319,36 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     float newAccX = Float.parseFloat(params[4].toString());
                     float newAccY = Float.parseFloat(params[5].toString());
 
-                    // Instead of snapping to the new position, we start interpolation:
+                    // Instead of snapping directly, set up interpolation:
                     interpStartPos.x = pos.x;
                     interpStartPos.y = pos.y;
                     interpEndPos.x   = newX;
                     interpEndPos.y   = newY;
-                    interpolating    = true;
-                    interpElapsed    = 0f;
+                    
+                    // --- New: store current and target velocity for interpolation ---
+                    interpStartVel.x = vel.x;
+                    interpStartVel.y = vel.y;
+                    interpEndVel.x   = newVelX;
+                    interpEndVel.y   = newVelY;
+                    
+                    // --- New: store current and target acceleration for interpolation ---
+                    interpStartAcc.x = acc.x;
+                    interpStartAcc.y = acc.y;
+                    interpEndAcc.x   = newAccX;
+                    interpEndAcc.y   = newAccY;
+                    
+                    interpolating = true;
+                    interpElapsed = 0f;
 
-                    // We also adopt the new velocity/acc so subsequent frames
-                    // have the correct motion from the server
-                    vel.x = newVelX;
-                    vel.y = newVelY;
-                    acc.x = newAccX;
-                    acc.y = newAccY;
+                    // Optionally, if you want to immediately adopt the target acceleration after interpolation,
+                    // you may comment out the following direct assignment.
+                    // acc.x = newAccX;
+                    // acc.y = newAccY;
 
                     System.out.println("Processed SNAPSHOT for " + getId()
                                        + ": pos=(" + newX + ", " + newY + ")");
                 } catch (NumberFormatException ex) {
-                    System.out.println("Error processing SNAPSHOT parameters: "
-                                       + Arrays.toString(params));
+                    System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
                 }
             } else {
                 System.out.println("SNAPSHOT message does not contain enough parameters.");
@@ -376,18 +410,29 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public Message createSnapshot() {
-        // Pack the position, velocity, and acceleration into an Object array.
+        // Grab the current tick from the parent game.
+        long currentTick = 0;
+        Game parentGame = getParentGame();
+        if (parentGame != null) {
+            currentTick = parentGame.getTickCount();
+        }
+
+        // Pack position, velocity, acceleration in the main parameter array.
         Object[] params = new Object[] {
             pos.x, pos.y,   // Position
             vel.x, vel.y,   // Velocity
             acc.x, acc.y    // Acceleration
         };
-        // Create a new message with type "SNAPSHOT" and an option of "GAME".
+
+        // Create the snapshot message.
         Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
 
-        // Set the concealed parameters so receivers know the source of the snapshot:
-        // [0] = this object's UUID, [1] = the Game's UUID.
-        snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
+        // Build the concealed array.
+        snapshotMsg.setConcealedParameters(new String[] {
+            getId(),
+            getGameId(),
+            String.valueOf(currentTick)
+        });
 
         return snapshotMsg;
     }

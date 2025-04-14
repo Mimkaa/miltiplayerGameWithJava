@@ -24,7 +24,7 @@ public abstract class GameObject {
     protected String name;
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
-    private Game parentGame;
+    protected Game parentGame;
     
     // NEW: Selected flag.
     private boolean selected = false;
