@@ -119,13 +119,24 @@ public class GameUIComponents {
 
         // Button: Start Level
         Button startLevelButton = new Button("Start Level");
+
+// Adjusted to include screen size
         startLevelButton.setOnAction(e -> {
             Level level = new Level();
-            level.initializeLevel();
+
+            // Get screen dimensions from the button's scene
+            double screenWidth = startLevelButton.getScene().getWidth();
+            double screenHeight = startLevelButton.getScene().getHeight();
+
+            // Initialize level with responsive layout
+            level.initializeLevel(screenWidth, screenHeight);
+
+            // Send STARTGAME message
             String gameId = GameContext.getCurrentGameId();
             Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
             Client.sendMessageStatic(msg);
         });
+
         uiManager.registerComponent("startLevelButton", startLevelButton);
 
         // Add all to VBox
