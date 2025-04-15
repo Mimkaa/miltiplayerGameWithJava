@@ -509,6 +509,9 @@ public class GameContext {
             Pane mainUIPane = GameUIComponents.createMainUIPane(uiManager, gameSessionManager);
             uiManager.registerComponent("mainUIPane", mainUIPane);
 
+            Pane startGamePane = GameUIComponents.createStartGamePane(uiManager, gameSessionManager);
+            uiManager.registerComponent("startGamePane", startGamePane);
+
             Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
             uiManager.registerComponent("adminUIPane", adminPane);
 
@@ -526,6 +529,7 @@ public class GameContext {
             StackPane layeredRoot = new StackPane();
             layeredRoot.getChildren().addAll(
                     mainUIPane,
+                    startGamePane,
                     chatPane,
                     adminPane,
                     whisperChatPane,
@@ -534,6 +538,7 @@ public class GameContext {
 
             // 4) Set the initial visibility
             mainUIPane.setVisible(true);
+            startGamePane.setVisible(false);
             chatPane.setVisible(false);
             adminPane.setVisible(false);
             whisperChatPane.setVisible(false);

@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -37,13 +38,6 @@ public class GameUIComponents {
         });
         uiManager.registerComponent("gameSelect", gameSelect);
 
-        // TextField: Game ID
-        TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
-        gameIdField.setPromptText("Game ID");
-        gameIdField.setEditable(false);
-        uiManager.registerComponent("gameIdField", gameIdField);
-        gameIdField.setPrefWidth(200);
-        gameIdField.setMaxWidth(300);
 
 
         // TextField: Overlay Input
@@ -69,6 +63,7 @@ public class GameUIComponents {
         // Button: Join Game
         Button joinGameButton = new Button("Join Game");
         joinGameButton.setOnAction(e -> {
+            if (gameSelect == null) return;
             String selectedGame = gameSelect.getSelectionModel().getSelectedItem();
             if (selectedGame == null || selectedGame.trim().isEmpty()) {
                 System.out.println("Please select a game.");
@@ -80,12 +75,48 @@ public class GameUIComponents {
                     GameContext.getCurrentGameId() == null ? "default" : GameContext.getCurrentGameId()
             }, "REQUEST");
             Client.sendMessageStatic(joinMsg);
+
+            Platform.runLater(() -> {
+                Node startPaneNode = uiManager.getComponent("startGamePane");
+                Node mainPaneNode = uiManager.getComponent("mainUIPane");
+
+                if (startPaneNode instanceof Pane && mainPaneNode instanceof Pane) {
+                    startPaneNode.setVisible(true);
+                    mainPaneNode.setVisible(false);
+                }
+            });
         });
         uiManager.registerComponent("joinGameButton", joinGameButton);
+
+
+
+        // Add all to VBox
+        mainVBox.getChildren().addAll(
+                gameSelect,
+                overlayInputField,
+                createGameButton,
+                joinGameButton
+
+        );
+
+        return mainVBox;
+    }
+
+    public static Pane createStartGamePane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        VBox startGameVBox = new VBox(10);
+        startGameVBox.setPadding(new Insets(20));
+        startGameVBox.setAlignment(Pos.TOP_CENTER);
+        startGameVBox.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
+
+        // Get the references from UIManager
+        ComboBox<String> gameSelect = (ComboBox<String>) uiManager.getComponent("gameSelect");
+        TextField overlayInputField = (TextField) uiManager.getComponent("overlayInputField");
+
 
         // Button: Create Object
         Button createObjectButton = new Button("Create Object");
         createObjectButton.setOnAction(e -> {
+            if (overlayInputField == null) return;
             String input = overlayInputField.getText().trim();
             if (input.isEmpty()) {
                 System.out.println("Please enter parameters.");
@@ -105,6 +136,7 @@ public class GameUIComponents {
         // Button: Select Object
         Button selectObjectButton = new Button("Select Object");
         selectObjectButton.setOnAction(e -> {
+            if (overlayInputField == null) return;
             String objectName = overlayInputField.getText().trim();
             if (objectName.isEmpty()) {
                 System.out.println("Please enter an object name.");
@@ -117,43 +149,38 @@ public class GameUIComponents {
         });
         uiManager.registerComponent("selectObjectButton", selectObjectButton);
 
+        // TextField: Game ID
+        TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
+        gameIdField.setPromptText("Game ID");
+        gameIdField.setEditable(false);
+        uiManager.registerComponent("gameIdField", gameIdField);
+        gameIdField.setPrefWidth(200);
+        gameIdField.setMaxWidth(300);
+
         // Button: Start Level
         Button startLevelButton = new Button("Start Level");
-
-// Adjusted to include screen size
         startLevelButton.setOnAction(e -> {
             Level level = new Level();
-
-            // Get screen dimensions from the button's scene
             double screenWidth = startLevelButton.getScene().getWidth();
             double screenHeight = startLevelButton.getScene().getHeight();
-
-            // Initialize level with responsive layout
             level.initializeLevel(screenWidth, screenHeight);
 
-            // Send STARTGAME message
             String gameId = GameContext.getCurrentGameId();
             Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
             Client.sendMessageStatic(msg);
         });
-
         uiManager.registerComponent("startLevelButton", startLevelButton);
 
-        // Add all to VBox
-        mainVBox.getChildren().addAll(
-                gameSelect,
-                overlayInputField,
-                createGameButton,
-                joinGameButton,
+        startGameVBox.getChildren().addAll(
+
                 createObjectButton,
                 selectObjectButton,
-                startLevelButton,
-                gameIdField
+                gameIdField,
+                startLevelButton
         );
 
-        return mainVBox;
+        return startGameVBox;
     }
-
 
 
     public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
