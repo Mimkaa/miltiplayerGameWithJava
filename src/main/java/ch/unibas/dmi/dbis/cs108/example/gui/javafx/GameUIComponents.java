@@ -172,6 +172,12 @@ public class GameUIComponents {
             String gameId = GameContext.getCurrentGameId();
             Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
             Client.sendMessageStatic(msg);
+
+            level.initializeLevel(screenWidth, screenHeight);
+
+
+            System.out.println("Level started!");
+
         });
         uiManager.registerComponent("startLevelButton", startLevelButton);
 

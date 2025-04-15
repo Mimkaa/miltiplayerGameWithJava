@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
@@ -23,7 +24,7 @@ public abstract class GameObject {
     protected String name;
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
     protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
-    private Game parentGame;
+    protected Game parentGame;
     
     // NEW: Selected flag.
     private boolean selected = false;
@@ -85,8 +86,14 @@ public abstract class GameObject {
      * @param message the message to add
      */
     public void addIncomingMessage(Message message) {
-        incomingMessages.offer(message);
+        // Only add the message if the current queue size is less than or equal to 5.
+        if (incomingMessages.size() <= 5) {
+            incomingMessages.offer(message);
+        } else {
+            System.out.println("Incoming message queue full for object " + getId() + "; discarding message " + message.getMessageType());
+        }
     }
+    
 
     /**
      * Processes all queued messages for this object.
@@ -94,7 +101,9 @@ public abstract class GameObject {
     public void processIncomingMessages() {
         Message msg;
         while ((msg = incomingMessages.poll()) != null) {
+            // Instead of processing on this thread:
             myUpdateGlobal(msg);
+            
         }
     }
 
@@ -104,6 +113,8 @@ public abstract class GameObject {
     protected abstract void myUpdateGlobal(Message msg);
     public abstract void draw(GraphicsContext gc);
     public abstract Object[] getConstructorParamValues();
+
+    public abstract Message createSnapshot();
 
     // === Collision ===
 

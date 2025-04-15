@@ -46,6 +46,7 @@ public class CreateGameCommandHandler implements CommandHandler {
         String gameUuid = UUID.randomUUID().toString();
 
         Game newGame = new Game(gameUuid, requestedGameName);
+        newGame.setAuthoritative(true);
         server.getGameSessionManager().addGameSession(gameUuid, newGame);
 
         Message response = new Message("CREATEGAME", new Object[]{gameUuid, requestedGameName}, "RESPONSE", msg.getConcealedParameters());

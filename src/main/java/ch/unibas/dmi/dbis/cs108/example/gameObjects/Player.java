@@ -372,5 +372,21 @@ public class Player extends GameObject implements IGravityAffected {
     public void setY(float y) {
         position.y = y;
     }
+    @Override
+    public Message createSnapshot() {
+        // Pack the position, velocity, and acceleration into an Object array.
+        Object[] params = new Object[]{
+            position.x, position.y,   // Position
+            velocity.x, velocity.y,   // Velocity
+            
+        };
+        // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").
+        Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
+        
+        // Set the concealed parameters so receivers know the source of the snapshot.
+        snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
+        
+        return snapshotMsg;
+    }
     
 }

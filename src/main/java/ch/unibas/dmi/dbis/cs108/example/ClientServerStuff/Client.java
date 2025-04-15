@@ -210,7 +210,11 @@ public class Client {
                     String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
                     System.out.println("Received (UDP): " + response);
                     Message receivedMessage = MessageCodec.decode(response);
-                    incomingQueue.offer(receivedMessage);
+                    messageHub.dispatch(receivedMessage);
+                    if(receivedMessage.getOption()!="Game")
+                    {
+                        incomingQueue.offer(receivedMessage);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -239,7 +243,7 @@ public class Client {
                                 ackProcessor.addAck(dest, msg.getUUID());
                             }
                             // Dispatch the message via the MessageHub.
-                            messageHub.dispatch(msg);
+                            //messageHub.dispatch(msg);
                         }
                     }
                 } catch (Exception e) {
