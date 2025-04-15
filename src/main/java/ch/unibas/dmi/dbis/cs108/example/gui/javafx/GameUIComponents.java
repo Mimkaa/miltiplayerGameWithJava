@@ -133,21 +133,25 @@ public class GameUIComponents {
         });
         uiManager.registerComponent("createObjectButton", createObjectButton);
 
-        // Button: Select Object
-        Button selectObjectButton = new Button("Select Object");
-        selectObjectButton.setOnAction(e -> {
-            if (overlayInputField == null) return;
-            String objectName = overlayInputField.getText().trim();
-            if (objectName.isEmpty()) {
-                System.out.println("Please enter an object name.");
-                return;
-            }
+        // Button: Gerald
+        Button selectGeraldButton = new Button("Select Gerald");
+        selectGeraldButton.setOnAction(e -> {
             String sessionId = GameContext.getCurrentGameId();
             if (sessionId == null) return;
-            Message msg = new Message("SELECTGO", new Object[]{sessionId, objectName}, "REQUEST");
+            Message msg = new Message("SELECTGO", new Object[]{sessionId, "Gerald"}, "REQUEST");
             Client.sendMessageStatic(msg);
         });
-        uiManager.registerComponent("selectObjectButton", selectObjectButton);
+        uiManager.registerComponent("selectGeraldButton", selectGeraldButton);
+
+         // Button: Alfred
+        Button selectAlfredButton = new Button("Select Alfred");
+        selectAlfredButton.setOnAction(e -> {
+            String sessionId = GameContext.getCurrentGameId();
+            if (sessionId == null) return;
+            Message msg = new Message("SELECTGO", new Object[]{sessionId, "Alfred"}, "REQUEST");
+            Client.sendMessageStatic(msg);
+        });
+        uiManager.registerComponent("selectAlfredButton", selectAlfredButton);
 
         // TextField: Game ID
         TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
@@ -174,7 +178,8 @@ public class GameUIComponents {
         startGameVBox.getChildren().addAll(
 
                 createObjectButton,
-                selectObjectButton,
+                selectGeraldButton,
+                selectAlfredButton,
                 gameIdField,
                 startLevelButton
         );
