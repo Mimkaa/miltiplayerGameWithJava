@@ -10,14 +10,13 @@ import javafx.application.Application;
 
 /**
  * Entry point class for starting the application in different modes:
- * server, client, or both. It initializes networking components,
+ * server, client. It initializes networking components,
  * sets up the user interface, and handles command-line arguments.
  *
  * <p>This class supports:
  * <ul>
  *     <li>Launching only the server</li>
  *     <li>Launching only the client</li>
- *     <li>Launching both server and client together</li>
  * </ul>
  *
  * <p>The chosen mode is passed as a command-line argument.
@@ -70,40 +69,8 @@ public class ThinkOutsideTheRoom {
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
 
-            case "both":
-                if (args.length < 2 || args.length > 3) {
-                    System.err.println("Usage: both <port> [username]");
-                    return;
-                }
-
-                String[] bothParts = args[1].split(":");
-                if (bothParts.length != 2) {
-                    System.err.println("Invalid host:port format.");
-                    return;
-                }
-
-                String bothHost = bothParts[0];
-                int bothPort;
-                try {
-                    bothPort = Integer.parseInt(bothParts[1]);
-                } catch (NumberFormatException e) {
-                    System.err.println("Invalid port: " + bothParts[1]);
-                    return;
-                }
-
-                String bothUsername = args.length == 3 ? args[2] : null;
-
-                startServer(String.valueOf(bothPort));
-                try {
-                    Thread.sleep(1000); // Wait until the server is ready
-                } catch (InterruptedException ignored) {}
-
-                prepareClientAndContext(bothHost, bothPort, bothUsername);
-                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
-                break;
-
             default:
-                System.err.println("Unknown mode. Use: server, client or both");
+                System.err.println("Unknown mode. Use: server or client");
         }
     }
 
@@ -114,7 +81,6 @@ public class ThinkOutsideTheRoom {
         System.out.println("Usage:");
         System.out.println("  server <port>");
         System.out.println("  client <host:port> [username]");
-        System.out.println("  both <port> [username]");
     }
 
     /**
