@@ -242,8 +242,50 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 }
                 // Additional keys for grabbing, throwing, etc.
                 else if (KeyCode.E.toString().equals(keyString)) {
-                    // Grabbing logic...
-                    // [ ... existing code not shown ... ]
+                    // If an object is already grabbed, release it and return.
+                    if (grabbedGuy != null && grabbedGuy.iAmGrabbed) {
+                        grabbedGuy.iAmGrabbed = false;
+                        System.out.println("Player " + getName() + " released grabbed player: " + grabbedGuy.getName());
+                        grabbedGuy = null;
+                        return;
+                    }
+
+                    // Otherwise, search for the closest grabbable Player2
+                    Game parentGame = getParentGame();
+                    if (parentGame != null) {
+                        Player2 closest = null;
+                        double minDistance = Double.MAX_VALUE;
+                        float myCenterX = getX() + getWidth() / 2;
+                        float myCenterY = getY() + getHeight() / 2;
+
+                        for (GameObject obj : parentGame.getGameObjects()) {
+                            if (obj.getId().equals(getId())) continue;
+                            if (!(obj instanceof Player2)) continue;
+                            Player2 candidate = (Player2) obj;
+                            if (candidate.iAmGrabbed) continue;
+
+                            float candidateCenterX = candidate.getX() + (candidate.getWidth() / 2);
+                            float candidateCenterY = candidate.getY() + (candidate.getHeight() / 2);
+                            double dx = myCenterX - candidateCenterX;
+                            double dy = myCenterY - candidateCenterY;
+                            double distance = Math.sqrt(dx * dx + dy * dy);
+
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closest = candidate;
+                            }
+                        }
+
+                        if (closest != null && minDistance <= GRAB_RADIUS) {
+                            grabbedGuy = closest;
+                            grabbedGuy.iAmGrabbed = true;
+                            System.out.println("Player " + getName() + " grabbed player: "
+                                    + grabbedGuy.getName() + " at distance " + minDistance);
+                        } else {
+                            System.out.println("No player found within grab radius (" + GRAB_RADIUS + ").");
+                        }
+                    }
+
                 } else if (KeyCode.F.toString().equals(keyString)) {
                     // Toggle throwing mode
                     if (!isThrowing) {
