@@ -46,17 +46,11 @@ public class ThinkOutsideTheRoom {
         switch (mode) {
             case "server":
                 if (args.length != 2) {
-                    System.err.println("Usage: server <host:port>");
+                    System.err.println("Usage: server <port>");
                     return;
                 }
-                String[] hostPort = args[1].split(":");
-                if (hostPort.length != 2) {
-                    System.err.println("Invalid host:port format.");
-                    return;
-                }
-                String serverAddress = hostPort[0];
-                String serverPort = hostPort[1];
-                startServer(serverAddress, serverPort);
+                String port = args[1];
+                startServer(port);
                 break;
             case "client":
                 if (args.length < 2 || args.length > 3) {
@@ -69,16 +63,16 @@ public class ThinkOutsideTheRoom {
                     return;
                 }
                 String host = parts[0];
-                int port = Integer.parseInt(parts[1]);
+                int clientPort = Integer.parseInt(parts[1]);
                 String username = args.length == 3 ? args[2] : null;
 
-                prepareClientAndContext(host, port, username);
+                prepareClientAndContext(host, clientPort, username);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
 
             case "both":
                 if (args.length < 2 || args.length > 3) {
-                    System.err.println("Usage: both <host:port> [username]");
+                    System.err.println("Usage: both <port> [username]");
                     return;
                 }
 
@@ -99,7 +93,7 @@ public class ThinkOutsideTheRoom {
 
                 String bothUsername = args.length == 3 ? args[2] : null;
 
-                startServer(bothHost, String.valueOf(bothPort));
+                startServer(String.valueOf(bothPort));
                 try {
                     Thread.sleep(1000); // Wait until the server is ready
                 } catch (InterruptedException ignored) {}
@@ -128,8 +122,9 @@ public class ThinkOutsideTheRoom {
      *
      * @param port The port number to bind the server to.
      */
-    private static void startServer(String address, String port) {
-        new Thread(() -> Server.main(new String[]{address , port})).start();
+    private static void startServer(String port) {
+        String serverAddress = "0.0.0.0"; // all available network address
+        new Thread(() -> Server.main(new String[]{serverAddress, port})).start();
     }
 
     /**
