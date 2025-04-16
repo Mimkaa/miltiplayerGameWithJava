@@ -288,44 +288,40 @@ public class GameUIComponents {
 
     public static Pane createglbChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
 
-        BorderPane root = new BorderPane();
-        root.setPrefSize(600, 500);
+        Pane root = new Pane();
+        int offsetY = 30;
 
-        // CHAT MESSAGES
+        // === SCROLLABLE MESSAGE BOX ===
         VBox messagesBox = new VBox(5);
+        messagesBox.setPadding(new Insets(5));
         uiManager.registerComponent("chatMessagesBox", messagesBox);
-        messagesBox.setPadding(new Insets(10));
+
         ScrollPane scrollPane = new ScrollPane(messagesBox);
-        uiManager.registerComponent("chatScroll", scrollPane);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        scrollPane.setLayoutX(50);
+        scrollPane.setLayoutY(20 + offsetY);
+        scrollPane.setPrefWidth(300);
+        scrollPane.setPrefHeight(150);
+        uiManager.registerComponent("chatScroll", scrollPane);
 
-        // INPUT FIELD & SEND BUTTON
+        // === INPUT FIELD ===
         TextField chatInputField = new TextField();
         chatInputField.setPromptText("Type a message...");
-        chatInputField.setPrefWidth(400);
+        chatInputField.setPrefWidth(200);
+        chatInputField.setLayoutX(50);
+        chatInputField.setLayoutY(180 + offsetY);
 
+        uiManager.registerComponent("chatInputField", chatInputField);
+
+        // === SEND BUTTON ===
         Button sendButton = new Button("Send");
         sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+        sendButton.setLayoutX(260);
+        sendButton.setLayoutY(180 + offsetY);
+        sendButton.setPrefWidth(80);
 
-        HBox inputBox = new HBox(10, chatInputField, sendButton);
-        inputBox.setAlignment(Pos.CENTER);
-        inputBox.setPadding(new Insets(10));
-
-        VBox chatContainer = new VBox();
-        chatContainer.setAlignment(Pos.BOTTOM_CENTER);
-        chatContainer.setPadding(new Insets(10));
-        chatContainer.setMouseTransparent(false);
-
-        chatContainer.getChildren().addAll(scrollPane, inputBox);
-
-        // Center everything
-        VBox centerWrapper = new VBox();
-        centerWrapper.setAlignment(Pos.CENTER);
-        centerWrapper.getChildren().add(chatContainer);
-        root.setCenter(centerWrapper);
-
-        // SEND ACTION
+        // === ACTION ===
         sendButton.setOnAction(e -> {
             String username = Client.getInstance().getUsername().get();
             String message = chatInputField.getText();
@@ -334,7 +330,6 @@ public class GameUIComponents {
                 Message responseMsg = new Message("CHATGLB", params, "REQUEST");
                 Client.sendMessageStatic(responseMsg);
 
-                // Local display
                 Label msg = new Label(username + ": " + message);
                 messagesBox.getChildren().add(msg);
                 chatInputField.clear();
@@ -342,61 +337,71 @@ public class GameUIComponents {
             }
         });
 
-        uiManager.registerComponent("chatInputField", chatInputField);
+        // === Title label : Global Chat ===
+        Label titleLabel = new Label("Global Chat");
+        titleLabel.setLayoutX(50);
+        titleLabel.setLayoutY(0 + offsetY);
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+
+        // === Add all to root ===
+        root.getChildren().addAll(
+                titleLabel,
+                scrollPane,
+                chatInputField,
+                sendButton
+        );
+
         return root;
     }
+
 
     public static Pane createWhisperChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
 
         // Keep the existing BorderPane for the chat
-        BorderPane root = new BorderPane();
-        root.setPrefSize(600, 500);
+        Pane root = new Pane();
+        int offsetY = 30;
 
-        // === (1) The main Whisper Chat messages & input, same as before ===
+        // === (1) Whisper Chat messages ===
         VBox messagesBox = new VBox(5);
         uiManager.registerComponent("whisperChatMessagesBox", messagesBox);
-        messagesBox.setPadding(new Insets(10));
+        messagesBox.setPadding(new Insets(5));
 
         ScrollPane scrollPane = new ScrollPane(messagesBox);
         uiManager.registerComponent("whisperChatScroll", scrollPane);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        scrollPane.setLayoutX(50);
+        scrollPane.setLayoutY(20 + offsetY);
+        scrollPane.setPrefWidth(300);
+        scrollPane.setPrefHeight(150);
 
+        // === (2) Input field ===
         TextField chatInputField = new TextField();
         chatInputField.setPromptText("Type a message...");
-        chatInputField.setPrefWidth(400);
+        chatInputField.setPrefWidth(200);
+        chatInputField.setLayoutX(50);
+        chatInputField.setLayoutY(180 + offsetY);
         uiManager.registerComponent("whisperChatInputField", chatInputField);
 
+        // === (3) Send button ===
         Button sendButton = new Button("Send");
         sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+        sendButton.setPrefWidth(80);
+        sendButton.setLayoutX(260);
+        sendButton.setLayoutY(180 + offsetY);
 
-        HBox inputBox = new HBox(10, chatInputField, sendButton);
-        inputBox.setAlignment(Pos.CENTER);
-        inputBox.setPadding(new Insets(10));
+        // === (4) Title Label ===
+        Label titleLabel = new Label("Whisper Chat");
+        titleLabel.setLayoutX(50);
+        titleLabel.setLayoutY(0 + offsetY);
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+;
 
-        VBox chatContainer = new VBox();
-        chatContainer.setAlignment(Pos.BOTTOM_CENTER);
-        chatContainer.setPadding(new Insets(10));
-        chatContainer.setMouseTransparent(false);
-        chatContainer.getChildren().addAll(scrollPane, inputBox);
-
-        VBox centerWrapper = new VBox();
-        centerWrapper.setAlignment(Pos.CENTER);
-        centerWrapper.getChildren().add(chatContainer);
-
-        // Put the chat in the center of our BorderPane
-        root.setCenter(centerWrapper);
-
-        // === (2) Add the OnlineUsersButton and a ComboBox for user selection ===
-
-        Pane topPane = new Pane();
-        topPane.setPrefHeight(100);
-
-        // The "Online Users Global" button
+        // === (5) Online Users Button ===
         Button OnlineUsersButton = new Button("Online Users Global");
-        OnlineUsersButton.setLayoutX(20);
-        OnlineUsersButton.setLayoutY(80);
-        topPane.getChildren().add(OnlineUsersButton);
+        OnlineUsersButton.setLayoutX(370);
+        OnlineUsersButton.setLayoutY(60 + offsetY);
         uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
 
         // On button click, send GETUSERS request
@@ -406,29 +411,23 @@ public class GameUIComponents {
             Client.sendMessageStatic(selectGoMsg);
         });
 
-        // Instead of a TextArea, use a ComboBox to select whom we want to whisper to
+        // === (6) User selection ComboBox ===
         ComboBox<String> userSelect = new ComboBox<>();
         userSelect.setPromptText("Select a user to whisper");
-        userSelect.setLayoutX(20);
-        userSelect.setLayoutY(120);
+        userSelect.setLayoutX(370);
+        userSelect.setLayoutY(100 + offsetY);
         userSelect.setPrefWidth(200);
-
-        // Register this combo box with the UIManager so we can populate it
-        // when the GETUSERS response comes back in GameContext
         uiManager.registerComponent("whisperUserSelect", userSelect);
 
-        topPane.getChildren().add(userSelect);
 
-        // Put the topPane with our button and combo box at the top of the BorderPane
-        root.setTop(topPane);
-
-        // === (3) The existing send button logic, but using "WHISPER" message ===
+        // === (7) Send button logic ===
         sendButton.setOnAction(e -> {
             String username = Client.getInstance().getUsername().get();
             String message = chatInputField.getText().trim();
 
             // Also get the target user from the ComboBox
             String targetUser = userSelect.getSelectionModel().getSelectedItem();
+
             if (targetUser == null || targetUser.isEmpty()) {
                 System.out.println("Please select a user to whisper to!");
                 return;
@@ -450,77 +449,71 @@ public class GameUIComponents {
             }
         });
 
-        // Return the final whisper chat pane
+        // === (8) Add all to root pane ===
+        root.getChildren().addAll(
+                titleLabel,
+                scrollPane,
+                chatInputField,
+                sendButton,
+                OnlineUsersButton,
+                userSelect
+        );
+
         return root;
     }
 
     public static Pane createLobbyChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
-        // Main BorderPane layout
-        BorderPane root = new BorderPane();
-        root.setPrefSize(600, 500);
+        Pane root = new Pane();
 
-        // ------------------------------------------
-        // (A) Top: Title Label
-        // ------------------------------------------
+        // === (1) Title Label ===
         Label titleLabel = new Label("Lobby Chat");
-        titleLabel.setPadding(new Insets(10));
-        titleLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold;");
-        root.setTop(titleLabel);
-        BorderPane.setAlignment(titleLabel, Pos.CENTER);
+        titleLabel.setLayoutX(50);
+        titleLabel.setLayoutY(30);
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        uiManager.registerComponent("lobbyChatTitle", titleLabel);
 
-        // ------------------------------------------
-        // (B) Left: Users List
-        // ------------------------------------------
-        VBox leftSideBox = new VBox(10);
-        leftSideBox.setPadding(new Insets(10));
 
+        // === (2) Users List (Left Side Box) ===
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Current Game Users");
         usersListCurrGS.setEditable(false);
-        usersListCurrGS.setPrefSize(150, 400);
-
-        leftSideBox.getChildren().add(usersListCurrGS);
+        usersListCurrGS.setLayoutX(370);
+        usersListCurrGS.setLayoutY(50);
+        usersListCurrGS.setPrefSize(180, 190);
         uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
-        root.setLeft(leftSideBox);
 
-        // ------------------------------------------
-        // (C) Center: Chat Messages
-        // ------------------------------------------
-        // A VBox to hold chat messages
+
+        // === (3) Chat messages ScrollPane ===
         VBox messagesBox = new VBox(5);
-        messagesBox.setPadding(new Insets(10));
+        messagesBox.setPadding(new Insets(5));
         uiManager.registerComponent("lobbyChatMessagesBox", messagesBox);
 
-        // A ScrollPane containing the messages
         ScrollPane scrollPane = new ScrollPane(messagesBox);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        scrollPane.setLayoutX(50);
+        scrollPane.setLayoutY(50);
+        scrollPane.setPrefWidth(300);
+        scrollPane.setPrefHeight(150);
         uiManager.registerComponent("lobbyChatScroll", scrollPane);
 
-        root.setCenter(scrollPane);
-
-        // ------------------------------------------
-        // (D) Bottom: Chat Input + Send Button
-        // ------------------------------------------
-        HBox bottomBox = new HBox(10);
-        bottomBox.setAlignment(Pos.CENTER);
-        bottomBox.setPadding(new Insets(10));
-
+        // === (4) Chat Input Field ===
         TextField chatInputField = new TextField();
         chatInputField.setPromptText("Type a lobby message...");
-        chatInputField.setPrefWidth(400);
+        chatInputField.setPrefWidth(200);
+        chatInputField.setLayoutX(50);
+        chatInputField.setLayoutY(210);
         uiManager.registerComponent("lobbyChatInputField", chatInputField);
 
+        // === (5) Send Button ===
         Button sendButton = new Button("Send");
         sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
-        bottomBox.getChildren().addAll(chatInputField, sendButton);
+        sendButton.setLayoutX(260);
+        sendButton.setLayoutY(210);
+        sendButton.setPrefWidth(80);
 
-        root.setBottom(bottomBox);
-
-        // ------------------------------------------
-        // (E) Send Button Logic
-        // ------------------------------------------
+        // === Send Logic ===
         sendButton.setOnAction(e -> {
             String username = Client.getInstance().getUsername().get();
             String gameId = GameContext.getCurrentGameId(); // Retrieve the current game ID
@@ -538,6 +531,14 @@ public class GameUIComponents {
                 scrollPane.setVvalue(1.0);
             }
         });
+
+        root.getChildren().addAll(
+                titleLabel,
+                usersListCurrGS,
+                scrollPane,
+                chatInputField,
+                sendButton
+        );
 
         return root;
     }
