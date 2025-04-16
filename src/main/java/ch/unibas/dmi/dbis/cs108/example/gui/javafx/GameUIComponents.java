@@ -112,12 +112,18 @@ public class GameUIComponents {
         ComboBox<String> gameSelect = (ComboBox<String>) uiManager.getComponent("gameSelect");
         TextField overlayInputField = (TextField) uiManager.getComponent("overlayInputField");
 
+        // TextField: Overlay Input
+        TextField overlayobjInputField = new TextField();
+        overlayInputField.setPromptText("Enter text here...");
+        uiManager.registerComponent("overlayInputField", overlayInputField);
+        overlayInputField.setPrefWidth(100);
+        overlayInputField.setMaxWidth(150);
 
         // Button: Create Object
         Button createObjectButton = new Button("Create Object");
         createObjectButton.setOnAction(e -> {
-            if (overlayInputField == null) return;
-            String input = overlayInputField.getText().trim();
+            if (overlayobjInputField == null) return;
+            String input = overlayobjInputField.getText().trim();
             if (input.isEmpty()) {
                 System.out.println("Please enter parameters.");
                 return;
