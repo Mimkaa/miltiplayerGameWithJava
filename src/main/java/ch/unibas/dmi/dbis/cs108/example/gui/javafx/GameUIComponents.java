@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
-import java.rmi.server.ObjID;
 import java.util.Collection;
 
 import ch.unibas.dmi.dbis.cs108.example.Level;
@@ -38,14 +37,13 @@ public class GameUIComponents {
         });
         uiManager.registerComponent("gameSelect", gameSelect);
 
-
-
         // TextField: Overlay Input
         TextField overlayInputField = new TextField();
         overlayInputField.setPromptText("Enter text here...");
         uiManager.registerComponent("overlayInputField", overlayInputField);
         overlayInputField.setPrefWidth(100);
         overlayInputField.setMaxWidth(150);
+
 
         // Button: Create Game
         Button createGameButton = new Button("Create Game");
@@ -93,8 +91,8 @@ public class GameUIComponents {
         // Add all to VBox
         mainVBox.getChildren().addAll(
                 gameSelect,
-                overlayInputField,
                 createGameButton,
+                overlayInputField,
                 joinGameButton
 
         );
@@ -112,60 +110,37 @@ public class GameUIComponents {
         ComboBox<String> gameSelect = (ComboBox<String>) uiManager.getComponent("gameSelect");
         TextField overlayInputField = (TextField) uiManager.getComponent("overlayInputField");
 
-        // TextField: Overlay Input
-        TextField overlayobjInputField = new TextField();
-        overlayInputField.setPromptText("Enter text here...");
-        uiManager.registerComponent("overlayInputField", overlayInputField);
-        overlayInputField.setPrefWidth(100);
-        overlayInputField.setMaxWidth(150);
 
-        // Button: Create Object
-        Button createObjectButton = new Button("Create Object");
-        createObjectButton.setOnAction(e -> {
-            if (overlayobjInputField == null) return;
-            String input = overlayobjInputField.getText().trim();
-            if (input.isEmpty()) {
-                System.out.println("Please enter parameters.");
-                return;
-            }
-            if (input.startsWith("[") && input.endsWith("]")) {
-                input = input.substring(1, input.length() - 1);
-            }
-            Object[] params = MessageCodec.decodeParameters(input);
-            Object[] finalParams = new Object[params.length + 1];
-            finalParams[0] = GameContext.getCurrentGameId();
-            System.arraycopy(params, 0, finalParams, 1, params.length);
-            Client.sendMessageStatic(new Message("CREATEGO", finalParams, "REQUEST"));
-        });
-        uiManager.registerComponent("createObjectButton", createObjectButton);
-
-        // Button: Gerald
+        // Button: Gerald and Alfred
         Button selectGeraldButton = new Button("Select Gerald");
+        Button selectAlfredButton = new Button("Select Alfred");
+
+        // Action handlers for button gerald and alfred
         selectGeraldButton.setOnAction(e -> {
             String sessionId = GameContext.getCurrentGameId();
             if (sessionId == null) return;
             Message msg = new Message("SELECTGO", new Object[]{sessionId, "Gerald"}, "REQUEST");
             Client.sendMessageStatic(msg);
+
+            // Hide both buttons after selection
+            selectGeraldButton.setVisible(false);
+            selectAlfredButton.setVisible(false);
+
         });
         uiManager.registerComponent("selectGeraldButton", selectGeraldButton);
 
-         // Button: Alfred
-        Button selectAlfredButton = new Button("Select Alfred");
+
         selectAlfredButton.setOnAction(e -> {
             String sessionId = GameContext.getCurrentGameId();
             if (sessionId == null) return;
             Message msg = new Message("SELECTGO", new Object[]{sessionId, "Alfred"}, "REQUEST");
             Client.sendMessageStatic(msg);
+
+            // Hide both buttons after selection
+            selectAlfredButton.setVisible(false);
+            selectGeraldButton.setVisible(false);
         });
         uiManager.registerComponent("selectAlfredButton", selectAlfredButton);
-
-        // TextField: Game ID
-        TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
-        gameIdField.setPromptText("Game ID");
-        gameIdField.setEditable(false);
-        uiManager.registerComponent("gameIdField", gameIdField);
-        gameIdField.setPrefWidth(200);
-        gameIdField.setMaxWidth(300);
 
         // Button: Start Level
         Button startLevelButton = new Button("Start Level");
@@ -181,6 +156,8 @@ public class GameUIComponents {
 
             level.initializeLevel(screenWidth, screenHeight);
 
+            // Hide the button after starting the game
+            startLevelButton.setVisible(false);
 
             System.out.println("Level started!");
 
@@ -189,10 +166,9 @@ public class GameUIComponents {
 
         startGameVBox.getChildren().addAll(
 
-                createObjectButton,
+
                 selectGeraldButton,
                 selectAlfredButton,
-                gameIdField,
                 startLevelButton
         );
 
@@ -202,44 +178,58 @@ public class GameUIComponents {
 
     public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
         Pane administrativePane = new Pane();
-        administrativePane.setTranslateX(0);
-        administrativePane.setTranslateY(30);
-        administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
-        // TextArea to show the game states
+        TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
+        gameIdField.setPromptText("Game ID");
+        gameIdField.setEditable(false);
+        gameIdField.setPrefWidth(200);
+        gameIdField.setLayoutX(50);
+        gameIdField.setLayoutY(50);
+        uiManager.registerComponent("gameIdField", gameIdField);
+
+        TextField overlayObjInputField = new TextField();
+        overlayObjInputField.setPromptText("Enter text...");
+        overlayObjInputField.setPrefWidth(120);
+        overlayObjInputField.setLayoutX(50);
+        overlayObjInputField.setLayoutY(90);
+        uiManager.registerComponent("overlayObjInputField", overlayObjInputField);
+
+        Button createObjectButton = new Button("Create Object");
+        createObjectButton.setLayoutX(200);
+        createObjectButton.setLayoutY(90);
+        createObjectButton.setOnAction(e -> {
+            String input = overlayObjInputField.getText().trim();
+            if (input.isEmpty()) {
+                System.out.println("Please enter parameters.");
+                return;
+            }
+            if (input.startsWith("[") && input.endsWith("]")) {
+                input = input.substring(1, input.length() - 1);
+            }
+            Object[] params = MessageCodec.decodeParameters(input);
+            Object[] finalParams = new Object[params.length + 1];
+            finalParams[0] = GameContext.getCurrentGameId();
+            System.arraycopy(params, 0, finalParams, 1, params.length);
+            Client.sendMessageStatic(new Message("CREATEGO", finalParams, "REQUEST"));
+        });
+        uiManager.registerComponent("createObjectButton", createObjectButton);
+
         TextArea usersListCurrGS = new TextArea();
-        usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
-        usersListCurrGS.setPromptText("Game ID");
-        usersListCurrGS.setEditable(false);
-        usersListCurrGS.setLayoutX(200);
-        usersListCurrGS.setLayoutY(50);
-        usersListCurrGS.setPrefWidth(200);
+        usersListCurrGS.setLayoutX(50);
+        usersListCurrGS.setLayoutY(140);
+        usersListCurrGS.setPrefWidth(300);
         usersListCurrGS.setPrefHeight(150);
-        administrativePane.getChildren().add(usersListCurrGS);
-
-        // Register the TextArea with the UI manager so we can retrieve it later
         uiManager.registerComponent("gameStateShow", usersListCurrGS);
 
-        // --- Add a "Refresh" button that, when clicked, lists all games in the TextArea ---
         Button refreshButton = new Button("Refresh Game Info");
-        refreshButton.setLayoutX(200);
-        refreshButton.setLayoutY(210);
-        administrativePane.getChildren().add(refreshButton);
-
-        // On button click, update the TextArea with info from all game sessions
+        refreshButton.setLayoutX(50);
+        refreshButton.setLayoutY(310);
         refreshButton.setOnAction(e -> {
-            // Because button actions run on the JavaFX thread, we can directly access UI elements
             Node gameStateNode = uiManager.getComponent("gameStateShow");
             if (gameStateNode instanceof TextArea) {
                 TextArea gameStateShow = (TextArea) gameStateNode;
-
-                // Fetch all games from the GameSessionManager
-                Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals(); 
-                // Replace "getAllGameSessionsVals()" with your actual method name if different
-
-                // Build a string listing every game’s details
+                Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals();
                 StringBuilder sb = new StringBuilder();
-
                 if (allGames.isEmpty()) {
                     sb.append("No games currently available.\n");
                 } else {
@@ -251,17 +241,25 @@ public class GameUIComponents {
                         for (String user : g.getUsers()) {
                             sb.append("  - ").append(user).append("\n");
                         }
-                        sb.append("\n"); // blank line between games
+                        sb.append("\n");
                     }
                 }
-
-                // Display the info in the TextArea
                 gameStateShow.setText(sb.toString());
             }
         });
 
+        administrativePane.getChildren().addAll(
+                gameIdField,
+                overlayObjInputField,
+                createObjectButton,
+                usersListCurrGS,
+                refreshButton
+        );
+
         return administrativePane;
     }
+
+
 
 
 
@@ -270,10 +268,6 @@ public class GameUIComponents {
         CheckPane.setTranslateX(0);
         CheckPane.setTranslateY(30);
         CheckPane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
-
-
-
-
 
 
         Button OnlineUsersButton = new Button("Online Users Global");
@@ -287,10 +281,6 @@ public class GameUIComponents {
         OnlineUsersButtonvvv.setLayoutY(210);
         CheckPane.getChildren().add(OnlineUsersButtonvvv);
         uiManager.registerComponent("OnlineUsersButtonnnvvv", OnlineUsersButtonvvv);
-
-
-
-
 
 
         return CheckPane;
