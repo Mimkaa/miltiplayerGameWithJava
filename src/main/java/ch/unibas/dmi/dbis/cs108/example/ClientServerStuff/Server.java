@@ -541,7 +541,7 @@ public class Server {
                 System.err.println("Invalid port number: " + args[1]);
             }
         } else {
-            Server.getInstance().start("localhost", 9876);
+            Server.getInstance().start("0.0.0.0", 9876);
             System.out.println("Server started at localhost:9876 (default)");
         }
     }
