@@ -65,6 +65,13 @@ public class CreateGoCommandHandler implements CommandHandler {
             return;
         }
 
+        // === Check for duplicate object name ===
+        String objectName = constructorParams.length > 0 ? constructorParams[0].toString() : null;
+        if (objectName != null && targetGame.containsObjectByName(objectName)) {
+            System.out.println("Duplicate detected: Object with name " + objectName + " already exists in game " + gameSessionId);
+            return;
+        }
+
         // Asynchronously create the game object using the factory.
         Future<GameObject> futureObj = targetGame.addGameObjectAsync(newParams[2].toString(), serverGeneratedUuid, constructorParams);
         try {

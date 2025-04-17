@@ -1,6 +1,5 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
-import java.rmi.server.ObjID;
 import java.util.Collection;
 
 import ch.unibas.dmi.dbis.cs108.example.Level;
@@ -11,6 +10,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -20,14 +20,12 @@ import javafx.scene.layout.*;
 public class GameUIComponents {
 
     public static Pane createMainUIPane(UIManager uiManager, GameSessionManager gameSessionManager) {
-        // Create a Pane and set its preferred size
-        Pane mainUIPane = new Pane();
-        mainUIPane.setPrefSize(640, 480); // Ensure enough space is available
-        mainUIPane.setTranslateX(0);
-        mainUIPane.setTranslateY(50);
-        mainUIPane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
+        VBox mainVBox = new VBox(10);
+        mainVBox.setPadding(new Insets(20));
+        mainVBox.setAlignment(Pos.TOP_CENTER);
+        mainVBox.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
 
-        // --- Overlay ComboBox for game selection ---
+        // ComboBox: Select Game
         ComboBox<String> gameSelect = new ComboBox<>();
         gameSelect.setPromptText("Select Game...");
         gameSessionManager.getAllGameSessions().values().stream()
@@ -37,188 +35,206 @@ public class GameUIComponents {
             String selectedGame = gameSelect.getSelectionModel().getSelectedItem();
             System.out.println("Selected game: " + selectedGame);
         });
-        gameSelect.setLayoutX(10);
-        gameSelect.setLayoutY(10);
-        mainUIPane.getChildren().add(gameSelect);
         uiManager.registerComponent("gameSelect", gameSelect);
 
-        // --- Game ID Input Field to display current game id ---
-        TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
-        gameIdField.setPromptText("Game ID");
-        gameIdField.setEditable(false);
-        gameIdField.setLayoutX(200);
-        gameIdField.setLayoutY(240);
-        mainUIPane.getChildren().add(gameIdField);
-        uiManager.registerComponent("gameIdField", gameIdField);
-
-        // --- Overlay Input Field ---
+        // TextField: Overlay Input
         TextField overlayInputField = new TextField();
         overlayInputField.setPromptText("Enter text here...");
-        overlayInputField.setLayoutX(200);
-        overlayInputField.setLayoutY(40);
-        mainUIPane.getChildren().add(overlayInputField);
         uiManager.registerComponent("overlayInputField", overlayInputField);
+        overlayInputField.setPrefWidth(100);
+        overlayInputField.setMaxWidth(150);
 
-        // --- First Overlay Button: Create Game Button ---
-        Button createGameButton = new Button("Create Game Button");
-        createGameButton.setLayoutX(200);
-        createGameButton.setLayoutY(80);
-        mainUIPane.getChildren().add(createGameButton);
-        uiManager.registerComponent("createGameButton", createGameButton);
+
+        // Button: Create Game
+        Button createGameButton = new Button("Create Game");
         createGameButton.setOnAction(e -> {
             String gameName = overlayInputField.getText().trim();
             if (gameName.isEmpty()) {
                 System.out.println("Please enter a game name.");
                 return;
             }
-            Message createGameMessage = new Message("CREATEGAME", new Object[]{gameName}, "REQUEST");
-            Client.sendMessageStatic(createGameMessage);
+            Message msg = new Message("CREATEGAME", new Object[]{gameName}, "REQUEST");
+            Client.sendMessageStatic(msg);
         });
+        uiManager.registerComponent("createGameButton", createGameButton);
 
-        // --- Second Overlay Button: Join Game Button ---
-        Button joinGameButton = new Button("Join Game Button");
-        joinGameButton.setLayoutX(200);
-        joinGameButton.setLayoutY(120);
-        mainUIPane.getChildren().add(joinGameButton);
-        uiManager.registerComponent("joinGameButton", joinGameButton);
+        // Button: Join Game
+        Button joinGameButton = new Button("Join Game");
         joinGameButton.setOnAction(e -> {
-            if (uiManager.getComponent("gameSelect") instanceof ComboBox) {
-                String selectedGameName = ((ComboBox<String>) uiManager.getComponent("gameSelect"))
-                        .getSelectionModel().getSelectedItem();
-                if (selectedGameName == null || selectedGameName.trim().isEmpty()) {
-                    System.out.println("Please select a game from the combo box.");
-                    return;
+            if (gameSelect == null) return;
+            String selectedGame = gameSelect.getSelectionModel().getSelectedItem();
+            if (selectedGame == null || selectedGame.trim().isEmpty()) {
+                System.out.println("Please select a game.");
+                return;
+            }
+            Message joinMsg = new Message("JOINGAME", new Object[]{
+                    selectedGame,
+                    Client.getInstance().getUsername(),
+                    GameContext.getCurrentGameId() == null ? "default" : GameContext.getCurrentGameId()
+            }, "REQUEST");
+            Client.sendMessageStatic(joinMsg);
+
+            Platform.runLater(() -> {
+                Node startPaneNode = uiManager.getComponent("startGamePane");
+                Node mainPaneNode = uiManager.getComponent("mainUIPane");
+
+                if (startPaneNode instanceof Pane && mainPaneNode instanceof Pane) {
+                    startPaneNode.setVisible(true);
+                    mainPaneNode.setVisible(false);
                 }
-
-
-                Message joinGameMessage = new Message("JOINGAME", new Object[]{selectedGameName, Client.getInstance().getUsername(), GameContext.getCurrentGameId()==null?"default":GameContext.getCurrentGameId()}, "REQUEST");
-                Client.sendMessageStatic(joinGameMessage);
-                System.out.println("Sent JOINGAME message with game name: " + selectedGameName);
-            } else {
-                System.out.println("Game selector not found.");
-            }
+            });
         });
+        uiManager.registerComponent("joinGameButton", joinGameButton);
 
-        // --- Third Overlay Button: Create Object Button ---
-        Button createObjectButton = new Button("Create Object Button");
-        createObjectButton.setLayoutX(200);
-        createObjectButton.setLayoutY(160);
-        mainUIPane.getChildren().add(createObjectButton);
-        uiManager.registerComponent("createObjectButton", createObjectButton);
-        createObjectButton.setOnAction(e -> {
+
+
+        // Add all to VBox
+        mainVBox.getChildren().addAll(
+                gameSelect,
+                createGameButton,
+                overlayInputField,
+                joinGameButton
+
+        );
+
+        return mainVBox;
+    }
+
+    public static Pane createStartGamePane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        VBox startGameVBox = new VBox(10);
+        startGameVBox.setPadding(new Insets(20));
+        startGameVBox.setAlignment(Pos.TOP_CENTER);
+        startGameVBox.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
+
+        // Get the references from UIManager
+        ComboBox<String> gameSelect = (ComboBox<String>) uiManager.getComponent("gameSelect");
+        TextField overlayInputField = (TextField) uiManager.getComponent("overlayInputField");
+
+
+        // Button: Gerald and Alfred
+        Button selectGeraldButton = new Button("Select Gerald");
+        Button selectAlfredButton = new Button("Select Alfred");
+
+        // Initially hide character select buttons
+        selectGeraldButton.setVisible(false);
+        selectAlfredButton.setVisible(false);
+
+        // Action handlers for button gerald and alfred
+        selectGeraldButton.setOnAction(e -> {
             String sessionId = GameContext.getCurrentGameId();
-            if (sessionId == null || sessionId.isEmpty()) {
-                System.out.println("No current game session to create an object in.");
-                return;
-            }
-            Node node = uiManager.getComponent("overlayInputField");
-            if (!(node instanceof TextField)) {
-                System.out.println("Overlay input field not found or is not a TextField.");
-                return;
-            }
-            String input = ((TextField) node).getText().trim();
+            if (sessionId == null) return;
+            Message msg = new Message("SELECTGO", new Object[]{sessionId, "Gerald"}, "REQUEST");
+            Client.sendMessageStatic(msg);
+
+            // Hide both buttons after selection
+            selectGeraldButton.setVisible(false);
+            selectAlfredButton.setVisible(false);
+
+        });
+        uiManager.registerComponent("selectGeraldButton", selectGeraldButton);
+
+
+        selectAlfredButton.setOnAction(e -> {
+            String sessionId = GameContext.getCurrentGameId();
+            if (sessionId == null) return;
+            Message msg = new Message("SELECTGO", new Object[]{sessionId, "Alfred"}, "REQUEST");
+            Client.sendMessageStatic(msg);
+
+            // Hide both buttons after selection
+            selectAlfredButton.setVisible(false);
+            selectGeraldButton.setVisible(false);
+        });
+        uiManager.registerComponent("selectAlfredButton", selectAlfredButton);
+
+        // Button: Start Level
+        Button startLevelButton = new Button("Start Level");
+        startLevelButton.setOnAction(e -> {
+            Level level = new Level();
+            double screenWidth = startLevelButton.getScene().getWidth();
+            double screenHeight = startLevelButton.getScene().getHeight();
+            level.initializeLevel(screenWidth, screenHeight);
+
+            String gameId = GameContext.getCurrentGameId();
+            Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
+            Client.sendMessageStatic(msg);
+
+            level.initializeLevel(screenWidth, screenHeight);
+
+            // Hide start button and show character selection buttons
+            startLevelButton.setVisible(false);
+            selectGeraldButton.setVisible(true);
+            selectAlfredButton.setVisible(true);
+
+            System.out.println("Level started!");
+
+        });
+        uiManager.registerComponent("startLevelButton", startLevelButton);
+
+        // Only start button is initially visible
+        startGameVBox.getChildren().addAll(
+                startLevelButton,
+                selectGeraldButton,
+                selectAlfredButton
+        );
+
+        return startGameVBox;
+    }
+
+
+    public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
+        Pane administrativePane = new Pane();
+
+        TextField gameIdField = new TextField(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
+        gameIdField.setPromptText("Game ID");
+        gameIdField.setEditable(false);
+        gameIdField.setPrefWidth(200);
+        gameIdField.setLayoutX(50);
+        gameIdField.setLayoutY(50);
+        uiManager.registerComponent("gameIdField", gameIdField);
+
+        TextField overlayObjInputField = new TextField();
+        overlayObjInputField.setPromptText("Enter text...");
+        overlayObjInputField.setPrefWidth(120);
+        overlayObjInputField.setLayoutX(50);
+        overlayObjInputField.setLayoutY(90);
+        uiManager.registerComponent("overlayObjInputField", overlayObjInputField);
+
+        Button createObjectButton = new Button("Create Object");
+        createObjectButton.setLayoutX(200);
+        createObjectButton.setLayoutY(90);
+        createObjectButton.setOnAction(e -> {
+            String input = overlayObjInputField.getText().trim();
             if (input.isEmpty()) {
-                System.out.println("Please enter the parameters for the game object in the input field.");
+                System.out.println("Please enter parameters.");
                 return;
             }
             if (input.startsWith("[") && input.endsWith("]")) {
                 input = input.substring(1, input.length() - 1);
             }
-            Object[] userParameters = MessageCodec.decodeParameters(input);
-            Object[] finalParameters = new Object[userParameters.length + 1];
-            finalParameters[0] = sessionId;
-            System.arraycopy(userParameters, 0, finalParameters, 1, userParameters.length);
-            Message createObjectMsg = new Message("CREATEGO", finalParameters, "REQUEST");
-            Client.sendMessageStatic(createObjectMsg);
-            System.out.println("Sent CREATEGO message with parameters: " + java.util.Arrays.toString(finalParameters));
+            Object[] params = MessageCodec.decodeParameters(input);
+            Object[] finalParams = new Object[params.length + 1];
+            finalParams[0] = GameContext.getCurrentGameId();
+            System.arraycopy(params, 0, finalParams, 1, params.length);
+            Client.sendMessageStatic(new Message("CREATEGO", finalParams, "REQUEST"));
         });
+        uiManager.registerComponent("createObjectButton", createObjectButton);
 
-        // --- Fourth Overlay Button: Select Object Button ---
-        Button selectObjectButton = new Button("Select Object Button");
-        selectObjectButton.setLayoutX(200);
-        selectObjectButton.setLayoutY(200);
-        mainUIPane.getChildren().add(selectObjectButton);
-        uiManager.registerComponent("selectObjectButton", selectObjectButton);
-        selectObjectButton.setOnAction(e -> {
-            Node node = uiManager.getComponent("overlayInputField");
-            if (node instanceof TextField) {
-                String objectName = ((TextField) node).getText().trim();
-                if (objectName.isEmpty()) {
-                    System.out.println("Please enter an object name to select.");
-                    return;
-                }
-                String sessionId = GameContext.getCurrentGameId();
-                if (sessionId == null || sessionId.isEmpty()) {
-                    System.out.println("No current game session available.");
-                    return;
-                }
-                Message selectGoMsg = new Message("SELECTGO", new Object[]{sessionId, objectName}, "REQUEST");
-                Client.sendMessageStatic(selectGoMsg);
-                System.out.println("Sent SELECTGO message with object name: " + objectName);
-            } else {
-                System.out.println("Overlay input field not found.");
-            }
-        });
-
-        // --- New Overlay Button: Start Level Button ---
-        Button startLevelButton = new Button("Start Level");
-        startLevelButton.setLayoutX(200);
-        startLevelButton.setLayoutY(220); // Make sure this is within the pane
-        mainUIPane.getChildren().add(startLevelButton);
-        uiManager.registerComponent("startLevelButton", startLevelButton);
-        startLevelButton.setOnAction(e -> {
-            Level level = new Level();
-            level.initializeLevel();
-            String gameId = GameContext.getCurrentGameId();
-            Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
-            Client.sendMessageStatic(msg);
-            System.out.println("Level started!");
-            
-        });
-
-        return mainUIPane;
-    }
-
-    public static Pane createAdministrativePane(UIManager uiManager, GameSessionManager gameSessionManager) {
-        Pane administrativePane = new Pane();
-        administrativePane.setTranslateX(0);
-        administrativePane.setTranslateY(30);
-        administrativePane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
-
-        // TextArea to show the game states
         TextArea usersListCurrGS = new TextArea();
-        usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
-        usersListCurrGS.setPromptText("Game ID");
-        usersListCurrGS.setEditable(false);
-        usersListCurrGS.setLayoutX(200);
-        usersListCurrGS.setLayoutY(50);
-        usersListCurrGS.setPrefWidth(200);
+        usersListCurrGS.setLayoutX(50);
+        usersListCurrGS.setLayoutY(140);
+        usersListCurrGS.setPrefWidth(300);
         usersListCurrGS.setPrefHeight(150);
-        administrativePane.getChildren().add(usersListCurrGS);
-
-        // Register the TextArea with the UI manager so we can retrieve it later
         uiManager.registerComponent("gameStateShow", usersListCurrGS);
 
-        // --- Add a "Refresh" button that, when clicked, lists all games in the TextArea ---
         Button refreshButton = new Button("Refresh Game Info");
-        refreshButton.setLayoutX(200);
-        refreshButton.setLayoutY(210);
-        administrativePane.getChildren().add(refreshButton);
-
-        // On button click, update the TextArea with info from all game sessions
+        refreshButton.setLayoutX(50);
+        refreshButton.setLayoutY(310);
         refreshButton.setOnAction(e -> {
-            // Because button actions run on the JavaFX thread, we can directly access UI elements
             Node gameStateNode = uiManager.getComponent("gameStateShow");
             if (gameStateNode instanceof TextArea) {
                 TextArea gameStateShow = (TextArea) gameStateNode;
-
-                // Fetch all games from the GameSessionManager
-                Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals(); 
-                // Replace "getAllGameSessionsVals()" with your actual method name if different
-
-                // Build a string listing every game’s details
+                Collection<Game> allGames = gameSessionManager.getAllGameSessionsVals();
                 StringBuilder sb = new StringBuilder();
-
                 if (allGames.isEmpty()) {
                     sb.append("No games currently available.\n");
                 } else {
@@ -230,17 +246,25 @@ public class GameUIComponents {
                         for (String user : g.getUsers()) {
                             sb.append("  - ").append(user).append("\n");
                         }
-                        sb.append("\n"); // blank line between games
+                        sb.append("\n");
                     }
                 }
-
-                // Display the info in the TextArea
                 gameStateShow.setText(sb.toString());
             }
         });
 
+        administrativePane.getChildren().addAll(
+                gameIdField,
+                overlayObjInputField,
+                createObjectButton,
+                usersListCurrGS,
+                refreshButton
+        );
+
         return administrativePane;
     }
+
+
 
 
 
@@ -249,10 +273,6 @@ public class GameUIComponents {
         CheckPane.setTranslateX(0);
         CheckPane.setTranslateY(30);
         CheckPane.setStyle("-fx-border-color: black; -fx-border-width: 2; -fx-background-color: transparent;");
-
-
-
-
 
 
         Button OnlineUsersButton = new Button("Online Users Global");
@@ -268,53 +288,45 @@ public class GameUIComponents {
         uiManager.registerComponent("OnlineUsersButtonnnvvv", OnlineUsersButtonvvv);
 
 
-
-
-
-
         return CheckPane;
     }
 
     public static Pane createglbChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
 
-        BorderPane root = new BorderPane();
-        root.setPrefSize(600, 500);
+        Pane root = new Pane();
+        int offsetY = 30;
 
-        // CHAT MESSAGES
+        // === SCROLLABLE MESSAGE BOX ===
         VBox messagesBox = new VBox(5);
+        messagesBox.setPadding(new Insets(5));
         uiManager.registerComponent("chatMessagesBox", messagesBox);
-        messagesBox.setPadding(new Insets(10));
+
         ScrollPane scrollPane = new ScrollPane(messagesBox);
-        uiManager.registerComponent("chatScroll", scrollPane);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        scrollPane.setLayoutX(50);
+        scrollPane.setLayoutY(20 + offsetY);
+        scrollPane.setPrefWidth(300);
+        scrollPane.setPrefHeight(150);
+        uiManager.registerComponent("chatScroll", scrollPane);
 
-        // INPUT FIELD & SEND BUTTON
+        // === INPUT FIELD ===
         TextField chatInputField = new TextField();
         chatInputField.setPromptText("Type a message...");
-        chatInputField.setPrefWidth(400);
+        chatInputField.setPrefWidth(200);
+        chatInputField.setLayoutX(50);
+        chatInputField.setLayoutY(180 + offsetY);
 
+        uiManager.registerComponent("chatInputField", chatInputField);
+
+        // === SEND BUTTON ===
         Button sendButton = new Button("Send");
         sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+        sendButton.setLayoutX(260);
+        sendButton.setLayoutY(180 + offsetY);
+        sendButton.setPrefWidth(80);
 
-        HBox inputBox = new HBox(10, chatInputField, sendButton);
-        inputBox.setAlignment(Pos.CENTER);
-        inputBox.setPadding(new Insets(10));
-
-        VBox chatContainer = new VBox();
-        chatContainer.setAlignment(Pos.BOTTOM_CENTER);
-        chatContainer.setPadding(new Insets(10));
-        chatContainer.setMouseTransparent(false);
-
-        chatContainer.getChildren().addAll(scrollPane, inputBox);
-
-        // Center everything
-        VBox centerWrapper = new VBox();
-        centerWrapper.setAlignment(Pos.CENTER);
-        centerWrapper.getChildren().add(chatContainer);
-        root.setCenter(centerWrapper);
-
-        // SEND ACTION
+        // === ACTION ===
         sendButton.setOnAction(e -> {
             String username = Client.getInstance().getUsername().get();
             String message = chatInputField.getText();
@@ -323,7 +335,6 @@ public class GameUIComponents {
                 Message responseMsg = new Message("CHATGLB", params, "REQUEST");
                 Client.sendMessageStatic(responseMsg);
 
-                // Local display
                 Label msg = new Label(username + ": " + message);
                 messagesBox.getChildren().add(msg);
                 chatInputField.clear();
@@ -331,61 +342,71 @@ public class GameUIComponents {
             }
         });
 
-        uiManager.registerComponent("chatInputField", chatInputField);
+        // === Title label : Global Chat ===
+        Label titleLabel = new Label("Global Chat");
+        titleLabel.setLayoutX(50);
+        titleLabel.setLayoutY(0 + offsetY);
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+
+        // === Add all to root ===
+        root.getChildren().addAll(
+                titleLabel,
+                scrollPane,
+                chatInputField,
+                sendButton
+        );
+
         return root;
     }
+
 
     public static Pane createWhisperChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
 
         // Keep the existing BorderPane for the chat
-        BorderPane root = new BorderPane();
-        root.setPrefSize(600, 500);
+        Pane root = new Pane();
+        int offsetY = 30;
 
-        // === (1) The main Whisper Chat messages & input, same as before ===
+        // === (1) Whisper Chat messages ===
         VBox messagesBox = new VBox(5);
         uiManager.registerComponent("whisperChatMessagesBox", messagesBox);
-        messagesBox.setPadding(new Insets(10));
+        messagesBox.setPadding(new Insets(5));
 
         ScrollPane scrollPane = new ScrollPane(messagesBox);
         uiManager.registerComponent("whisperChatScroll", scrollPane);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        scrollPane.setLayoutX(50);
+        scrollPane.setLayoutY(20 + offsetY);
+        scrollPane.setPrefWidth(300);
+        scrollPane.setPrefHeight(150);
 
+        // === (2) Input field ===
         TextField chatInputField = new TextField();
         chatInputField.setPromptText("Type a message...");
-        chatInputField.setPrefWidth(400);
+        chatInputField.setPrefWidth(200);
+        chatInputField.setLayoutX(50);
+        chatInputField.setLayoutY(180 + offsetY);
         uiManager.registerComponent("whisperChatInputField", chatInputField);
 
+        // === (3) Send button ===
         Button sendButton = new Button("Send");
         sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
+        sendButton.setPrefWidth(80);
+        sendButton.setLayoutX(260);
+        sendButton.setLayoutY(180 + offsetY);
 
-        HBox inputBox = new HBox(10, chatInputField, sendButton);
-        inputBox.setAlignment(Pos.CENTER);
-        inputBox.setPadding(new Insets(10));
+        // === (4) Title Label ===
+        Label titleLabel = new Label("Whisper Chat");
+        titleLabel.setLayoutX(50);
+        titleLabel.setLayoutY(0 + offsetY);
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+;
 
-        VBox chatContainer = new VBox();
-        chatContainer.setAlignment(Pos.BOTTOM_CENTER);
-        chatContainer.setPadding(new Insets(10));
-        chatContainer.setMouseTransparent(false);
-        chatContainer.getChildren().addAll(scrollPane, inputBox);
-
-        VBox centerWrapper = new VBox();
-        centerWrapper.setAlignment(Pos.CENTER);
-        centerWrapper.getChildren().add(chatContainer);
-
-        // Put the chat in the center of our BorderPane
-        root.setCenter(centerWrapper);
-
-        // === (2) Add the OnlineUsersButton and a ComboBox for user selection ===
-
-        Pane topPane = new Pane();
-        topPane.setPrefHeight(100);
-
-        // The "Online Users Global" button
+        // === (5) Online Users Button ===
         Button OnlineUsersButton = new Button("Online Users Global");
-        OnlineUsersButton.setLayoutX(20);
-        OnlineUsersButton.setLayoutY(80);
-        topPane.getChildren().add(OnlineUsersButton);
+        OnlineUsersButton.setLayoutX(370);
+        OnlineUsersButton.setLayoutY(60 + offsetY);
         uiManager.registerComponent("OnlineUsersButton", OnlineUsersButton);
 
         // On button click, send GETUSERS request
@@ -395,29 +416,23 @@ public class GameUIComponents {
             Client.sendMessageStatic(selectGoMsg);
         });
 
-        // Instead of a TextArea, use a ComboBox to select whom we want to whisper to
+        // === (6) User selection ComboBox ===
         ComboBox<String> userSelect = new ComboBox<>();
         userSelect.setPromptText("Select a user to whisper");
-        userSelect.setLayoutX(20);
-        userSelect.setLayoutY(120);
+        userSelect.setLayoutX(370);
+        userSelect.setLayoutY(100 + offsetY);
         userSelect.setPrefWidth(200);
-
-        // Register this combo box with the UIManager so we can populate it
-        // when the GETUSERS response comes back in GameContext
         uiManager.registerComponent("whisperUserSelect", userSelect);
 
-        topPane.getChildren().add(userSelect);
 
-        // Put the topPane with our button and combo box at the top of the BorderPane
-        root.setTop(topPane);
-
-        // === (3) The existing send button logic, but using "WHISPER" message ===
+        // === (7) Send button logic ===
         sendButton.setOnAction(e -> {
             String username = Client.getInstance().getUsername().get();
             String message = chatInputField.getText().trim();
 
             // Also get the target user from the ComboBox
             String targetUser = userSelect.getSelectionModel().getSelectedItem();
+
             if (targetUser == null || targetUser.isEmpty()) {
                 System.out.println("Please select a user to whisper to!");
                 return;
@@ -439,77 +454,71 @@ public class GameUIComponents {
             }
         });
 
-        // Return the final whisper chat pane
+        // === (8) Add all to root pane ===
+        root.getChildren().addAll(
+                titleLabel,
+                scrollPane,
+                chatInputField,
+                sendButton,
+                OnlineUsersButton,
+                userSelect
+        );
+
         return root;
     }
 
     public static Pane createLobbyChatPane(UIManager uiManager, GameSessionManager gameSessionManager) {
-        // Main BorderPane layout
-        BorderPane root = new BorderPane();
-        root.setPrefSize(600, 500);
+        Pane root = new Pane();
 
-        // ------------------------------------------
-        // (A) Top: Title Label
-        // ------------------------------------------
+        // === (1) Title Label ===
         Label titleLabel = new Label("Lobby Chat");
-        titleLabel.setPadding(new Insets(10));
-        titleLabel.setStyle("-fx-font-size: 16; -fx-font-weight: bold;");
-        root.setTop(titleLabel);
-        BorderPane.setAlignment(titleLabel, Pos.CENTER);
+        titleLabel.setLayoutX(50);
+        titleLabel.setLayoutY(30);
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        uiManager.registerComponent("lobbyChatTitle", titleLabel);
 
-        // ------------------------------------------
-        // (B) Left: Users List
-        // ------------------------------------------
-        VBox leftSideBox = new VBox(10);
-        leftSideBox.setPadding(new Insets(10));
 
+        // === (2) Users List (Left Side Box) ===
         TextArea usersListCurrGS = new TextArea();
         usersListCurrGS.setText(GameContext.getCurrentGameId() != null ? GameContext.getCurrentGameId() : "");
         usersListCurrGS.setPromptText("Current Game Users");
         usersListCurrGS.setEditable(false);
-        usersListCurrGS.setPrefSize(150, 400);
-
-        leftSideBox.getChildren().add(usersListCurrGS);
+        usersListCurrGS.setLayoutX(370);
+        usersListCurrGS.setLayoutY(50);
+        usersListCurrGS.setPrefSize(180, 190);
         uiManager.registerComponent("usersListCurrGS", usersListCurrGS);
-        root.setLeft(leftSideBox);
 
-        // ------------------------------------------
-        // (C) Center: Chat Messages
-        // ------------------------------------------
-        // A VBox to hold chat messages
+
+        // === (3) Chat messages ScrollPane ===
         VBox messagesBox = new VBox(5);
-        messagesBox.setPadding(new Insets(10));
+        messagesBox.setPadding(new Insets(5));
         uiManager.registerComponent("lobbyChatMessagesBox", messagesBox);
 
-        // A ScrollPane containing the messages
         ScrollPane scrollPane = new ScrollPane(messagesBox);
         scrollPane.setFitToWidth(true);
         scrollPane.setStyle("-fx-background: white; -fx-border-radius: 10;");
+        scrollPane.setLayoutX(50);
+        scrollPane.setLayoutY(50);
+        scrollPane.setPrefWidth(300);
+        scrollPane.setPrefHeight(150);
         uiManager.registerComponent("lobbyChatScroll", scrollPane);
 
-        root.setCenter(scrollPane);
-
-        // ------------------------------------------
-        // (D) Bottom: Chat Input + Send Button
-        // ------------------------------------------
-        HBox bottomBox = new HBox(10);
-        bottomBox.setAlignment(Pos.CENTER);
-        bottomBox.setPadding(new Insets(10));
-
+        // === (4) Chat Input Field ===
         TextField chatInputField = new TextField();
         chatInputField.setPromptText("Type a lobby message...");
-        chatInputField.setPrefWidth(400);
+        chatInputField.setPrefWidth(200);
+        chatInputField.setLayoutX(50);
+        chatInputField.setLayoutY(210);
         uiManager.registerComponent("lobbyChatInputField", chatInputField);
 
+        // === (5) Send Button ===
         Button sendButton = new Button("Send");
         sendButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-background-radius: 5;");
-        bottomBox.getChildren().addAll(chatInputField, sendButton);
+        sendButton.setLayoutX(260);
+        sendButton.setLayoutY(210);
+        sendButton.setPrefWidth(80);
 
-        root.setBottom(bottomBox);
-
-        // ------------------------------------------
-        // (E) Send Button Logic
-        // ------------------------------------------
+        // === Send Logic ===
         sendButton.setOnAction(e -> {
             String username = Client.getInstance().getUsername().get();
             String gameId = GameContext.getCurrentGameId(); // Retrieve the current game ID
@@ -527,6 +536,14 @@ public class GameUIComponents {
                 scrollPane.setVvalue(1.0);
             }
         });
+
+        root.getChildren().addAll(
+                titleLabel,
+                usersListCurrGS,
+                scrollPane,
+                chatInputField,
+                sendButton
+        );
 
         return root;
     }

@@ -125,4 +125,19 @@ public class Platform extends GameObject {
     public void setHeight(float height) {
         // Static platform: size should not change.
     }
+    @Override
+    public Message createSnapshot() {
+        // Pack the position, velocity, and acceleration into an Object array.
+        Object[] params = new Object[]{
+            x, y,   // Position
+            
+        };
+        // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").
+        Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
+        
+        // Set the concealed parameters so receivers know the source of the snapshot.
+        snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
+        
+        return snapshotMsg;
+    }
 }

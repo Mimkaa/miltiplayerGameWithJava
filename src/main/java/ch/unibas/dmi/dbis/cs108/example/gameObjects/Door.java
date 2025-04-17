@@ -108,4 +108,19 @@ public class Door extends GameObject {
     public void setHeight(float height) { 
         this.height = height; 
     }
+    @Override
+    public Message createSnapshot() {
+        // Pack the position, velocity, and acceleration into an Object array.
+        Object[] params = new Object[]{
+            x, y,   // Positionvelocity.x, velocity.y,   // Velocity
+            
+        };
+        // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").
+        Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
+        
+        // Set the concealed parameters so receivers know the source of the snapshot.
+        snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
+        
+        return snapshotMsg;
+    }
 }

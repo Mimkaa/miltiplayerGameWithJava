@@ -362,7 +362,8 @@ public class Server {
                 System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
             }
             if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                processMessageBestEffort(msg, senderSocket);
+                //processMessageBestEffort(msg, senderSocket);
+                AsyncManager.run(() -> sendKeyEvent(msg));
             } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                 AsyncManager.run(() -> handleRequest(msg, username));
             } else {
@@ -374,21 +375,49 @@ public class Server {
     }
 
     /**
+     * Sends a key event message to all connected clients in a best-effort manner,
+     * but only if the message type contains "KEY".
+     */
+    public void sendKeyEvent(Message msg) {
+        try {
+            // Check if the message type contains "KEY" (case-insensitive).
+            if (!msg.getMessageType().toUpperCase().contains("KEY")) {
+                //System.out.println("sendKeyEvent: Message type does not contain 'KEY'; skipping key event send.");
+                return;
+            }
+            
+            // Iterate over all connected clients.
+            for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
+                InetAddress dest = entry.getValue().getAddress();
+                int port = entry.getValue().getPort();
+                String encoded = MessageCodec.encode(msg);
+                byte[] data = encoded.getBytes();
+                DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
+                serverSocket.send(packet);
+                System.out.println("Key event sent to " + entry.getKey() + " at " + entry.getValue());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
      * Sends the given {@link Message} to all connected clients except the sender.
      * This is done in a "best effort" manner, i.e., without the reliable UDP layer.
      *
      * @param msg          the message to broadcast
      * @param senderSocket the socket of the original sender (excluded from broadcast)
      */
-    private void processMessageBestEffort(Message msg, InetSocketAddress senderSocket) {
+    public void sendMessageBestEffort(Message msg) {
         try {
             // Check if the message type contains "KEY"
-            boolean isKeyMessage = msg.getMessageType().contains("KEY");
+            //boolean isKeyMessage = msg.getMessageType().contains("KEY");
             for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
                 // If it's not a key message, then skip sending to the sender
-                if (!isKeyMessage && entry.getValue().equals(senderSocket)) {
-                    continue;
-                }
+                //if (!isKeyMessage && entry.getValue().equals(senderSocket)) {
+                //    continue;
+                //}
                 InetAddress dest = entry.getValue().getAddress();
                 int port = entry.getValue().getPort();
                 String encoded = MessageCodec.encode(msg);
