@@ -223,4 +223,20 @@ public class Game {
         AsyncManager.shutdown();
         System.out.println("Game [" + gameName + "] (ID: " + gameId + ") async manager stopped.");
     }
+
+    /**
+     * Checks if a game object with the given name already exists in this game.
+     * Used to prevent duplicate object creation (e.g., duplicate players).
+     */
+    public boolean containsObjectByName(String name) {
+        for (GameObject go : gameObjects) {
+            if (go.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+
 }
