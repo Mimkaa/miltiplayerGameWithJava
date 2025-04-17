@@ -115,6 +115,10 @@ public class GameUIComponents {
         Button selectGeraldButton = new Button("Select Gerald");
         Button selectAlfredButton = new Button("Select Alfred");
 
+        // Initially hide character select buttons
+        selectGeraldButton.setVisible(false);
+        selectAlfredButton.setVisible(false);
+
         // Action handlers for button gerald and alfred
         selectGeraldButton.setOnAction(e -> {
             String sessionId = GameContext.getCurrentGameId();
@@ -156,20 +160,21 @@ public class GameUIComponents {
 
             level.initializeLevel(screenWidth, screenHeight);
 
-            // Hide the button after starting the game
+            // Hide start button and show character selection buttons
             startLevelButton.setVisible(false);
+            selectGeraldButton.setVisible(true);
+            selectAlfredButton.setVisible(true);
 
             System.out.println("Level started!");
 
         });
         uiManager.registerComponent("startLevelButton", startLevelButton);
 
+        // Only start button is initially visible
         startGameVBox.getChildren().addAll(
-
-
+                startLevelButton,
                 selectGeraldButton,
-                selectAlfredButton,
-                startLevelButton
+                selectAlfredButton
         );
 
         return startGameVBox;
