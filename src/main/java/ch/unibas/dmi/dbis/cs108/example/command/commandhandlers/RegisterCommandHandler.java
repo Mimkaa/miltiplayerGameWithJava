@@ -23,7 +23,7 @@ public class RegisterCommandHandler implements CommandHandler {
      */
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
-        msg.setOption("Response");
+        msg.setOption("RESPONSE");
         server.broadcastMessageToAll(msg);
     }
 }

@@ -1,32 +1,38 @@
 package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-public class TaskScheduler {
-    // Internal queue for tasks.
-    private final ConcurrentLinkedQueue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
+/**
+ * The TaskScheduler uses a blocking queue to automatically consume and execute
+ * scheduled Runnable tasks without requiring a sleep loop.
+ */
+class TaskScheduler {
+    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
+    private volatile boolean running = true;
 
-    /**
-     * Schedule a task to be executed later.
-     *
-     * @param task The task (Runnable) to schedule.
-     */
+    public TaskScheduler() {
+        // Start a loop to take and run tasks as they arrive.
+        AsyncManager.runLoop(() -> {
+            while (running) {
+                try {
+                    Runnable task = taskQueue.take();
+                    task.run();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        });
+    }
+
     public void scheduleTask(Runnable task) {
         taskQueue.offer(task);
     }
 
-    /**
-     * Synchronously run all tasks currently in the queue.
-     * This method runs tasks on the calling thread.
-     */
-    public void runAllTasks() {
-        Runnable task;
-        while ((task = taskQueue.poll()) != null) {
-            task.run();
-        }
+    public void stop() {
+        running = false;
     }
-
-    
 }
-

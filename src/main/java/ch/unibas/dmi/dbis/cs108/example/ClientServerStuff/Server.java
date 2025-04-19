@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
+import java.util.concurrent.LinkedBlockingQueue;
+
 
 import lombok.Setter;
 
@@ -120,7 +122,7 @@ public class Server {
      * A queue for outgoing messages that should be sent asynchronously to clients.
      * Processed by a background loop in {@link #start()}.
      */
-    private final ConcurrentLinkedQueue<OutgoingMessage> outgoingQueue = new ConcurrentLinkedQueue<>();
+    private final LinkedBlockingQueue<OutgoingMessage> outgoingQueue = new LinkedBlockingQueue<>();
 
     /** Holds multiple active games by ID (UUID, etc.). */
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
@@ -246,17 +248,28 @@ public class Server {
 
             // Process outgoing messages.
             AsyncManager.runLoop(() -> {
-                OutgoingMessage om = outgoingQueue.poll();
-                if (om != null) {
+                while (true) {
                     try {
+                        // This can throw InterruptedException if the thread is interrupted
+                        OutgoingMessage om = outgoingQueue.take();
+            
+                        // No null-check needed: take() never returns null
                         reliableSender.sendMessage(om.msg, om.address, om.port);
                         System.out.println("Sent message to " + om.address + ":" + om.port);
+            
+                    } catch (InterruptedException ie) {
+                        // Restore the interrupt flag and exit the loop
+                        Thread.currentThread().interrupt();
+                        break;
+            
                     } catch (Exception e) {
-                        System.err.println("Error sending message to " + om.address + ":" + om.port + ": " + e.getMessage());
+                        // Catch any other failures from sendMessage()
+                        System.err.println("Error sending message");
                         e.printStackTrace();
                     }
                 }
             });
+            
 
             // Listen for incoming packets.
             new Thread(() -> {
@@ -276,9 +289,20 @@ public class Server {
                         System.out.println("Received: " + messageString + " from " + senderSocket);
 
                         Message msg = MessageCodec.decode(messageString);
+                        
+                        // immediate ACK handling
+                        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+                            String ackUuid = msg.getParameters()[0].toString();
+                            reliableSender.acknowledge(ackUuid);
+                            continue;  // skip the normal dispatch
+                        }
+                        
+
                         AsyncManager.run(() -> processMessage(msg, senderSocket));
                         // Also dispatch the message to the MessageHub.
+                        
                         messageHub.dispatch(msg);
+                        
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -318,12 +342,7 @@ public class Server {
      * @param senderSocket the network socket (IP + port) of the message sender
      */
     private void processMessage(Message msg, InetSocketAddress senderSocket) {
-        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-            String ackUuid = msg.getParameters()[0].toString();
-            reliableSender.acknowledge(ackUuid);
-            System.out.println("Processed ACK message for UUID " + msg.getUUID());
-            return;
-        }
+        
         if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
             System.out.println("Processed CHAT message 1 ");
             if (serverChatManager == null) {

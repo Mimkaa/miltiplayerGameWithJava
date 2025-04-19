@@ -226,9 +226,13 @@ public class ReliableUDPSender {
      * @param uuid the UUID of the acknowledged message
      */
     public void acknowledge(String uuid) {
-        AsyncManager.run(() -> {
-            System.out.println("Received ACK for UUID " + uuid);
-            pendingMessages.remove(uuid);
-        });
+        // ===== SYNCHRONOUS removal =====
+        System.out.println("Received ACK for UUID " + uuid);
+        PendingMessage removed = pendingMessages.remove(uuid);
+        if (removed != null) {
+            System.out.println("✔ Removed pending message with UUID " + uuid);
+        } else {
+            System.err.println("❌ No pending message found for UUID " + uuid);
+        }
     }
 }

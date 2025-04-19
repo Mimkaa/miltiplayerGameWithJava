@@ -13,13 +13,16 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
+import java.net.UnknownHostException;
 
 /**
  * The {@code Client} class represents a networked game client that communicates
@@ -73,13 +76,13 @@ public class Client {
      * A thread-safe queue for outgoing messages to be sent to the server or other clients.
      * This queue is processed in a background loop.
      */
-    private static final ConcurrentLinkedQueue<Message> outgoingQueue = new ConcurrentLinkedQueue<>();
+    private static final LinkedBlockingQueue<Message> outgoingQueue = new LinkedBlockingQueue<>();
 
     /**
      * A thread-safe queue for incoming messages received from the server or other clients.
      * This queue is processed in a background loop.
      */
-    private static final ConcurrentLinkedQueue<Message> incomingQueue = new ConcurrentLinkedQueue<>();
+    private static final LinkedBlockingQueue<Message> incomingQueue = new LinkedBlockingQueue<>();
 
     /**
      * The {@link Game} instance handling local game logic, such as objects and event responses.
@@ -156,18 +159,7 @@ public class Client {
         return ThinkOutsideTheRoom.client.getClientId();
     }
 
-    /**
-     * Initializes the client chat manager. This should be called before
-     * setting up the UI so that {@link #clientChatManager} is available.
-     */
-    public void initChatManager() {
-        this.clientChatManager = new ChatManager.ClientChatManager(
-                username,
-                game.getGameName(),
-                outgoingQueue,
-                game.getGameId()
-        );
-    }
+    
 
     /**
      * Retrieves the chat panel UI component from the client chat manager.
@@ -202,28 +194,50 @@ public class Client {
             ackProcessor.start();
 
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
+        
             AsyncManager.runLoop(() -> {
-                try {
-                    byte[] receiveData = new byte[1024];
-                    DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                    clientSocket.receive(receivePacket);
-                    String response = new String(receivePacket.getData(), 0, receivePacket.getLength());
-                    System.out.println("Received (UDP): " + response);
-                    Message receivedMessage = MessageCodec.decode(response);
-                    messageHub.dispatch(receivedMessage);
-                    if(receivedMessage.getOption()!="Game")
-                    {
-                        incomingQueue.offer(receivedMessage);
+                while (true) {
+                    try {
+                        byte[] receiveData = new byte[1024];
+                        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+                        clientSocket.receive(receivePacket);
+
+                        String response = new String(
+                            receivePacket.getData(), 0, receivePacket.getLength(),
+                            StandardCharsets.UTF_8
+                        );
+                        System.out.println("Received (UDP): " + response);
+
+                        Message receivedMessage = MessageCodec.decode(response);
+
+                        // Immediate ACK handling: consume and loop again
+                        if ("ACK".equalsIgnoreCase(receivedMessage.getMessageType())) {
+                            if (receivedMessage.getParameters() != null
+                                && receivedMessage.getParameters().length > 0) {
+                                String ackUuid = receivedMessage.getParameters()[0].toString();
+                                myReliableUDPSender.acknowledge(ackUuid);
+                                System.out.println("Client: acknowledged UUID " + ackUuid);
+                            }
+                            continue;  // skip normal dispatch for ACKs
+                        }
+
+                        // Dispatch all other messages
+                        messageHub.dispatch(receivedMessage);
+                        if (!"Game".equalsIgnoreCase(receivedMessage.getOption())) {
+                            incomingQueue.offer(receivedMessage);
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
             });
+
 
             // Process incoming messages.
             AsyncManager.runLoop(() -> {
                 try {
-                    Message msg = incomingQueue.poll();
+                    Message msg = incomingQueue.take();
                     if (msg != null) {
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
                             // Process the ACK message.
@@ -253,31 +267,47 @@ public class Client {
 
             // Sender Task: Continuously poll outgoingQueue and send messages.
             AsyncManager.runLoop(() -> {
-                Message msg = outgoingQueue.poll();
-                if (msg != null) {
+                while (true) {
                     try {
+                        // this can throw InterruptedException
+                        Message msg = outgoingQueue.take();
+
+                        // take() never returns null, so no need to check for null here
                         InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
+
                         if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                            // Send best effort for "GAME" messages
+                            // best‑effort
                             String encoded = MessageCodec.encode(msg);
-                            byte[] data = encoded.getBytes();
+                            byte[] data     = encoded.getBytes(StandardCharsets.UTF_8);
                             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
                             clientSocket.send(packet);
                             System.out.println("Best effort sent: " + encoded);
+
                         } else if ("CLIENT".equalsIgnoreCase(msg.getOption())) {
-                            // Perform local client state updates
+                            // local update
                             AsyncManager.run(() -> updateLocalClientState(msg));
+
                         } else {
-                            // Reliable send otherwise
+                            // reliable
                             myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
-                            // Uncomment for debug:
-                            // System.out.println("Reliable sent: " + MessageCodec.encode(msg));
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
+
+                    } catch (InterruptedException ie) {
+                        // Restore the interrupt and exit loop (or return)
+                        Thread.currentThread().interrupt();
+                        break;
+
+                    } catch (UnknownHostException uhe) {
+                        System.err.println("Invalid server address: " + SERVER_ADDRESS);
+                        uhe.printStackTrace();
+
+                    } catch (IOException ioe) {
+                        System.err.println("I/O error while sending message");
+                        ioe.printStackTrace();
                     }
                 }
             });
+
 
             // Block the main thread indefinitely.
             Thread.currentThread().join();
@@ -349,6 +379,14 @@ public class Client {
         }
     }
 
+    public void acknowledge(Message receivedMessage)
+    {
+        // Process the ACK message.
+        if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length > 0) {
+            String ackUuid = receivedMessage.getParameters()[0].toString();
+            myReliableUDPSender.acknowledge(ackUuid);
+        } 
+    }
 
     /**
      * Handles certain local client state updates based on message content.

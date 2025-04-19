@@ -449,7 +449,12 @@ public class GameContext {
                 else if ("EXIT".equals(type)) {
                     System.out.println("Exiting Game");
                     System.exit(0);
-                } else {
+                } 
+                else if("ACK".equals(type))
+                {
+                    client.acknowledge(receivedMessage);
+                }
+                else {
                     System.out.println("Unknown message type: " + type);
                 }
             }

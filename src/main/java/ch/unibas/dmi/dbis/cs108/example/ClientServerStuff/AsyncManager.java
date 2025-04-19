@@ -68,12 +68,12 @@ public class AsyncManager {
                     e.printStackTrace();
                 }
                 // Pause briefly to avoid busy spinning.
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+                ///try {
+                    //Thread.sleep(10);
+                //} catch (InterruptedException e) {
+                    //Thread.currentThread().interrupt();
+                    //break;
+                //}
             }
         });
     }

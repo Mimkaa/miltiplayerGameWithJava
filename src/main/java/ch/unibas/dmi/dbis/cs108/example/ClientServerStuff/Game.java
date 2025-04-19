@@ -46,7 +46,7 @@ public class Game {
         // Initialize the dedicated message hogger for GAME messages.
         this.gameMessageHogger = new MessageHogger() {
             @Override
-            protected void processMessage(Message msg) {
+            protected void processBestEffortMessage(Message msg) {
                 // Only process if msg.getOption() == "GAME"
                 if ("GAME".equalsIgnoreCase(msg.getOption())) {
                     String[] concealed = msg.getConcealedParameters();
