@@ -230,9 +230,9 @@ public class ReliableUDPSender {
         System.out.println("Received ACK for UUID " + uuid);
         PendingMessage removed = pendingMessages.remove(uuid);
         if (removed != null) {
-            System.out.println("✔ Removed pending message with UUID " + uuid);
+            System.out.println(" Removed pending message with UUID " + uuid);
         } else {
-            System.err.println("❌ No pending message found for UUID " + uuid);
+            System.err.println(" No pending message found for UUID " + uuid);
         }
     }
 }

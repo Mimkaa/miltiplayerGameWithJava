@@ -67,7 +67,7 @@ public class GameContext {
     private long lastFrameTime = 0;
     
     // Adjustable FPS fields.
-    private int targetFPS = 10; 
+    private int targetFPS = 60; 
     private long frameIntervalMs = 1000L / targetFPS; // (For 60 fps, roughly 16 ms per frame)
 
     private Set<KeyCode> prevPressedKeys = new HashSet<>();
@@ -82,7 +82,9 @@ public class GameContext {
         testHogger = new MessageHogger() {
             @Override
             protected void processMessage(Message receivedMessage) {
-                String type = receivedMessage.getMessageType();
+                String type   = receivedMessage.getMessageType();
+                String option = receivedMessage.getOption();   // e.g. "REQUEST", "RESPONSE", "GAME"
+                String uuid   = receivedMessage.getUUID();
 
                 if ("REGISTER".equals(type)) {
                     System.out.println("Processing REGISTER message");
@@ -446,16 +448,29 @@ public class GameContext {
                         System.out.println("No game session found with id: " + gameID);
                     }
                 }
-                else if ("EXIT".equals(type)) {
-                    System.out.println("Exiting Game");
-                    System.exit(0);
-                } 
-                else if("ACK".equals(type))
-                {
-                    client.acknowledge(receivedMessage);
-                }
+                //else if ("EXIT".equals(type)) {
+                //    System.out.println("Exiting Game");
+                //    System.exit(0);
+                //} 
+                
                 else {
+                    
                     System.out.println("Unknown message type: " + type);
+                }
+
+                if ("RESPONSE".equalsIgnoreCase(option)
+                    && uuid != null
+                    && !uuid.isEmpty())
+                {
+                    // build a proper ACK message
+                    Message ack = new Message(
+                    "ACK",                  // messageType
+                    new Object[]{ uuid },   // parameters: the UUID we're ACKing
+                    "GAME"               // or whatever “option” your protocol expects
+                    );
+                    // this will append your username as concealedParam and enqueue it
+                    Client.sendMessageBestEffort(ack);
+                    System.out.println("→ Sent ACK for UUID=" + uuid);
                 }
             }
         };
@@ -524,13 +539,7 @@ public class GameContext {
             System.out.println("All UI components have been added via GameUIComponents.");
         });
 
-        // Register the client on the server.
-        Message registrationMsg = new Message(
-                "REGISTER",
-                new Object[] {},
-                "REQUEST"
-        );
-        Client.sendMessageStatic(registrationMsg);
+        
     }
 
     /**
