@@ -220,11 +220,16 @@ public class Client {
                             }
                             continue;  // skip normal dispatch for ACKs
                         }
+                        else{
 
-                        // Dispatch all other messages
-                        messageHub.dispatch(receivedMessage);
-                        if (!"Game".equalsIgnoreCase(receivedMessage.getOption())) {
-                            incomingQueue.offer(receivedMessage);
+                            // Dispatch all other messages
+                            messageHub.dispatch(receivedMessage);
+                            //if (!"Game".equalsIgnoreCase(receivedMessage.getOption())) {
+                                //InetSocketAddress dest = new InetSocketAddress(
+                                        //InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
+                                //ackProcessor.addAck(dest, receivedMessage.getUUID());
+                                //incomingQueue.offer(receivedMessage);
+                            //}
                         }
 
                     } catch (IOException e) {
@@ -379,14 +384,42 @@ public class Client {
         }
     }
 
-    public void acknowledge(Message receivedMessage)
-    {
-        // Process the ACK message.
-        if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length > 0) {
-            String ackUuid = receivedMessage.getParameters()[0].toString();
-            myReliableUDPSender.acknowledge(ackUuid);
-        } 
+    /**
+     * Sends an ACK back to the server for the given received ACK message.
+     *
+     * @param receivedMessage the ACK Message we just got from the server
+     */
+    /**
+     * A static helper that sends an ACK for the given message
+     * by delegating to the singleton’s AckProcessor.
+     */
+    public static void acknowledge(Message receivedMessage) {
+        // make sure the client has been initialized
+        Client self = Client.getInstance();
+        if (self == null || self.ackProcessor == null) {
+            System.err.println("Cannot ACK before client is running");
+            return;
+        }
+
+        // extract the UUID
+        Object[] params = receivedMessage.getParameters();
+        if (params == null || params.length == 0) {
+            System.err.println("ACK received with no UUID parameter");
+            return;
+        }
+        String uuid = params[0].toString();
+
+        try {
+            InetAddress addr = InetAddress.getByName(SERVER_ADDRESS);
+            InetSocketAddress dest = new InetSocketAddress(addr, SERVER_PORT);
+            self.ackProcessor.addAck(dest, uuid);
+            System.out.println("Sent ACK for UUID " + uuid + " to " + dest);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
     }
+
+
 
     /**
      * Handles certain local client state updates based on message content.

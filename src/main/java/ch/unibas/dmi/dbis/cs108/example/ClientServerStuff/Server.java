@@ -14,6 +14,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.io.IOException;
@@ -244,7 +245,7 @@ public class Server {
 
             reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
             ackProcessor = new AckProcessor(serverSocket);
-            ackProcessor.start();
+            //ackProcessor.start();
 
             // Process outgoing messages.
             AsyncManager.runLoop(() -> {
@@ -275,39 +276,49 @@ public class Server {
             new Thread(() -> {
                 while (true) {
                     try {
-                        byte[] buffer = new byte[1024];
-                        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                        serverSocket.receive(packet);
+                    byte[] buffer = new byte[1024];
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+                    serverSocket.receive(packet);
 
-                        byte[] data = new byte[packet.getLength()];
-                        System.arraycopy(packet.getData(), packet.getOffset(), data, 0, packet.getLength());
+                    // 1) Decode
+                    String raw = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.UTF_8);
+                    InetSocketAddress sender = new InetSocketAddress(packet.getAddress(), packet.getPort());
+                    Message msg = MessageCodec.decode(raw);
+                    System.out.println("Received: " + raw + " from " + sender);
 
-                        InetAddress clientAddress = packet.getAddress();
-                        int clientPort = packet.getPort();
-                        InetSocketAddress senderSocket = new InetSocketAddress(clientAddress, clientPort);
-                        String messageString = new String(data);
-                        System.out.println("Received: " + messageString + " from " + senderSocket);
-
-                        Message msg = MessageCodec.decode(messageString);
-                        
-                        // immediate ACK handling
-                        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-                            String ackUuid = msg.getParameters()[0].toString();
-                            reliableSender.acknowledge(ackUuid);
-                            continue;  // skip the normal dispatch
+                    // 2) If it’s an ACK *for* one of our reliable sends, clear it immediately
+                    if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+                        String ackUuid = msg.getParameters()[0].toString();
+                        reliableSender.acknowledge(ackUuid);
+                        // don’t process it any further
+                        continue;
+                    }
+                    else
+                    {
+                        // 3) Best‑effort ACK back to the user who sent it:
+                        String[] concealed = msg.getConcealedParameters();
+                        if (msg.getUUID() != null
+                            && !msg.getUUID().isEmpty()
+                            && concealed != null
+                            && concealed.length > 0
+                            && !"GAME".equalsIgnoreCase(msg.getOption())
+                        ) {
+                        // last concealed parameter is the username
+                        String username = concealed[concealed.length - 1];
+                        sendPlainAckAsync(username, msg);
                         }
-                        
 
-                        AsyncManager.run(() -> processMessage(msg, senderSocket));
-                        // Also dispatch the message to the MessageHub.
-                        
+                        // 4) Finally hand it off to the rest of your server logic
+                        AsyncManager.run(() -> processMessage(msg, sender));
                         messageHub.dispatch(msg);
-                        
+                    }
+
                     } catch (IOException e) {
-                        e.printStackTrace();
+                    e.printStackTrace();
                     }
                 }
             }).start();
+
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -342,6 +353,7 @@ public class Server {
      * @param senderSocket the network socket (IP + port) of the message sender
      */
     private void processMessage(Message msg, InetSocketAddress senderSocket) {
+
         
         if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
             System.out.println("Processed CHAT message 1 ");
@@ -422,6 +434,48 @@ public class Server {
 
 
     /**
+     * Asynchronously sends a best‑effort plain‑UDP ACK for the given message
+     * back to the client identified by username.
+     *
+     * @param username the client’s username (must have been registered in clientsMap)
+     * @param original the message we’re ACKing; its UUID will be echoed back
+     */
+    public void sendPlainAckAsync(String username, Message original) {
+        InetSocketAddress dest = clientsMap.get(username);
+        if (dest == null) {
+            System.err.println("Cannot ACK: no address for user " + username);
+            return;
+        }
+        String uuid = original.getUUID();
+        if (uuid == null || uuid.isEmpty()) {
+            System.err.println("Cannot ACK: message has no UUID");
+            return;
+        }
+
+        AsyncManager.run(() -> {
+            try {
+                // build a minimal ACK message
+                Message ack = new Message("ACK", new Object[]{ uuid }, "GAME");
+                String payload = MessageCodec.encode(ack);
+                byte[] data = payload.getBytes(StandardCharsets.UTF_8);
+
+                DatagramPacket packet = new DatagramPacket(
+                    data, data.length,
+                    dest.getAddress(), dest.getPort()
+                );
+                serverSocket.send(packet);
+
+                System.out.println("→ Sent best‑effort ACK to "
+                    + username + "@" + dest + " for UUID=" + uuid);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+
+
+    /**
      * Sends the given {@link Message} to all connected clients except the sender.
      * This is done in a "best effort" manner, i.e., without the reliable UDP layer.
      *
@@ -455,41 +509,55 @@ public class Server {
      *
      * @param msg the message to broadcast
      */
-    public void broadcastMessageToAll(Message msg) {
+    public void broadcastMessageToAll(Message original) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-            String clientUsername = entry.getKey();
-            InetSocketAddress clientAddress = entry.getValue();
-            try {
-                enqueueMessage(msg, clientAddress.getAddress(), clientAddress.getPort());
-                System.out.println("Enqueued broadcast message to " + clientUsername + " at " + clientAddress);
-            } catch (Exception e) {
-                System.err.println("Error enqueuing message to " + clientUsername + " at " + clientAddress + ": " + e.getMessage());
-            }
+          String clientUsername  = entry.getKey();
+          InetSocketAddress dest = entry.getValue();
+      
+          // clone the original so constructor gives us a new UUID
+          Message perClient = new Message(
+            original.getMessageType(),
+            original.getParameters(),
+            original.getOption(),
+            original.getConcealedParameters()
+          );
+      
+          try {
+            enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+            
+          } catch (Exception e) {
+            System.err.println("Error enqueuing to " 
+              + clientUsername 
+              + " at " + dest + ": " + e.getMessage());
+          }
         }
-    }
-
-    /**
-     * Broadcasts a message to all connected clients <em>except</em> the one
-     * specified by {@code excludedUsername}. Useful for scenarios where
-     * the original sender does not need to receive its own message.
-     *
-     * @param msg             the message to broadcast
-     * @param excludedUsername the username to exclude from receiving the message
-     */
-    public void broadcastMessageToOthers(Message msg, String excludedUsername) {
+      }
+      
+      public void broadcastMessageToOthers(Message original, String excludedUsername) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-            String clientUsername = entry.getKey();
-            InetSocketAddress clientAddress = entry.getValue();
-            if (!clientUsername.equals(excludedUsername)) {
-                try {
-                    enqueueMessage(msg, clientAddress.getAddress(), clientAddress.getPort());
-                    System.out.println("Enqueued message to " + clientUsername + " at " + clientAddress);
-                } catch (Exception e) {
-                    System.err.println("Error enqueuing message to " + clientUsername + " at " + clientAddress + ": " + e.getMessage());
-                }
-            }
+          String clientUsername  = entry.getKey();
+          if (clientUsername.equals(excludedUsername)) continue;
+          InetSocketAddress dest = entry.getValue();
+      
+          // again, new instance with its own UUID
+          Message perClient = new Message(
+            original.getMessageType(),
+            original.getParameters(),
+            original.getOption(),
+            original.getConcealedParameters()
+          );
+      
+          try {
+            enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+            
+          } catch (Exception e) {
+            System.err.println("Error enqueuing to " 
+              + clientUsername 
+              + " at " + dest + ": " + e.getMessage());
+          }
         }
-    }
+      }
+      
 
     // ================================
     // Request Handling

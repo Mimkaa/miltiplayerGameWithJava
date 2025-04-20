@@ -148,7 +148,7 @@ public class Game {
             // 1) & 2) Process inbound messages & commands, then update each GameObject
             for (GameObject go : gameObjects) {
                 go.processIncomingMessages();
-                go.processCommands();
+                //go.processCommands();
                 go.myUpdateLocal(deltaTime);
             }
 
