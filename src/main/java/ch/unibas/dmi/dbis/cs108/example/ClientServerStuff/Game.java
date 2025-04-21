@@ -48,22 +48,24 @@ public class Game {
             @Override
             protected void processBestEffortMessage(Message msg) {
                 // Only process if msg.getOption() == "GAME"
-                if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                    String[] concealed = msg.getConcealedParameters();
-                    if (concealed != null && concealed.length >= 2) {
-                        String targetGameObjectUuid = concealed[0];
-                        String msgGameUuid = concealed[1];
-                        if (msgGameUuid.equals(Game.this.gameId)) {
-                            routeMessageToGameObject(msg);
+                
+                    if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                        String[] concealed = msg.getConcealedParameters();
+                        if (concealed != null && concealed.length >= 2) {
+                            String targetGameObjectUuid = concealed[0];
+                            String msgGameUuid = concealed[1];
+                            if (msgGameUuid.equals(Game.this.gameId)) {
+                                routeMessageToGameObject(msg);
+                            } else {
+                                System.out.println("Ignoring GAME message: mismatch with " + Game.this.gameId);
+                            }
                         } else {
-                            System.out.println("Ignoring GAME message: mismatch with " + Game.this.gameId);
+                            System.out.println("Ignoring GAME message: insufficient concealed parameters.");
                         }
                     } else {
-                        System.out.println("Ignoring GAME message: insufficient concealed parameters.");
+                        System.out.println("Ignoring non-GAME message in gameMessageHogger: " + msg.getMessageType());
                     }
-                } else {
-                    System.out.println("Ignoring non-GAME message in gameMessageHogger: " + msg.getMessageType());
-                }
+                
             }
         };
 
@@ -120,13 +122,23 @@ public class Game {
      */
     public Future<GameObject> addGameObjectAsync(String type, String uuid, Object... params) {
         return AsyncManager.run(() -> {
+            // 1) look for an existing object with this UUID
+            for (GameObject go : gameObjects) {
+                if (uuid.equals(go.getId())) {
+                    // found—just return it (no re‑creation)
+                    return go;
+                }
+            }
+    
+            // 2) not found, so create, assign id, add, wire up:
             GameObject newObject = GameObjectFactory.create(type, params);
             newObject.setId(uuid);
-            gameObjects.add(newObject);
             newObject.setParentGame(this);
+            gameObjects.add(newObject);
             return newObject;
         });
     }
+    
 
     /**
      * The main loop that processes all objects at a fixed framerate (targetFps):

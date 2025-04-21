@@ -57,12 +57,7 @@ public class Level {
         //};
         //Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
 
-        // === 3. Delay ===
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-        }
+        
         // --- Create two players (Alfred and Gerald) ---
         // Delay to ensure server state is ready before adding players.
         //try {

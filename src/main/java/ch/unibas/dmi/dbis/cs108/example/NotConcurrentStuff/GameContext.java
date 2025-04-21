@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
@@ -67,7 +68,7 @@ public class GameContext {
     private long lastFrameTime = 0;
     
     // Adjustable FPS fields.
-    private int targetFPS = 60; 
+    private int targetFPS = 20; 
     private long frameIntervalMs = 1000L / targetFPS; // (For 60 fps, roughly 16 ms per frame)
 
     private Set<KeyCode> prevPressedKeys = new HashSet<>();
@@ -547,6 +548,10 @@ public class GameContext {
      * Uses JavaFX's AnimationTimer to continuously update and draw.
      */
     public void startGameLoop() {
+         AsyncManager.runLoop(() -> {
+            // 1) update your game state off‑FX
+            update();
+         });
         AnimationTimer timer = new AnimationTimer() {
             GraphicsContext gc = CentralGraphicalUnit.getInstance().getGraphicsContext();
             @Override

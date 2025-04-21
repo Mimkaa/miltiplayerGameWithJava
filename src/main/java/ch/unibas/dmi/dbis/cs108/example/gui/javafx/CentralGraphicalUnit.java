@@ -8,6 +8,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Screen;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -38,7 +40,13 @@ public class CentralGraphicalUnit {
     // Private constructor to prevent external instantiation.
     private CentralGraphicalUnit() {
         mainContainer = new StackPane();
-        canvas = new Canvas(400, 400);
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+        double screenW = bounds.getWidth();
+        double screenH = bounds.getHeight();
+
+        // create the canvas at exactly that size
+        canvas = new Canvas(screenW, screenH);
+        
 
         // Bind the canvas size to the StackPane size for dynamic resizing.
         canvas.widthProperty().bind(mainContainer.widthProperty());

@@ -34,6 +34,9 @@ public class CreateGoCommandHandler implements CommandHandler {
             System.err.println("CREATEGO request requires at least two parameters: game session ID and object type.");
             return;
         }
+        System.out.println("RARRRRR:");
+        System.out.println(msg);
+        
         // originalParams[0]: game session ID, originalParams[1]: object type, remaining are constructor parameters
 
         // Generate a new UUID for the game object.
@@ -81,34 +84,42 @@ public class CreateGoCommandHandler implements CommandHandler {
         } catch (Exception e) {
             e.printStackTrace();
         }
+     
 
         // Broadcast the CREATEGO response message to all clients.
         System.out.println("Broadcasting CREATEGO to all: " + responseMsg);
         server.broadcastMessageToAll(responseMsg);
 
-        // Optionally, for the new user, send existing objects from this session.
         InetSocketAddress newUserAddress = server.getClientsMap().get(senderUsername);
         if (newUserAddress != null) {
-            for (GameObject gameObject : targetGame.getGameObjects()) {
-                if (gameObject.getId().equals(serverGeneratedUuid)) continue;
-                Object[] constructorParameters = gameObject.getConstructorParamValues();
-                Object[] finalParameters = new Object[constructorParameters.length + 2];
-                finalParameters[0] = gameObject.getId();
-                String objType = gameObject.getClass().getSimpleName();
-                finalParameters[1] = objType;
-                System.arraycopy(constructorParameters, 0, finalParameters, 2, constructorParameters.length);
-                Message createResponseMessage = makeResponse(msg, finalParameters);
-                server.enqueueMessage(createResponseMessage, newUserAddress.getAddress(), newUserAddress.getPort());
-            }
-        } else {
-            System.err.println("No known address for user: " + senderUsername);
+        String sessionId = targetGame.getGameId();  // or newParams[1].toString()
+        for (GameObject gameObject : targetGame.getGameObjects()) {
+            String objId   = gameObject.getId();
+            if (objId.equals(serverGeneratedUuid)) continue;
+
+            Object[] ctorArgs = gameObject.getConstructorParamValues();
+            // build [ objId, sessionId, type, ...ctorArgs ]
+            Object[] finalParameters = new Object[ctorArgs.length + 3];
+            finalParameters[0] = objId;
+            finalParameters[1] = sessionId;
+            finalParameters[2] = gameObject.getClass().getSimpleName();
+            System.arraycopy(ctorArgs, 0, finalParameters, 3, ctorArgs.length);
+
+            Message replayMsg = makeResponse(msg, finalParameters);
+            //server.enqueueMessage(replayMsg,newUserAddress.getAddress(),newUserAddress.getPort());
         }
+        } else {
+        System.err.println("No known address for user: " + senderUsername);
+        }
+
 
         // After handling CREATEGO, print all game sessions (IDs and names) for debugging.
         System.out.println("Current game sessions:");
         server.getGameSessionManager().getAllGameSessions().forEach((id, gameSession) -> {
             System.out.println("  Game Session ID: " + id + " | Name: " + gameSession.getGameName());
         });
+
+        
 
     }
 }

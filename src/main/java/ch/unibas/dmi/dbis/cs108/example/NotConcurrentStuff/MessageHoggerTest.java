@@ -46,7 +46,7 @@ public class MessageHoggerTest {
             Platform.runLater(() -> {
                 // Create and add an initial label.
                 Label initLabel = new Label("UI Initialized");
-                CentralGraphicalUnit.getInstance().addNode(initLabel);
+                //CentralGraphicalUnit.getInstance().addNode(initLabel);
                 uiManager.registerComponent("initLabel", initLabel);
     
                 // Create and add a text area for user input.
@@ -54,14 +54,14 @@ public class MessageHoggerTest {
                 inputArea.setPrefRowCount(5);
                 inputArea.setPrefColumnCount(20);
                 inputArea.setPromptText("Enter text here...");
-                CentralGraphicalUnit.getInstance().addNode(inputArea);
+                //CentralGraphicalUnit.getInstance().addNode(inputArea);
                 uiManager.registerComponent("inputArea", inputArea);
     
                 // Create and add a text field for displaying text.
                 TextField displayField = new TextField();
                 displayField.setEditable(false);
                 displayField.setPromptText("Display text here...");
-                CentralGraphicalUnit.getInstance().addNode(displayField);
+                //CentralGraphicalUnit.getInstance().addNode(displayField);
                 uiManager.registerComponent("displayField", displayField);
     
                 // Create and add a button to copy text from the input area to the display field.
@@ -70,7 +70,7 @@ public class MessageHoggerTest {
                     String inputText = inputArea.getText();
                     displayField.setText(inputText);
                 });
-                CentralGraphicalUnit.getInstance().addNode(copyButton);
+                //CentralGraphicalUnit.getInstance().addNode(copyButton);
                 uiManager.registerComponent("copyButton", copyButton);
             });
         });
