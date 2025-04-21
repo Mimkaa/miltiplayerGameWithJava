@@ -32,8 +32,8 @@ public class GUI extends Application {
 
         // Determine usable screen size (excludes taskbar)
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-        double screenW = bounds.getWidth();
-        double screenH = bounds.getHeight();
+        double screenW = 800;
+        double screenH = 800;
 
         // Create scene at full-screen size (without toggling maximize)
         Scene scene = new Scene(cgu.getMainContainer(), screenW, screenH);

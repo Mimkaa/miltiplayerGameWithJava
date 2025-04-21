@@ -243,7 +243,7 @@ public class Server {
             myGameInstance = new Game("DefaultSessionID", "DefaultGameName");
             myGameInstance.startPlayersCommandProcessingLoop();
 
-            reliableSender = new ReliableUDPSender(serverSocket, 50, 200);
+            reliableSender = new ReliableUDPSender(serverSocket, 100, 200);
             ackProcessor = new AckProcessor(serverSocket);
             //ackProcessor.start();
 
@@ -385,7 +385,7 @@ public class Server {
                 }
             } else {
                 clientsMap.put(username, senderSocket);
-                synchronizeNewClient(username, senderSocket);
+                syncGames(senderSocket);
             }
             System.out.println("Registered user: " + username + " at " + senderSocket + ". Total clients: " + clientsMap.size());
             if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
@@ -598,43 +598,42 @@ public class Server {
     }
 
     /**
-     * Synchronizes a newly connected client with the current game state by sending:
-     * 1) All existing game sessions
-     * 2) All game objects within those sessions
-     *
-     * @param username      The username of the new client
-     * @param clientSocket  The socket address of the new client
+     * 1) Send CREATEGAME for every existing game.
      */
-    private void synchronizeNewClient(String username, InetSocketAddress clientSocket) {
-        // 1) For each existing game in the GameSessionManager:
-        for (Map.Entry<String, Game> entry : gameSessionManager.getAllGameSessions().entrySet()) {
-            String gameId = entry.getKey();
-            Game game = entry.getValue();
-
-            // a) Send a CREATEGAME message, so the client knows this game ID + name.
+    public void syncGames(InetSocketAddress clientSocket) {
+        for (Game game : gameSessionManager.getAllGameSessionsVals()) {
+            String gameId   = game.getGameId();
+            String gameName = game.getGameName();
             Message createGameMsg = new Message(
-                    "CREATEGAME",
-                    new Object[]{ gameId, game.getGameName() },
-                    "RESPONSE"
+                "CREATEGAME",
+                new Object[]{ gameId, gameName },
+                "RESPONSE"
             );
             enqueueMessage(createGameMsg, clientSocket.getAddress(), clientSocket.getPort());
+        }
+    }
 
-            // b) For each GameObject in that game, send a CREATEGO message with all constructor params.
-            for (GameObject go : game.getGameObjects()) {
-                String objectUuid = go.getId();
-                String objectType = go.getClass().getSimpleName();
-                Object[] constructorParams = go.getConstructorParamValues();
+    /**
+     * 2) For a given gameId, send CREATEGO for all of its objects.
+     */
+    public void syncGameObjects(InetSocketAddress clientSocket, String gameId) {
+        Game game = gameSessionManager.getGameSession(gameId);
+        if (game == null) return;
 
-                // Build a combined param array:
-                Object[] createGoParams = new Object[3 + constructorParams.length];
-                createGoParams[0] = objectUuid;
-                createGoParams[1] = gameId;
-                createGoParams[2] = objectType;
-                System.arraycopy(constructorParams, 0, createGoParams, 3, constructorParams.length);
+        for (GameObject go : game.getGameObjects()) {
+            String objectUuid    = go.getId();
+            String objectType    = go.getClass().getSimpleName();
+            Object[] params      = go.getConstructorParamValues();
 
-                Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
-                enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
-            }
+            // Build [uuid, gameId, type, ...ctorParams]
+            Object[] createGoParams = new Object[3 + params.length];
+            createGoParams[0] = objectUuid;
+            createGoParams[1] = gameId;
+            createGoParams[2] = objectType;
+            System.arraycopy(params, 0, createGoParams, 3, params.length);
+
+            Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
+            enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
         }
     }
 

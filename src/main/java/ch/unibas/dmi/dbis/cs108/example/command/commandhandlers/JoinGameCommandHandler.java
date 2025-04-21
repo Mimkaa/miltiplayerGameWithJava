@@ -104,6 +104,7 @@ public class JoinGameCommandHandler implements CommandHandler {
         if (address != null) {
             server.broadcastMessageToAll(response);
             server.enqueueMessage(syncGamePlayers, address.getAddress(), address.getPort());
+            server.syncGameObjects(address, gameId);
         } else {
             System.err.println("Sender address not found for user: " + senderUsername);
         }
