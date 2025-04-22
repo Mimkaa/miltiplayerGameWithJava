@@ -480,7 +480,6 @@ public class Server {
      * This is done in a "best effort" manner, i.e., without the reliable UDP layer.
      *
      * @param msg          the message to broadcast
-     * @param senderSocket the socket of the original sender (excluded from broadcast)
      */
     public void sendMessageBestEffort(Message msg) {
         try {
@@ -507,7 +506,7 @@ public class Server {
     /**
      * Broadcasts a given message to <strong>all</strong> connected clients using the reliable queue.
      *
-     * @param msg the message to broadcast
+     * @param original the message to broadcast
      */
     public void broadcastMessageToAll(Message original) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
