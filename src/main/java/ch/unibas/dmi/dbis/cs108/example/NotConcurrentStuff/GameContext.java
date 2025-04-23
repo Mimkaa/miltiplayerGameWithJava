@@ -3,11 +3,8 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
-import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
@@ -15,37 +12,23 @@ import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
-
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.Node;
 import lombok.Getter;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Set;
 
-import static ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom.client;
 
 @Getter
 public class GameContext {

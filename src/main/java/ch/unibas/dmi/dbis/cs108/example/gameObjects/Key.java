@@ -29,6 +29,9 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     // Grab radius
     private static final float GRAB_RADIUS = 50.0f;
 
+    private boolean grabbed = false;
+
+    private Player2.Vector2 velocity;
     /**
      * Constructs a Key.
      *
@@ -59,6 +62,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     // -------------------------
     @Override
     public void onGrab(String playerId) {
+        this.grabbed = true;
         isGrabbed = true;
         grabbedBy = playerId;
         vx = 0;
@@ -81,7 +85,13 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     }
 
     @Override
+    public void setVelocity(float vx, float vy) {
+        this.velocity = new Player2.Vector2(vx, vy);  // Set the velocity of the key
+    }
+
+    @Override
     public void onRelease() {
+        this.grabbed = false;
         isGrabbed = false;
         grabbedBy = null;
         System.out.println("Key " + getName() + " released");
@@ -89,12 +99,22 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
 
     @Override
     public boolean isGrabbed() {
-        return isGrabbed;
+        return grabbed;
     }
 
     @Override
     public String getGrabbedBy() {
         return grabbedBy;
+    }
+
+    /**
+     * @param x
+     * @param y
+     */
+    @Override
+    public void setPos(float x, float y) {
+        this.x = x;
+        this.y = y;
     }
 
     // -------------------------

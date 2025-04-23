@@ -43,6 +43,8 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
     // The ID of the player carrying this box.
     private String grabbedBy = null;
 
+    private Player2.Vector2 velocity;
+
     /**
      * Constructs a Box.
      *
@@ -97,6 +99,12 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
         System.out.println("Box " + getName() + " grabbed by player " + playerId);
     }
 
+    // Implement the setVelocity method from IGrabbable
+    @Override
+    public void setVelocity(float vx, float vy) {
+        this.velocity = new Player2.Vector2(vx, vy);  // Set the velocity of the box
+    }
+
     @Override
     public void onRelease() {
         isGrabbed = false;
@@ -112,6 +120,16 @@ public class Box extends GameObject implements IGravityAffected, IGrabbable, ITh
     @Override
     public String getGrabbedBy() {
         return grabbedBy;
+    }
+
+    /**
+     * @param x
+     * @param y
+     */
+    @Override
+    public void setPos(float x, float y) {
+        this.x = x;
+        this.y = y;
     }
 
     // -------------------------

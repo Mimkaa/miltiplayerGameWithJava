@@ -34,6 +34,36 @@ public abstract class GameObject {
     // Whether the object is movable by external forces (e.g. collision resolution).
     private boolean movable = true;
 
+    private Player2.Vector2 pos; // Position of the object
+    private boolean isGrabbed = false;
+    private String grabbedById;
+
+    // Set the position of the object
+    public void setPos(Player2.Vector2 pos) {
+        this.pos = pos;
+    }
+
+    // Return the position
+    public Player2.Vector2 getPos() {
+        return pos;
+    }
+
+    // Handle when the object is grabbed
+    public void onGrab(String playerId) {
+        this.isGrabbed = true;
+        this.grabbedById = playerId;
+    }
+
+    // Handle when the object is released
+    public void onRelease() {
+        this.isGrabbed = false;
+        this.grabbedById = null;
+    }
+
+    public boolean isGrabbed() {
+        return isGrabbed;
+    }
+
     public GameObject(String name, String gameId) {
         this.name = name;
         this.gameId = gameId;

@@ -137,7 +137,7 @@ public class ServerCommandTests {
     void testCreateCommand() throws Exception {
         Message msg = new Message(
                 "CREATE",
-                new Object[]{"Player", "TestPlayer", 100.0f, 200.0f, 25.0f, "TestGame"},
+                new Object[]{"Player2", "TestPlayer", 100.0f, 200.0f, 25.0f, "TestGame"},
                 "REQUEST",
                 new String[]{"session1", "game1", "testUser", UUID.randomUUID().toString()}
         );
@@ -266,7 +266,7 @@ public class ServerCommandTests {
         // e.g., param 0 = session ID, param 1 = object type
         Message msg = new Message(
                 "CREATEGO",
-                new Object[]{"sessionXYZ", "Player", 100.0f, 200.0f, "SomeOtherParam"},
+                new Object[]{"sessionXYZ", "Player2", 100.0f, 200.0f, "SomeOtherParam"},
                 "REQUEST",
                 new String[]{"session1", "gameXYZ", "testUser", UUID.randomUUID().toString()}
         );
