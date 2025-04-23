@@ -421,8 +421,11 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         if (grabbedGuy != null) {
             if (grabbedGuy instanceof IGrabbable) {
                 IGrabbable grabbableObject = (IGrabbable) grabbedGuy;
-                grabbableObject.setVelocity(throwVx, throwVy);  // Set the velocity of the thrown object.
-                System.out.println("Threw object with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
+                float factor = 3.0f;
+                float adjustedVy = throwVy * factor;
+                float adjustedVx = throwVx * 2;
+                grabbableObject.setVelocity(adjustedVx, adjustedVy);  // Set the velocity of the thrown object.
+                System.out.println("Threw object with velocity: Vx=" + adjustedVx + ", Vy=" + adjustedVy);
                 ((IGrabbable) grabbedGuy).onRelease();  // Release the object after throwing it.
                 grabbedGuy = null;
             }
