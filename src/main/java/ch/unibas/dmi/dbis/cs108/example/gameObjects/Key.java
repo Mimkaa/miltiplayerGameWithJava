@@ -26,6 +26,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     private String grabbedBy = null;
     // Friction factor to reduce horizontal sliding when on ground.
     private final float frictionFactor = 0.8f;
+    // Grab radius
+    private static final float GRAB_RADIUS = 50.0f;
 
     /**
      * Constructs a Key.
@@ -65,8 +67,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         Game currentGame = getParentGame(); // Use the parent game reference.
         if (currentGame != null) {
             for (GameObject obj : currentGame.getGameObjects()) {
-                if (obj.getId().equals(playerId) && obj instanceof Player) {
-                    Player p = (Player) obj;
+                if (obj.getId().equals(playerId) && obj instanceof Player2) {
+                    Player2 p = (Player2) obj;
                     setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
                     setY(p.getY() - getHeight());
                     Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
@@ -141,7 +143,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
             if (this.intersects(other)) {
                 this.resolveCollision(other);
                 // Assign ownership if colliding with a player and not yet owned.
-                if (other instanceof Player && ownerId == null) {
+                if (other instanceof Player2 && ownerId == null) {
                     ownerId = other.getId();
                     System.out.println("Key " + getName() + " now owned by player " + ownerId);
                 }
@@ -171,8 +173,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
             Game currentGame = getParentGame();
             if (currentGame != null) {
                 for (GameObject obj : currentGame.getGameObjects()) {
-                    if (obj.getId().equals(grabbedBy) && obj instanceof Player) {
-                        Player p = (Player) obj;
+                    if (obj.getId().equals(grabbedBy) && obj instanceof Player2) {
+                        Player2 p = (Player2) obj;
                         setX(p.getX() + p.getWidth() / 2 - getWidth() / 2);
                         setY(p.getY() - getHeight());
                         // Send frequent sync updates (every 0.1 sec).
