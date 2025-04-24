@@ -130,7 +130,7 @@ public class Game {
         }
     }
 
-    // Methode zum Abrufen der verstrichenen Zeit
+    // method to get the time
     public long getElapsedTime() {
         return levelTimer.getElapsedTimeInSeconds();
     }

@@ -485,11 +485,13 @@ public class GameContext {
             uiManager.registerComponent("startGamePane", startGamePane);
 
             Button startGameButton = (Button) uiManager.getComponent("startGameButton"); // start button
+            /*
             if (startGameButton != null) {
                 startGameButton.setOnAction(event -> {
                     startGame();  // Start the game und the timer
                 });
             }
+             */
 
             Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
             uiManager.registerComponent("adminUIPane", adminPane);
@@ -538,8 +540,8 @@ public class GameContext {
         String gameId = currentGameId.get();
         Game game = gameSessionManager.getGameSession(gameId);
         if (game != null) {
-            game.startLevel();  // start Timer
             LevelTimer.getInstance().start();
+            game.startLevel();
             System.out.println("Game started. Timer started.");
         } else {
             System.out.println("No game session found for the current game ID.");

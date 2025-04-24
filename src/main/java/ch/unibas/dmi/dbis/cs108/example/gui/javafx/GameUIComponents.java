@@ -10,6 +10,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
+import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -166,6 +167,10 @@ public class GameUIComponents {
             selectAlfredButton.setVisible(true);
 
             System.out.println("Level started!");
+
+            LevelTimer levelTimer = LevelTimer.getInstance();
+            levelTimer.start();
+            System.out.println("Timer started");
 
         });
         uiManager.registerComponent("startLevelButton", startLevelButton);
