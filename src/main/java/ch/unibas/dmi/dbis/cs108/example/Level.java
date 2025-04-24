@@ -40,7 +40,7 @@ public class Level {
         Object[] keyParams = new Object[]{
                 sessionId, "Key", "Key1",
                 (float) (screenWidth * 0.15), (float) (screenHeight * 0.15),
-                40.0f, 40.0f, 5.0F,sessionId
+                40.0f, 40.0f, 1.0F,sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
         // --- Create the key (optional) ---
