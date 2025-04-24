@@ -56,7 +56,9 @@ public class Door extends GameObject {
 
                         // save the time in a txt. file
                         try (BufferedWriter writer = new BufferedWriter(new FileWriter("level_time.txt", true))) {
-                            writer.write("Level completed at: " + elapsedTime + " seconds\n");
+                            for (String username : currentGame.getUsers()) {
+                                writer.write(username + " completed the Level in " + elapsedTime + " seconds \n");
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }

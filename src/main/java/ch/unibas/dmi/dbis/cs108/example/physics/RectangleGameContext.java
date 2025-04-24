@@ -64,6 +64,9 @@ public class RectangleGameContext {
         double canvasWidth = gc.getCanvas().getWidth();
         double canvasHeight = gc.getCanvas().getHeight();
 
+        System.out.println("Rect1 Position: " + rect1X + ", " + rect1Y);
+        System.out.println("Rect2 Position: " + rect2X + ", " + rect2Y);
+
         // 1. Update positions based on velocity.
         rect1X += rect1VX;
         rect1Y += rect1VY;
