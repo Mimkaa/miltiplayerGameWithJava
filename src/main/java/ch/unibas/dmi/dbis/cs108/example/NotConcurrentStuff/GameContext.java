@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.UIManager;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
+import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -483,6 +484,13 @@ public class GameContext {
             Pane startGamePane = GameUIComponents.createStartGamePane(uiManager, gameSessionManager);
             uiManager.registerComponent("startGamePane", startGamePane);
 
+            Button startGameButton = (Button) uiManager.getComponent("startGameButton"); // start button
+            if (startGameButton != null) {
+                startGameButton.setOnAction(event -> {
+                    startGame();  // Start the game und the timer
+                });
+            }
+
             Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
             uiManager.registerComponent("adminUIPane", adminPane);
 
@@ -526,6 +534,18 @@ public class GameContext {
         
     }
 
+    private void startGame() {
+        String gameId = currentGameId.get();
+        Game game = gameSessionManager.getGameSession(gameId);
+        if (game != null) {
+            game.startLevel();  // start Timer
+            LevelTimer.getInstance().start();
+            System.out.println("Game started. Timer started.");
+        } else {
+            System.out.println("No game session found for the current game ID.");
+        }
+    }
+
     /**
      * Starts the game loop for updating and drawing the game state.
      * Uses JavaFX's AnimationTimer to continuously update and draw.
@@ -537,10 +557,17 @@ public class GameContext {
          });
         AnimationTimer timer = new AnimationTimer() {
             GraphicsContext gc = CentralGraphicalUnit.getInstance().getGraphicsContext();
+
+
             @Override
             public void handle(long now) {
                 update();
                 draw(gc);
+                long elapsedTime = LevelTimer.getInstance().getElapsedTimeInSeconds();
+                Platform.runLater(() -> {
+                    // Update your GUI element here with the elapsed time
+                    String message = "Elapsed Time: " + elapsedTime + " seconds";
+                });
             }
         };
         timer.start();

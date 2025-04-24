@@ -31,7 +31,7 @@ public class Door extends GameObject {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        Game currentGame = getParentGame(); // Verwende die Referenz zum übergeordneten Spiel
+        Game currentGame = getParentGame();
         if (currentGame == null) return;
 
         for (GameObject go : currentGame.getGameObjects()) {
@@ -40,10 +40,9 @@ public class Door extends GameObject {
                 if (this.intersects(key)) {
                     System.out.println("You won the game!");
 
-                    // stop the time for the level
-                    LevelTimer levelTimer = new LevelTimer();
+                    LevelTimer levelTimer = LevelTimer.getInstance();
                     levelTimer.stop();
-                    long elapsedTime = levelTimer.getElapsedTimeInSeconds(); // Hol die Zeit in Sekunden
+                    long elapsedTime = levelTimer.getElapsedTimeInSeconds();
 
                     // shows a panel if the level is finished
                     Platform.runLater(() -> {
@@ -51,7 +50,7 @@ public class Door extends GameObject {
 
                         // shows panel
                         Label winLabel = new Label(message);
-                        winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: green; -fx-background-color: rgba(255,255,255,0.8);");
+                        winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #008011; -fx-background-color: rgba(255,255,255,0.8);");
                         winLabel.setAlignment(Pos.CENTER);
                         CentralGraphicalUnit.getInstance().addNode(winLabel);
 

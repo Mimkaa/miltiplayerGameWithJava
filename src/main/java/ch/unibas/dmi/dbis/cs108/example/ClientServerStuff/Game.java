@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObjectFactory;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.Platform;
+import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
 import lombok.Getter;
@@ -25,6 +26,9 @@ public class Game {
     private final String gameName;
     private final CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>();
     private final MessageHogger gameMessageHogger;
+
+    // timer for the level
+    private LevelTimer levelTimer;
 
     // Whether the game has started.
     private boolean startedFlag = false;
@@ -73,14 +77,6 @@ public class Game {
         startPlayersCommandProcessingLoop();
     }
 
-    public void setStartedFlag(boolean state) {
-        this.startedFlag = state;
-    }
-
-    public boolean getStartedFlag() {
-        return startedFlag;
-    }
-
     public void setAuthoritative(boolean authoritative) {
         this.authoritative = authoritative;
       
@@ -114,6 +110,38 @@ public class Game {
                 }
             }
         }
+    }
+
+    // starting level and start timer
+    public void startLevel() {
+        if (!startedFlag) {
+            levelTimer.start();  // Starts the level timer
+            startedFlag = true;   // game marked as started
+            System.out.println("Level started. Timer started.");
+        }
+    }
+
+    // stop game and stop timer
+    public void stopLevel() {
+        if (startedFlag) {
+            levelTimer.stop();  // Stop the timer
+            startedFlag = false;  // game marked as stopped
+            System.out.println("Level stopped. Timer stopped.");
+        }
+    }
+
+    // Methode zum Abrufen der verstrichenen Zeit
+    public long getElapsedTime() {
+        return levelTimer.getElapsedTimeInSeconds();
+    }
+
+    // Getter und Setter für startedFlag
+    public boolean getStartedFlag() {
+        return startedFlag;
+    }
+
+    public void setStartedFlag(boolean state) {
+        this.startedFlag = state;
     }
 
     /**
