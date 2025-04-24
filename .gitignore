@@ -11,4 +11,5 @@ bin/
 /dataSources.local.xml
 *.class
 *.jar
+*.txt
 
