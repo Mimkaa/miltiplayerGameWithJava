@@ -23,6 +23,10 @@ import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.Node;
 import lombok.Getter;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -432,6 +436,34 @@ public class GameContext {
                     } else {
                         System.out.println("No game session found with id: " + gameID);
                     }
+                }
+                else if ("WIN".equals(type)) {
+                    System.out.println("processing WIN message");
+                    Game currentGame = GameContext.getInstance().getGameSessionManager().getGameSession(GameContext.getCurrentGameId());
+                    if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
+                        return;
+                    }
+                    long elapsedTime = (long) receivedMessage.getParameters()[1];
+
+                    Platform.runLater(() -> {
+                        String message = "Level Completed and Time: " + elapsedTime + " seconds";
+
+                        // shows panel
+                        Label winLabel = new Label(message);
+                        winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #008011; -fx-background-color: rgba(255,255,255,0.8);");
+                        winLabel.setAlignment(Pos.CENTER);
+                        CentralGraphicalUnit.getInstance().addNode(winLabel);
+
+                        // save the time in a txt. file
+                        try (BufferedWriter writer = new BufferedWriter(new FileWriter("highscore.txt", true))) {
+                            for (String username : currentGame.getUsers()) {
+                                writer.write(username + " completed the Level in " + elapsedTime + " seconds \n");
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+
                 }
                 //else if ("EXIT".equals(type)) {
                 //    System.out.println("Exiting Game");
