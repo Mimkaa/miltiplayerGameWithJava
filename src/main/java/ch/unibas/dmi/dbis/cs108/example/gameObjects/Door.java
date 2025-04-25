@@ -18,6 +18,7 @@ import java.io.IOException;
 public class Door extends GameObject {
 
     private float x, y, width, height;
+    private boolean hasWon = false;
 
     public Door(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
@@ -38,36 +39,39 @@ public class Door extends GameObject {
             if (go instanceof Key) {
                 Key key = (Key) go;
                 if (this.intersects(key)) {
-                    System.out.println("You won the game!");
+                    if (!hasWon) {
+                        hasWon = true;
+                        System.out.println("You won the game!");
 
-                    LevelTimer levelTimer = LevelTimer.getInstance();
-                    levelTimer.stop();
-                    long elapsedTime = levelTimer.getElapsedTimeInSeconds();
+                        LevelTimer levelTimer = LevelTimer.getInstance();
+                        levelTimer.stop();
+                        long elapsedTime = levelTimer.getElapsedTimeInSeconds();
 
-                    // shows a panel if the level is finished
-                    Platform.runLater(() -> {
-                        String message = "Level Completed and Time: " + elapsedTime + " seconds";
+                        // shows a panel if the level is finished
+                        Platform.runLater(() -> {
+                            String message = "Level Completed and Time: " + elapsedTime + " seconds";
 
-                        // shows panel
-                        Label winLabel = new Label(message);
-                        winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #008011; -fx-background-color: rgba(255,255,255,0.8);");
-                        winLabel.setAlignment(Pos.CENTER);
-                        CentralGraphicalUnit.getInstance().addNode(winLabel);
+                            // shows panel
+                            Label winLabel = new Label(message);
+                            winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #008011; -fx-background-color: rgba(255,255,255,0.8);");
+                            winLabel.setAlignment(Pos.CENTER);
+                            CentralGraphicalUnit.getInstance().addNode(winLabel);
 
-                        // save the time in a txt. file
-                        try (BufferedWriter writer = new BufferedWriter(new FileWriter("level_time.txt", true))) {
-                            for (String username : currentGame.getUsers()) {
-                                writer.write(username + " completed the Level in " + elapsedTime + " seconds \n");
+                            // save the time in a txt. file
+                            try (BufferedWriter writer = new BufferedWriter(new FileWriter("level_time.txt", true))) {
+                                for (String username : currentGame.getUsers()) {
+                                    writer.write(username + " completed the Level in " + elapsedTime + " seconds \n");
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
+                        });
 
-                    // sends message that the level is finished
-                    Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, null);
-                    sendMessage(winMsg);
-                    break;
+                        // sends message that the level is finished
+                        Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, null);
+                        sendMessage(winMsg);
+                        break;
+                    }
                 }
             }
         }

@@ -86,8 +86,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
 
     @Override
     public void setVelocity(float vx, float vy) {
-        this.x += vx * 5;
-        this.y += vy * 5;  // Set the velocity of the key
+        this.x += vx * 4;
+        this.y += vy * 2;  // Set the velocity of the key
     }
 
     @Override
@@ -123,8 +123,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     // -------------------------
     @Override
     public void throwObject(float throwVx, float throwVy) {
-        vx = throwVx * 50;
-        vy = throwVy * 50;
+        vx = throwVx;
+        vy = throwVy;
         onRelease();
         System.out.println("Key " + getName() + " thrown with velocity (" + vx + ", " + vy + ")");
         Message throwMsg = new Message("THROW", new Object[]{vx, vy}, null);
