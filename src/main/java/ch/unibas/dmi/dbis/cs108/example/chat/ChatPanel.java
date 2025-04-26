@@ -56,7 +56,7 @@ public class ChatPanel extends JPanel {
      *
      * @param listener The listener for handling chat events (message sending, typing notifications).
      */
-    private ChatPanel(ChatPanelListener listener) {
+    public ChatPanel(ChatPanelListener listener) {
         this.listener = listener;
         initUI();
         //System.out.println("ChatPanel created, instance hashCode: " + this.hashCode());

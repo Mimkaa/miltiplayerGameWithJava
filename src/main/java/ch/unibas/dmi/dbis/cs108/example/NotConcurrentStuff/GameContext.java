@@ -519,7 +519,7 @@ public class GameContext {
                     Message ack = new Message(
                     "ACK",                  // messageType
                     new Object[]{ uuid },   // parameters: the UUID we're ACKing
-                    "GAME"               // or whatever “option” your protocol expects
+                    "GAME"               // or whatever option your protocol expects
                     );
                     // this will append your username as concealedParam and enqueue it
                     Client.sendMessageBestEffort(ack);
