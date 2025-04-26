@@ -1,7 +1,4 @@
----
-layout: default
-title : Week 6
----
+
 
 # Test Plan: Server Command Integration
 
