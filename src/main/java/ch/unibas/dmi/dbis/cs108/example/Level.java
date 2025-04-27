@@ -37,12 +37,15 @@ public class Level {
         }
 
         // === 2. Key ===
+
         Object[] keyParams = new Object[]{
+
                 sessionId, "Key", "Key1",
                 (float) (screenWidth * 0.15), (float) (screenHeight * 0.15),
                 40.0f, 40.0f, 1.0F,sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
+
         // --- Create the key (optional) ---
         // If you still want a key for this level, keep this block:
         //Object[] keyParams = new Object[] {
@@ -92,7 +95,7 @@ public class Level {
         // === 6. Door ===
         Object[] doorParams = new Object[]{
                 sessionId, "Door", "Door1",
-                (float) (screenWidth * 0.88), (float) (screenHeight * 0.5),
+                (float) (screenWidth * 0.1), (float) (screenHeight * 0.65),
                 50.0f, 120.0f, sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", doorParams, "REQUEST"));

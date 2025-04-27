@@ -443,7 +443,19 @@ public class GameContext {
                     if (receivedMessage.getParameters() == null || receivedMessage.getParameters().length < 2) {
                         return;
                     }
-                    long elapsedTime = (long) receivedMessage.getParameters()[1];
+                    Object raw = receivedMessage.getParameters()[1];   // compile-time type: Object
+
+                    long elapsedTime;
+
+                    if (raw instanceof Number n) {        // Java 16 pattern-matching form
+                        elapsedTime = n.longValue();      // works for Float, Double, Integer, Long …
+                    } else if (raw instanceof String s) { // JSON or text payload?
+                        elapsedTime = Long.parseLong(s);
+                    } else {
+                        throw new IllegalArgumentException(
+                            "Elapsed-time parameter must be numeric, but got " + raw.getClass());
+                    }
+
 
                     Platform.runLater(() -> {
                         String message = "Level Completed and Time: " + elapsedTime + " seconds";

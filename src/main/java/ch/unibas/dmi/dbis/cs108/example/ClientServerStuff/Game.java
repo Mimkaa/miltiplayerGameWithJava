@@ -1,9 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObjectFactory;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.Platform;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.*;
 import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
@@ -79,7 +76,6 @@ public class Game {
 
     public void setAuthoritative(boolean authoritative) {
         this.authoritative = authoritative;
-      
     }
 
     public boolean isAuthoritative() {
@@ -201,6 +197,11 @@ public class Game {
                     if (!b.isCollidable()) continue;
 
                     if (a.intersects(b)) {
+                        if (a instanceof Key && b instanceof Door) {
+                            Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, "RESPONSE");
+                            System.out.println("key door collision");
+                            //Server.getInstance().broadcastMessageToAll(winMsg);
+                        }
                         a.resolveCollision(b);
                         // Example: zero out y velocity if Player2 collides with Platform
                         if (a instanceof Player2 && b instanceof Platform) {
@@ -208,6 +209,13 @@ public class Game {
                         } else if (b instanceof Player2 && a instanceof Platform) {
                             ((Player2) b).getVel().y = 0;
                         }
+                        
+                        if (a instanceof Key && b instanceof Platform) {
+                            ((Key) a).setVelocityY(0.0f);
+                        } else if (b instanceof Key && a instanceof Platform) {
+                            ((Key) b).setVelocityY(0.0f);
+                        }
+                        
                     }
                 }
             }

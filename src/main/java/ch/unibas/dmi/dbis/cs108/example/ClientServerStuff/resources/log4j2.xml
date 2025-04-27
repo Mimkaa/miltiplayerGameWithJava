@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN"
+               monitorInterval="30">
+  
+  <!-- 1) Define reusable properties -->
+  <Properties>
+    <!-- base directory for log files -->
+    <Property name="log.dir">logs</Property>
+    <!-- current log file -->
+    <Property name="log.file">${log.dir}/app.log</Property>
+  </Properties>
+
+  <!-- 2) Appenders send events to destinations -->
+  <Appenders>
+    
+    <!-- 2a) Console appender → writes to stdout -->
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %c{1} - %msg%n"/>
+    </Console> <!-- Appenders deliver log events to destinations :contentReference[oaicite:1]{index=1} -->
+
+    <!-- 2b) Rolling file appender → writes to logs/app.log, rotates daily & by size -->
+    <RollingFile name="File"
+                 fileName="${log.file}"
+                 filePattern="${log.dir}/app-%d{yyyy-MM-dd}-%i.log.gz">
+      
+      <!-- format of each log entry -->
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level %logger - %msg%n"/> <!-- Layout encodes log events :contentReference[oaicite:2]{index=2} -->
+      
+      <!-- when to roll over -->
+      <Policies> <!-- only one nested policy allowed unless wrapped in Policies :contentReference[oaicite:3]{index=3} -->
+        <!-- roll every day at midnight -->
+        <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+        <!-- or when file > 10 MB -->
+        <SizeBasedTriggeringPolicy size="10MB"/>
+      </Policies>
+      
+      <!-- keep 7 days of backups -->
+      <DefaultRolloverStrategy max="7"/>
+    </RollingFile> <!-- RollingFileAppender supports time + size policies :contentReference[oaicite:4]{index=4} -->
+
+  </Appenders>
+
+  <!-- 3) Loggers control what gets logged and where -->
+  <Loggers>
+    <!-- 3a) Application root logger at INFO level -->
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
+    </Root>
+
+    <!-- 3b) Example of package-specific DEBUG logger -->
+    <Logger name="ch.unibas.dmi" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+      <AppenderRef ref="File"/>
+    </Logger> <!-- Fine-tune logging per package :contentReference[oaicite:5]{index=5} -->
+  </Loggers>
+
+</Configuration>
