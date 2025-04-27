@@ -23,7 +23,7 @@ public abstract class GameObject {
     private final String gameId;
     protected String name;
     protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
-    protected final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
+    public final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
     protected Game parentGame;
     
     // NEW: Selected flag.
@@ -289,7 +289,7 @@ public abstract class GameObject {
      * @param msg the message
      * @return the game ID or "UnknownGame" if missing
      */
-    protected String extractGameId(Message msg) {
+    public String extractGameId(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed != null && concealed.length > 1) {
             return concealed[1];
