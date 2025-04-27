@@ -204,9 +204,9 @@ public class Game {
                         } else if (b instanceof Player2 && a instanceof Platform) {
                             ((Player2) b).getVel().y = 0;
                         }
-                        else if (a instanceof Key && b instanceof Platform) {
+                        if (a instanceof Key && b instanceof Platform) {
                             ((Key) a).setVelocityY(0.0f);
-                        } else if (b instanceof Player2 && a instanceof Platform) {
+                        } else if (b instanceof Key && a instanceof Platform) {
                             ((Key) b).setVelocityY(0.0f);
                         }
                     }

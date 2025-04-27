@@ -46,32 +46,13 @@ public class Door extends GameObject {
 
                         LevelTimer levelTimer = LevelTimer.getInstance();
                         levelTimer.stop();
-                        long elapsedTime = levelTimer.getElapsedTimeInSeconds();
-
-                        // shows a panel if the level is finished
-                        Platform.runLater(() -> {
-                            String message = "Level Completed and Time: " + elapsedTime + " seconds";
-
-                            // shows panel
-                            Label winLabel = new Label(message);
-                            winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #008011; -fx-background-color: rgba(255,255,255,0.8);");
-                            winLabel.setAlignment(Pos.CENTER);
-                            CentralGraphicalUnit.getInstance().addNode(winLabel);
-
-                            // save the time in a txt. file
-                            try (BufferedWriter writer = new BufferedWriter(new FileWriter("highscore.txt", true))) {
-                                for (String username : currentGame.getUsers()) {
-                                    writer.write(username + " completed the Level in " + elapsedTime + " seconds \n");
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
+                        float elapsedTime = LevelTimer.getInstance().getElapsedTimeInSeconds();
 
                         // sends message that the level is finished
                         if (parentGame.isAuthoritative()) {
-                        Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "GAME");
-                        Server.getInstance().sendMessageBestEffort(winMsg);
+                        Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "RESPONSE");
+
+                        Server.getInstance().broadcastMessageToAll(winMsg);
                         System.out.println("sending Win Message");
                         break;
 }                   }
@@ -87,31 +68,7 @@ public class Door extends GameObject {
 
     @Override
     protected void myUpdateGlobal(Message msg) {
-        Game currentGame = getParentGame();
-       if ("WIN".equals(msg.getMessageType())) {
-           hasWon = true;
-           System.out.println("You won the game!");
-           long elapsedTime = (long) msg.getParameters()[1];
-
-           Platform.runLater(() -> {
-               String message = "Level Completed and Time: " + elapsedTime + " seconds";
-
-               // shows panel
-               Label winLabel = new Label(message);
-               winLabel.setStyle("-fx-font-size: 48px; -fx-text-fill: #008011; -fx-background-color: rgba(255,255,255,0.8);");
-               winLabel.setAlignment(Pos.CENTER);
-               CentralGraphicalUnit.getInstance().addNode(winLabel);
-
-               // save the time in a txt. file
-               try (BufferedWriter writer = new BufferedWriter(new FileWriter("highscore.txt", true))) {
-                   for (String username : currentGame.getUsers()) {
-                       writer.write(username + " completed the Level in " + elapsedTime + " seconds \n");
-                   }
-               } catch (IOException e) {
-                   e.printStackTrace();
-               }
-           });
-       }
+        //not used
     }
 
     @Override
