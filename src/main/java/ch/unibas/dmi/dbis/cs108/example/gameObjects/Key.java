@@ -35,6 +35,9 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     private boolean grabbed = false;
 
     private Player2.Vector2 velocity;
+
+    private Player2.Vector2 acceleration = new Player2.Vector2(0, 0);
+
     /**
      * Constructs a Key.
      *
@@ -288,21 +291,25 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         } else if ("SNAPSHOT".equals(msg.getMessageType())) {
             // Process SNAPSHOT messages for non-authoritative clients.
             Object[] params = msg.getParameters();
-            if (params != null && params.length >= 6) {
+            if (params != null && params.length >= 4) {
                 try {
                     float newX = Float.parseFloat(params[0].toString());
                     float newY = Float.parseFloat(params[1].toString());
+                    float newVelX = Float.parseFloat(params[2].toString());
+                    float newVelY = Float.parseFloat(params[3].toString());
 
                     this.x = newX;
                     this.y = newY;
+                    this.vx = newVelX;
+                    this.vy = newVelY;
 
                     System.out.println("Processed SNAPSHOT for " + getId()
-                            + ": pos=(" + newX + ", " + newY + ")");
+                            + ": pos=(" + newX + ", " + newY + ") and Velocity= ( " + newVelX + ", " + newVelY + ")");
                 } catch (NumberFormatException ex) {
                     System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
                 }
             } else {
-                System.out.println("SNAPSHOT message does not contain enough parameters.");
+                System.out.println("SNAPSHOT message for KEY does not contain enough parameters.");
             }
         }
     }
@@ -342,11 +349,12 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     public void setWidth(float width) { this.width = width; }
     @Override
     public void setHeight(float height) { this.height = height; }
+
     @Override
     public Message createSnapshot() {
         // Pack the position, velocity, and acceleration into an Object array.
         Object[] params = new Object[]{
-            x, y,   // Positionvelocity.x, velocity.y,   // Velocity
+            x, y, vx ,vy // Positionvelocity.x, velocity.y,   // Velocity
             
         };
         // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").

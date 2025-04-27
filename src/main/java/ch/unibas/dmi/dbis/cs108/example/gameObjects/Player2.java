@@ -408,7 +408,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
                 }
             } else {
-                System.out.println("SNAPSHOT message does not contain enough parameters.");
+                System.out.println("SNAPSHOT message for Player2 does not contain enough parameters.");
             }
         }
         else {
@@ -421,10 +421,8 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         if (grabbedGuy != null) {
             if (grabbedGuy instanceof IGrabbable) {
                 IGrabbable grabbableObject = (IGrabbable) grabbedGuy;
-                float adjustedVy = throwVy;
-                float adjustedVx = throwVx;
-                grabbableObject.setVelocity(adjustedVx, adjustedVy);  // Set the velocity of the thrown object.
-                System.out.println("Threw object with velocity: Vx=" + adjustedVx + ", Vy=" + adjustedVy);
+                grabbableObject.setVelocity(throwVx, throwVy);  // Set the velocity of the thrown object.
+                System.out.println("Threw object with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
                 ((IGrabbable) grabbedGuy).onRelease();  // Release the object after throwing it.
                 grabbedGuy = null;
             }

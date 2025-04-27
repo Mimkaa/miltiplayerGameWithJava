@@ -76,7 +76,6 @@ public class Game {
 
     public void setAuthoritative(boolean authoritative) {
         this.authoritative = authoritative;
-      
     }
 
     public boolean isAuthoritative() {
