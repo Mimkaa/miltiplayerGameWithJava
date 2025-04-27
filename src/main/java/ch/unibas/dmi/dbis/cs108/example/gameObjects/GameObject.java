@@ -168,7 +168,7 @@ public abstract class GameObject {
      */
     public boolean intersects(GameObject other, double widthFactor) {
 
-        /* --- scale “other” around its centre on the X-axis --- */
+        /* --- scale other around its centre on the X-axis --- */
         double scaledWidth  = other.getWidth() * widthFactor;
         double deltaWidth   = scaledWidth - other.getWidth();     // growth (+) or shrinkage (−)
         double otherXScaled = other.getX() - deltaWidth / 2.0;    // shift left so centre stays put
