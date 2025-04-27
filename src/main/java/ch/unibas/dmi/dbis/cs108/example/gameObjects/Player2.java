@@ -197,7 +197,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             if (syncCounter >= SYNC_THRESHOLD) {
                 // Broadcast a snapshot.
                 Message snapshot = createSnapshot();
-                //Server.getInstance().sendMessageBestEffort(snapshot);
+                Server.getInstance().sendMessageBestEffort(snapshot);
 
                 // Reset the counter.
                 syncCounter = 0;

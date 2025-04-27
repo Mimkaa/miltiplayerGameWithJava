@@ -249,7 +249,7 @@ public class Server {
 
             // Process outgoing messages.
             AsyncManager.runLoop(() -> {
-                while (true) {
+                
                     try {
                         // This can throw InterruptedException if the thread is interrupted
                         OutgoingMessage om = outgoingQueue.take();
@@ -261,14 +261,14 @@ public class Server {
                     } catch (InterruptedException ie) {
                         // Restore the interrupt flag and exit the loop
                         Thread.currentThread().interrupt();
-                        break;
+                        return;
             
                     } catch (Exception e) {
                         // Catch any other failures from sendMessage()
                         System.err.println("Error sending message");
                         e.printStackTrace();
                     }
-                }
+                
             });
             
 

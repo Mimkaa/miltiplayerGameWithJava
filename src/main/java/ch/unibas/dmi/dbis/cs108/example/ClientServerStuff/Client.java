@@ -196,7 +196,7 @@ public class Client {
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
         
             AsyncManager.runLoop(() -> {
-                while (true) {
+                
                     try {
                         byte[] receiveData = new byte[1024];
                         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
@@ -218,7 +218,7 @@ public class Client {
                                 myReliableUDPSender.acknowledge(ackUuid);
                                 System.out.println("Client: acknowledged UUID " + ackUuid);
                             }
-                            continue;  // skip normal dispatch for ACKs
+                            return;  // skip normal dispatch for ACKs
                         }
                         else{
 
@@ -235,7 +235,7 @@ public class Client {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                }
+                
             });
 
 
@@ -272,46 +272,39 @@ public class Client {
 
             // Sender Task: Continuously poll outgoingQueue and send messages.
             AsyncManager.runLoop(() -> {
-                while (true) {
-                    try {
-                        // this can throw InterruptedException
-                        Message msg = outgoingQueue.take();
 
-                        // take() never returns null, so no need to check for null here
-                        InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
-
-                        if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                            // best‑effort
-                            String encoded = MessageCodec.encode(msg);
-                            byte[] data     = encoded.getBytes(StandardCharsets.UTF_8);
-                            DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
-                            clientSocket.send(packet);
-                            System.out.println("Best effort sent: " + encoded);
-
-                        } else if ("CLIENT".equalsIgnoreCase(msg.getOption())) {
-                            // local update
+                try {
+                    Message msg = outgoingQueue.take();                 // blocks
+            
+                    InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
+            
+                    switch (msg.getOption().toUpperCase()) {
+                        case "GAME": {                                  // best-effort
+                            String enc = MessageCodec.encode(msg);
+                            byte[] data = enc.getBytes(StandardCharsets.UTF_8);
+                            clientSocket.send(new DatagramPacket(data, data.length, dest, SERVER_PORT));
+                            break;
+                        }
+                        case "CLIENT": {                                // local only
                             AsyncManager.run(() -> updateLocalClientState(msg));
-
-                        } else {
-                            // reliable
+                            break;
+                        }
+                        default: {                                      // reliable
                             myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
                         }
-
-                    } catch (InterruptedException ie) {
-                        // Restore the interrupt and exit loop (or return)
-                        Thread.currentThread().interrupt();
-                        break;
-
-                    } catch (UnknownHostException uhe) {
-                        System.err.println("Invalid server address: " + SERVER_ADDRESS);
-                        uhe.printStackTrace();
-
-                    } catch (IOException ioe) {
-                        System.err.println("I/O error while sending message");
-                        ioe.printStackTrace();
                     }
+            
+                } catch (InterruptedException ie) {         // graceful shutdown
+                    Thread.currentThread().interrupt();     // restore the flag
+                    return;                                 // leave this run() call
+            
+                } catch (IOException ioe) {
+                    System.err.println("I/O error while sending message");
+                    ioe.printStackTrace();
+                    // keep the sender thread alive – no return here
                 }
             });
+            
 
 
             // Block the main thread indefinitely.
