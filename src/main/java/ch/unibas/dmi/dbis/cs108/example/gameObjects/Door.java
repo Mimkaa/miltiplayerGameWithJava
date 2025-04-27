@@ -39,10 +39,11 @@ public class Door extends GameObject {
         for (GameObject go : currentGame.getGameObjects()) {
             if (go instanceof Key) {
                 Key key = (Key) go;
-                if (this.intersects(key)) {
-                    if (!hasWon) {
+                if (this.intersects(key, 1.5)) {
+                    if(!hasWon)
+                    {
                         hasWon = true;
-                        System.out.println("You won the game!");
+                        //System.out.println("You won the game!");
 
                         LevelTimer levelTimer = LevelTimer.getInstance();
                         levelTimer.stop();
@@ -50,12 +51,13 @@ public class Door extends GameObject {
 
                         // sends message that the level is finished
                         if (parentGame.isAuthoritative()) {
-                        Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "RESPONSE");
+                            Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "RESPONSE");
 
-                        Server.getInstance().broadcastMessageToAll(winMsg);
-                        System.out.println("sending Win Message");
-                        break;
-}                   }
+                            Server.getInstance().broadcastMessageToAll(winMsg);
+                        }
+                        //System.out.println("key touched me");
+                    }
+                    
                 }
             }
         }

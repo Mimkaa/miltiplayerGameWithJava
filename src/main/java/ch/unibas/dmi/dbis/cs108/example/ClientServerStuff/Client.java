@@ -206,7 +206,7 @@ public class Client {
                             receivePacket.getData(), 0, receivePacket.getLength(),
                             StandardCharsets.UTF_8
                         );
-                        System.out.println("Received (UDP): " + response);
+                        //System.out.println("Received (UDP): " + response);
 
                         Message receivedMessage = MessageCodec.decode(response);
 

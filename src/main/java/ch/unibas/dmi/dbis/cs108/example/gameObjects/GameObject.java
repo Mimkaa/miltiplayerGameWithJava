@@ -162,6 +162,29 @@ public abstract class GameObject {
     }
 
     /**
+     * @param other        object to test against
+     * @param widthFactor  multiplier for {@code other}'s width (1 = no change)
+     * @return             {@code true} if the two boxes now overlap
+     */
+    public boolean intersects(GameObject other, double widthFactor) {
+
+        /* --- scale “other” around its centre on the X-axis --- */
+        double scaledWidth  = other.getWidth() * widthFactor;
+        double deltaWidth   = scaledWidth - other.getWidth();     // growth (+) or shrinkage (−)
+        double otherXScaled = other.getX() - deltaWidth / 2.0;    // shift left so centre stays put
+
+        /* --- unchanged Y-axis (height) --- */
+        double otherY       = other.getY();
+        double otherHeight  = other.getHeight();
+
+        return this.getX()               < otherXScaled + scaledWidth &&
+            this.getX() + this.getWidth() > otherXScaled          &&
+            this.getY()               < otherY + otherHeight      &&
+            this.getY() + this.getHeight() > otherY;
+    }
+
+
+    /**
      * Resolves collisions based on whether objects are movable.
      */
     public void resolveCollision(GameObject other) {

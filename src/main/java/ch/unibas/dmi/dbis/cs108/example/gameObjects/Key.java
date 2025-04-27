@@ -178,7 +178,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         // Use the parent game reference instead of GameContext.
         Game currentGame = getParentGame();
         if (currentGame == null) return;
-        final float tolerance = 20.0f;
+        final float tolerance = 5.0f;
         for (GameObject other : currentGame.getGameObjects()) {
             if (other == this || !other.isCollidable()) continue;
             if (this.intersects(other)) {
@@ -188,19 +188,11 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                     ownerId = other.getId();
                     System.out.println("Key " + getName() + " now owned by player " + ownerId);
                 }
-                // Check win condition: if key touches a Door.
-                if (other instanceof Door) {
-                    System.out.println("Key " + getName() + " touched a Door. You won the game!");
-                    Message winMsg = new Message("WIN", new Object[]{"You won the game!"}, null);
-                    sendMessage(winMsg);
-                    Platform.runLater(() -> {
-                        // Optionally, add a win overlay message (e.g., display a label).
-                    });
-                }
+                
                 // Simple landing check.
                 if (Math.abs((getY() + getHeight()) - other.getY()) < tolerance && vy >= 0) {
                     onGround = true;
-                    vy = 0;
+                    //vy = 0;
                 }
             }
         }
@@ -221,8 +213,8 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                         // Send frequent sync updates (every 0.1 sec).
                         if (ownerId != null && ownerId.equals(currentGame.getSelectedGameObjectId())) {
                             if (now - lastSyncTime >= 100_000_000L) {
-                                Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
-                                sendMessage(syncMsg);
+                                //Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
+                                //sendMessage(syncMsg);
                                 lastSyncTime = now;
                             }
                         }
@@ -245,15 +237,15 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         // Send periodic sync updates when not grabbed.
         if (ownerId != null && ownerId.equals(getParentGame().getSelectedGameObjectId())) {
             if (now - lastSyncTime >= 1_000_000_000L) {
-                Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
-                sendMessage(syncMsg);
+                //Message syncMsg = new Message("SYNC", new Object[]{getX(), getY()}, null);
+                //sendMessage(syncMsg);
                 lastSyncTime = now;
             }
         }
         if (parentGame.isAuthoritative()) {
                 // Broadcast a snapshot.
                 Message snapshot = createSnapshot();
-                Server.getInstance().sendMessageBestEffort(snapshot);
+                //Server.getInstance().sendMessageBestEffort(snapshot);
         }
     }
 
