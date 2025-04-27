@@ -7,8 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.*;
 
@@ -16,13 +15,13 @@ class ExitCommandHandlerTest {
 
     private Server mockServer;
     private ExitCommandHandler handler;
-    private Map<String, InetSocketAddress> clientsMap;
+    private ConcurrentHashMap<String, InetSocketAddress> clientsMap;
 
     @BeforeEach
     void setUp() {
         mockServer = mock(Server.class);
         handler = new ExitCommandHandler();
-        clientsMap = new HashMap<>();
+        clientsMap = new ConcurrentHashMap<>();
 
         when(mockServer.getClientsMap()).thenAnswer(invocation -> clientsMap);
     }
@@ -31,7 +30,7 @@ class ExitCommandHandlerTest {
     void testHandle_RemovesUserAndSendsExitMessage() throws Exception {
         // Arrange
         String username = "testUser";
-        Message incomingMessage = new Message("EXIT", new String[]{}, "COMMAND");
+        Message incomingMessage = new Message("EXIT", new Object[]{}, "COMMAND");
 
         InetAddress address = InetAddress.getByName("127.0.0.1");
         int port = 12345;
