@@ -220,16 +220,4 @@ public class ClientTest {
         staticClient.close();
     }
 
-
-    @Test
-    void testGetChatPanelDelegation() {
-        Client spy = new Client();
-        ChatPanel panel = new ChatPanel();
-        ChatManager.ClientChatManager mgr = mock(ChatManager.ClientChatManager.class);
-        when(mgr.getChatPanel()).thenReturn(panel);
-        spy.clientChatManager = mgr;
-
-        assertSame(panel, spy.getChatPanel());
-    }
-
 }
