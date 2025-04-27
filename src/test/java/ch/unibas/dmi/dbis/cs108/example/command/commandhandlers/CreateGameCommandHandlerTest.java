@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class CreateGameCommandHandlerTest {
@@ -44,7 +45,9 @@ class CreateGameCommandHandlerTest {
 
         // Assert
         verify(mockGameSessionManager, times(1)).addGameSession(anyString(), any(Game.class));
-        verify(mockServer, times(1)).broadcastMessageToAll(any(Message.class));
+        verify(mockServer, times(1)).broadcastMessageToAll(argThat(message ->
+                "CREATEGAME".equals(message.getMessageType())
+        ));
     }
 
     @Test
