@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.application.Platform;
@@ -68,8 +69,8 @@ public class Door extends GameObject {
                         });
 
                         // sends message that the level is finished
-                        Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "REQUEST");
-                        sendMessage(winMsg);
+                        Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "GAME");
+                        Server.getInstance().sendMessageBestEffort(winMsg);
                         System.out.println("sending Win Message");
                         break;
                     }

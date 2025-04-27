@@ -1,9 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObjectFactory;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.Platform;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.*;
 import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
@@ -207,6 +204,11 @@ public class Game {
                             ((Player2) a).getVel().y = 0;
                         } else if (b instanceof Player2 && a instanceof Platform) {
                             ((Player2) b).getVel().y = 0;
+                        }
+                        else if (a instanceof Key && b instanceof Platform) {
+                            ((Key) a).setVelocityY(0.0f);
+                        } else if (b instanceof Player2 && a instanceof Platform) {
+                            ((Key) b).setVelocityY(0.0f);
                         }
                     }
                 }

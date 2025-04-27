@@ -2,10 +2,13 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import javafx.application.Platform;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+
+import java.util.Arrays;
 
 public class Key extends GameObject implements IGravityAffected, IGrabbable, IThrowable {
 
@@ -86,8 +89,20 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
 
     @Override
     public void setVelocity(float vx, float vy) {
-        this.x += vx * 4;
-        this.y += vy * 2;  // Set the velocity of the key
+        this.vx += vx * 4;
+        this.vy += vy * 2;  // Set the velocity of the key
+    }
+
+    public void setVelocityY(float vy) {
+        this.vy += vy;
+    }
+
+    public float getVelocityX() {
+        return this.vx;
+    }
+
+    public float getVelocityY() {
+        return this.vy;
     }
 
     @Override
@@ -138,7 +153,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     public void applyGravity(float deltaTime) {
         if (!onGround && !isGrabbed) {
             if (vy < 0) {
-                vy += GravityEngine.GRAVITY * deltaTime * 0.5f;
+                vy += GravityEngine.GRAVITY * deltaTime;
             } else {
                 vy += GravityEngine.GRAVITY * deltaTime;
             }
@@ -149,8 +164,6 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
             float newX = x + vx * deltaTime;
             setY(newY);
             setX(newX);
-            y = newY;
-            x = newX;
         }
     }
 
@@ -234,6 +247,11 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                 lastSyncTime = now;
             }
         }
+        if (parentGame.isAuthoritative()) {
+                // Broadcast a snapshot.
+                Message snapshot = createSnapshot();
+                Server.getInstance().sendMessageBestEffort(snapshot);
+        }
     }
 
     @Override
@@ -267,8 +285,25 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
                 }
                 System.out.println("Processed THROW for " + getName() + ": new velocity (" + vx + ", " + vy + ")");
             }
-        } else {
-            System.out.println("Unhandled message type: " + msg.getMessageType());
+        } else if ("SNAPSHOT".equals(msg.getMessageType())) {
+            // Process SNAPSHOT messages for non-authoritative clients.
+            Object[] params = msg.getParameters();
+            if (params != null && params.length >= 6) {
+                try {
+                    float newX = Float.parseFloat(params[0].toString());
+                    float newY = Float.parseFloat(params[1].toString());
+
+                    this.x = newX;
+                    this.y = newY;
+
+                    System.out.println("Processed SNAPSHOT for " + getId()
+                            + ": pos=(" + newX + ", " + newY + ")");
+                } catch (NumberFormatException ex) {
+                    System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
+                }
+            } else {
+                System.out.println("SNAPSHOT message does not contain enough parameters.");
+            }
         }
     }
 
