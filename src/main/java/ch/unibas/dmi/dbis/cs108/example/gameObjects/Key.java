@@ -17,7 +17,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
     // Physics properties.
     private float mass;
     private float vx = 0.0f, vy = 0.0f;
-    private float terminalVelocity = 600.0f;
+    private float terminalVelocity = 200.0f;
     // Time tracking for sync.
     private long lastSyncTime = System.nanoTime();
     // Ground state.
@@ -178,7 +178,7 @@ public class Key extends GameObject implements IGravityAffected, IGrabbable, ITh
         // Use the parent game reference instead of GameContext.
         Game currentGame = getParentGame();
         if (currentGame == null) return;
-        final float tolerance = 5.0f;
+        final float tolerance = 20.0f;
         for (GameObject other : currentGame.getGameObjects()) {
             if (other == this || !other.isCollidable()) continue;
             if (this.intersects(other)) {
