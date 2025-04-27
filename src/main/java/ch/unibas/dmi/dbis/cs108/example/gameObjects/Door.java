@@ -69,11 +69,12 @@ public class Door extends GameObject {
                         });
 
                         // sends message that the level is finished
+                        if (parentGame.isAuthoritative()) {
                         Message winMsg = new Message("WIN", new Object[]{"You won the game!",elapsedTime}, "GAME");
                         Server.getInstance().sendMessageBestEffort(winMsg);
                         System.out.println("sending Win Message");
                         break;
-                    }
+}                   }
                 }
             }
         }
