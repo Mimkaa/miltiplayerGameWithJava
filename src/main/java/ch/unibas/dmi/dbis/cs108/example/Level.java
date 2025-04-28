@@ -6,14 +6,22 @@ import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 
 public class Level {
 
+    private boolean initialised = false;
+
     public Level() {
-        // Constructor
+        // Konstruktor
     }
 
     /**
      * Initialize the level with layout adapted to screen size.
+     * Ensures that initialization runs only once.
      */
     public void initializeLevel(double screenWidth, double screenHeight) {
+        if (initialised) {
+            return;
+        }
+        initialised = true;
+
         String sessionId = GameContext.getCurrentGameId();
         if (sessionId == null) {
             System.out.println("No session ID. Cannot initialize level.");
@@ -37,39 +45,14 @@ public class Level {
         }
 
         // === 2. Key ===
-
         Object[] keyParams = new Object[]{
-
                 sessionId, "Key", "Key1",
                 (float) (screenWidth * 0.15), (float) (screenHeight * 0.15),
-                40.0f, 40.0f, 1.0F,sessionId
+                40.0f, 40.0f, 1.0F, sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
 
-        // --- Create the key (optional) ---
-        // If you still want a key for this level, keep this block:
-        //Object[] keyParams = new Object[] {
-        //        sessionId,
-        //        "Key",
-        //        "Key1",
-        //        150.0f,   // x
-        //        100.0f,   // y
-        //        30.0f,    // width
-        //        30.0f,    // height
-        //        sessionId
-        //};
-        //Client.sendMessageStatic(new Message("CREATEGO", keyParams, "REQUEST"));
-
-        
-        // --- Create two players (Alfred and Gerald) ---
-        // Delay to ensure server state is ready before adding players.
-        //try {
-        //    Thread.sleep(5000);  // 5-second delay
-        //} catch (InterruptedException ex) {
-        //    Thread.currentThread().interrupt();
-        //}
-
-        // === 4. Players ===
+        // === 3. Players ===
         Object[] alfredParams = new Object[]{
                 sessionId, "Player2", "Alfred",
                 (float) (screenWidth * 0.2), (float) (screenHeight * 0.4),
@@ -84,7 +67,7 @@ public class Level {
         };
         Client.sendMessageStatic(new Message("CREATEGO", geraldParams, "REQUEST"));
 
-        // === 5. Final Platform ===
+        // === 4. Final Platform ===
         Object[] finalPlatformParams = new Object[]{
                 sessionId, "Platform", "Floor5",
                 (float) (screenWidth * 0.85), (float) (screenHeight * 0.65),
@@ -92,7 +75,7 @@ public class Level {
         };
         Client.sendMessageStatic(new Message("CREATEGO", finalPlatformParams, "REQUEST"));
 
-        // === 6. Door ===
+        // === 5. Door ===
         Object[] doorParams = new Object[]{
                 sessionId, "Door", "Door1",
                 (float) (screenWidth * 0.1), (float) (screenHeight * 0.65),
