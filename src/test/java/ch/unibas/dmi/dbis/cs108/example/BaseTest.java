@@ -2,40 +2,59 @@
 package ch.unibas.dmi.dbis.cs108.example;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
-import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.mockito.*;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+
+import java.lang.reflect.Method;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 
 public abstract class BaseTest {
-
-    @Mock
-    Server server;
-    @Mock GameSessionManager gsm;
-    @Mock Game fakeGame;
-    @Mock GameObject fakeObj;
-    @Captor ArgumentCaptor<Message> msgCap;
 
     private static MockedStatic<AsyncManager> asyncMock;
 
     @BeforeAll
-    static void initAsyncManager() {
-        asyncMock = Mockito.mockStatic(AsyncManager.class);
-        asyncMock
-                .when(() -> AsyncManager.run(Mockito.any(Runnable.class)))
-                .thenAnswer(inv -> {
-                    Runnable r = inv.getArgument(0);
-                    r.run();
-                    return null;
-                });
+    static void initAsyncManagerMock() {
+        // Hier legen wir als Default-Answer fest, was bei jedem statischen Aufruf passieren soll.
+        asyncMock = Mockito.mockStatic(AsyncManager.class, invocation -> {
+            Method m = invocation.getMethod();
+            Object[] args = invocation.getArguments();
+
+            switch (m.getName()) {
+                case "run":
+                    // Überprüfe, ob Runnable-Overload
+                    if (args.length == 1 && args[0] instanceof Runnable) {
+                        ((Runnable) args[0]).run();
+                        return null;
+                    }
+                    // oder Callable-Overload
+                    if (args.length == 1 && args[0] instanceof Callable) {
+                        try {
+                            return ((Callable<?>) args[0]).call();
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    break;
+                case "runLoop":
+                    // Einfach einmal ausführen (nicht endlos)
+                    if (args.length == 1 && args[0] instanceof Runnable) {
+                        ((Runnable) args[0]).run();
+                        return null;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            // Für alle anderen statischen Methoden gehen wir zurück zur echten Implementierung
+            return invocation.callRealMethod();
+        });
     }
 
     @AfterAll
-    static void teardownAsyncManager() {
+    static void teardownAsyncManagerMock() {
         asyncMock.close();
     }
 }
