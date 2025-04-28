@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  * </p>
  */
-class ServerTest {
+class ServerTest extends BaseTest{
 
     private Server server;
 

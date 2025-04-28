@@ -1,6 +1,7 @@
 // src/test/java/ch/unibas/dmi/dbis/cs108/example/command/commandhandlers/CreateGoCommandHandlerTest.java
 package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 
+import ch.unibas.dmi.dbis.cs108.example.BaseTest;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -19,7 +20,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class CreateGoCommandHandlerTest {
+class CreateGoCommandHandlerTest extends BaseTest {
 
     @Mock Server               server;
     @Mock GameSessionManager   gsm;
