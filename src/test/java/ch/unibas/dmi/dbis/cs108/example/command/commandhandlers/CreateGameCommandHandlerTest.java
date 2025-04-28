@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 
+import ch.unibas.dmi.dbis.cs108.example.BaseTest;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -14,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-class CreateGameCommandHandlerTest {
+class CreateGameCommandHandlerTest extends BaseTest {
 
     private Server mockServer;
     private GameSessionManager mockGameSessionManager;

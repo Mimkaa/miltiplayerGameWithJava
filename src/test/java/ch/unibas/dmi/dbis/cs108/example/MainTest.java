@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * An example test class.
  * Checks the output of the {@link Main} class and verifies that it contains "Suggested Nickname:".
  */
-public class MainTest {
+public class MainTest extends BaseTest{
 
     // Streams to capture System.out and System.err output.
     private final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
