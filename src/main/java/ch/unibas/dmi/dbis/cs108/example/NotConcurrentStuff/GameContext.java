@@ -13,9 +13,11 @@ import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.StringProperty;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -377,6 +379,28 @@ public class GameContext {
                         });
                     }
                 }
+
+                else if ("CHANGEUSERNAME".equals(type)) {
+                    /* Expected parameters: [ "OK"/"FAIL", oldName, newName ] */
+                    Object[] p = receivedMessage.getParameters();
+                    if (p == null || p.length < 3) {
+                        System.out.println("CHANGEUSERNAME response missing parameters");
+                        return;
+                    }
+                
+                    boolean ok      = "OK".equalsIgnoreCase(p[0].toString());
+                    String oldName  = p[1].toString();
+                    String newName  = p[2].toString();
+                
+                    if (ok) {
+                        
+                
+                        // 2) Print success and refresh any UI that shows player lists
+                        System.out.printf("changed:" + oldName +" to " + newName);
+                
+                    }
+                }
+                
                 else if ("STARTGAME".equals(type)) {
                     System.out.println("Processing STARTGAME message: " + receivedMessage);
                     if (receivedMessage.getParameters() != null && receivedMessage.getParameters().length > 0) {
@@ -572,7 +596,60 @@ public class GameContext {
             guiInterfaces.setTranslateY(10);
             layeredRoot.getChildren().add(guiInterfaces);
 
+            // ─── create the controls ─────────────────────────────────────────────
+            TextField renameField = new TextField();
+            renameField.setPromptText(Client.getInstance().getUsername().get());    // gray hint text
+
+            Button changeNameBtn = new Button("Change User name");
+
+            // small horizontal container so the field and button stay together
+            HBox renameBar = new HBox(6, renameField, changeNameBtn);
+            renameBar.setAlignment(Pos.TOP_RIGHT);      // field then button
+
+            // ─── pin the bar to the top-right of the StackPane ──────────────────
+            StackPane.setAlignment(renameBar, Pos.TOP_RIGHT);
+
+            // push it 10 px from the right & 10 px from the top
+            renameBar.setTranslateX(-10);   // negative X moves left from the edge
+            renameBar.setTranslateY(10);
+
+            changeNameBtn.setOnAction(ev -> {
+                String newName = renameField.getText().trim();
+                
+                if (newName.isEmpty()) {
+                    return;                       // nothing to do
+                }
+
+                /* 1)  update the local username property */
+                
+
+                /* 2)  (optional but recommended) tell the server so everyone else
+                    sees the change – here we reuse your CHANGENAME protocol   */
+                Message changeReq = new Message(
+                        "CHANGEUSERNAME",
+                        new Object[]{
+                                Client.getInstance().getUsername().get(),
+                                newName
+                        },
+                        "REQUEST"
+                );
+
+                /* 3)  clean up the field */
+                renameField.clear();
+                renameField.setPromptText(newName);
+                
+                Client.sendMessageStatic(changeReq);
+                Client.getInstance().setUsername(newName);
+                
+            });
+
+            // finally add to the layer stack
+            layeredRoot.getChildren().add(renameBar);
+
             CentralGraphicalUnit.getInstance().addNode(layeredRoot);
+
+            
+
 
             System.out.println("All UI components have been added via GameUIComponents.");
         });

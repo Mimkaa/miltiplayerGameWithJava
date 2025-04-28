@@ -605,6 +605,8 @@ public class Client {
         username.set(newUsername);
     }
 
+   
+
     /**
      * Sends multiple CREATE messages in quick succession, each creating a "Player"
      * object at incrementally spaced coordinates. Useful for testing or debugging.

@@ -432,6 +432,53 @@ public class Server {
         }
     }
 
+    /**
+     * Renames a connected user in every place the server knows about:
+     *   1) clientsMap    – socket lookup
+     *   2) every Game    – Game#getUsers() set
+     *
+     * @return true if rename was performed, false if oldName not found
+     *         or newName already taken.
+     */
+    public boolean renameUser(String oldName, String newName) {
+        // debug: what was passed in, and what keys we actually have
+        System.out.printf("renameUser called: oldName='%s', newName='%s'%n", oldName, newName);
+        System.out.println("  clientsMap before → " + clientsMap.keySet());
+    
+        // 0) disallow trivial no-ops or collisions
+        if (oldName.equals(newName)) {
+            System.out.println("  abort: old==new");
+            return false;
+        }
+        if (clientsMap.containsKey(newName)) {
+            System.out.println("  abort: newName already in use");
+            return false;
+        }
+    
+        // 1) make sure the old name exists
+        if (!clientsMap.containsKey(oldName)) {
+            System.out.println("  abort: oldName not connected");
+            return false;
+        }
+    
+        // 2) perform the move
+        InetSocketAddress socket = clientsMap.remove(oldName);
+        clientsMap.put(newName, socket);
+        System.out.println("  clientsMap after → " + clientsMap.keySet());
+    
+        // 3) update every game’s user lists
+        for (Game g : gameSessionManager.getAllGameSessionsVals()) {
+            if (g.getUsers().remove(oldName)) {
+                g.getUsers().add(newName);
+            }
+        }
+    
+        System.out.printf("  rename succeeded: %s → %s%n", oldName, newName);
+        return true;
+    }
+    
+
+
 
     /**
      * Asynchronously sends a best‑effort plain‑UDP ACK for the given message
