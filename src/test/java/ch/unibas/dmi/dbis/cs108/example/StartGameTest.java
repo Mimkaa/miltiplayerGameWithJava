@@ -1,4 +1,3 @@
-// src/test/java/ch/unibas/dmi/dbis/cs108/example/integration/ServerStartupTest.java
 package ch.unibas.dmi.dbis.cs108.example;
 
 import org.junit.jupiter.api.AfterAll;
@@ -14,10 +13,12 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ServerStartupTest {
+class StartGameTest {
 
     private static Process serverProcess;
-    private static Path jar = Paths.get("build", "libs", "Think_Outside_The_Room-0.0.1-ALPHA.jar");
+    private static Path jar =
+            Paths.get("build","libs","Think_Outside_The_Room-0.0.1-ALPHA-all.jar");
+
 
     @BeforeAll
     static void launchServer() throws Exception {

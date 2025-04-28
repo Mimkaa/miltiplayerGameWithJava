@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 
+import ch.unibas.dmi.dbis.cs108.example.BaseTest;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
@@ -13,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class DeleteCommandHandlerTest {
+class DeleteCommandHandlerTest extends BaseTest {
 
     private Server mockServer;
     private Game realGameInstance;

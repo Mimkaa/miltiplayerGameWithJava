@@ -2,7 +2,10 @@ plugins {
     id 'java-library'
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.13'
-}
+    id 'com.github.johnrengelman.shadow' version '7.1.2'}
+
+
+
 
 // Projectinformation
 group 'ch.unibas.dmi.dbis'
@@ -67,6 +70,7 @@ dependencies {
 // Testconfiguration
 test {
     useJUnitPlatform()
+    dependsOn tasks.named("shadowJar")
 }
 
 // JAR-configuration(inkl. dependencies )
@@ -112,4 +116,12 @@ tasks.register('build-cs108') {
     group = "build"
     description = "Builds the project, executable JAR, and Javadoc."
     dependsOn 'clean', 'build', 'javadoc'
+}
+
+shadowJar {
+    archiveClassifier.set('all')
+    mergeServiceFiles()
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
 }
