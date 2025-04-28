@@ -9,6 +9,16 @@ import lombok.Setter;
 
 import java.util.Arrays;
 
+/**
+ * The {@code MovingPlatform} class represents a platform that oscillates
+ * between specified start and end positions along both the X and Y axes.
+ * <p>
+ * Movement is computed based on velocity and direction, and position updates
+ * are sent as "MOVE" messages when running in a server context.
+ * Rendering is done via JavaFX by drawing a gray rectangle and optionally
+ * displaying the platform's name.
+ * </p>
+ */
 @Getter
 @Setter
 public class MovingPlatform extends GameObject implements IMovable {
@@ -34,20 +44,25 @@ public class MovingPlatform extends GameObject implements IMovable {
     private float elapsedTime = 0;
 
     /**
-     * Constructs a MovingPlatform game object that oscillates in both x and y.
+     * Constructs a MovingPlatform that oscillates between given bounds.
      *
-     * @param name    The platform's name.
-     * @param startX  The left-most x position.
-     * @param endX    The right-most x position.
-     * @param startY  The top-most y position.
-     * @param endY    The bottom-most y position.
-     * @param width   The width of the platform.
-     * @param height  The height of the platform.
-     * @param periodX The period (in seconds) for a full horizontal oscillation cycle.
-     * @param periodY The period (in seconds) for a full vertical oscillation cycle.
-     * @param gameId  The game session ID.
+     * @param name    the platform's display name
+     * @param startX  the minimum x-coordinate
+     * @param endX    the maximum x-coordinate
+     * @param startY  the minimum y-coordinate
+     * @param endY    the maximum y-coordinate
+     * @param width   the platform's width
+     * @param height  the platform's height
+     * @param periodX the horizontal oscillation period in seconds
+     * @param periodY the vertical oscillation period in seconds
+     * @param gameId  the ID of the game session this platform belongs to
      */
-    public MovingPlatform(String name, float startX, float endX, float startY, float endY, float width, float height, float periodX, float periodY, String gameId) {
+    public MovingPlatform(String name,
+                          float startX, float endX,
+                          float startY, float endY,
+                          float width, float height,
+                          float periodX, float periodY,
+                          String gameId) {
         super(name, gameId);
         this.startX = startX;
         this.endX = endX;
@@ -57,34 +72,28 @@ public class MovingPlatform extends GameObject implements IMovable {
         this.height = height;
         this.periodX = periodX;
         this.periodY = periodY;
-        // Initialize current position to the starting positions.
         this.x = startX;
         this.y = startY;
-        // Initialize time tracking.
         this.lastUpdateNano = System.nanoTime();
     }
 
-
     private float velocityX = 100f; // units per second
     private float velocityY = 100f;
-
-    private int directionX = 1; // +1 or -1
+    private int directionX = 1;     // +1 or -1
     private int directionY = 1;
 
     /**
-     * Implements the movement behavior.
-     * Uses deltaTime to update the accumulated elapsed time and then
-     * computes new positions using cosine interpolation.
+     * Moves the platform according to its velocity and direction,
+     * reversing direction when reaching bounds, and sends a MOVE message
+     * if running on the server.
      *
-     * @param deltaTime the time in seconds since the last update.
+     * @param deltaTime time elapsed since the last update, in seconds
      */
     @Override
     public void move(float deltaTime) {
-        // Berechne neue Position
         float newX = x + velocityX * directionX * deltaTime;
         float newY = y + velocityY * directionY * deltaTime;
 
-        // Kollision mit Begrenzung (links/rechts)
         if (newX < startX) {
             newX = startX;
             directionX = 1;
@@ -93,7 +102,6 @@ public class MovingPlatform extends GameObject implements IMovable {
             directionX = -1;
         }
 
-        // Kollision mit Begrenzung (oben/unten)
         if (newY < startY) {
             newY = startY;
             directionY = 1;
@@ -105,18 +113,24 @@ public class MovingPlatform extends GameObject implements IMovable {
         setX(newX);
         setY(newY);
 
-        // Nur auf dem Server senden
-        Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
-        sendMessage(moveMsg);
+        if (isServerInstance()) {
+            Message moveMsg = new Message("MOVE", new Object[]{getX(), getY()}, null);
+            sendMessage(moveMsg);
+        }
     }
 
+    /**
+     * Determines if this instance is running on the server (no JavaFX thread).
+     *
+     * @return true if server-side, false if client-side
+     */
     private boolean isServerInstance() {
-        // Trick: Auf dem Server läuft kein JavaFX, daher kein FX Application Thread.
         return !Thread.currentThread().getName().contains("JavaFX");
     }
 
     /**
-     * Local update method that computes the deltaTime and then calls move.
+     * Local update called each frame; computes deltaTime and moves platform
+     * when running on the server.
      */
     @Override
     public void myUpdateLocal() {
@@ -128,45 +142,52 @@ public class MovingPlatform extends GameObject implements IMovable {
         }
     }
 
+    /**
+     * Stub for time-based updates; not implemented.
+     *
+     * @param deltaTime time since last update, in seconds
+     */
     @Override
     public void myUpdateLocal(float deltaTime) {
-
     }
 
+    /**
+     * Applies a global update based on a received Message.
+     * Handles MOVE messages to set the platform's position.
+     *
+     * @param msg the received Message with type "MOVE" and parameters [ newX, newY ]
+     */
     @Override
     protected void myUpdateGlobal(Message msg) {
         if ("MOVE".equals(msg.getMessageType())) {
             Object[] params = msg.getParameters();
             System.out.println("MovingPlatform MOVE message parameters: " + Arrays.toString(params));
-
             if (params.length >= 2) {
                 float newX = (params[0] instanceof Number)
                         ? ((Number) params[0]).floatValue()
                         : Float.parseFloat(params[0].toString());
-
                 float newY = (params[1] instanceof Number)
                         ? ((Number) params[1]).floatValue()
                         : Float.parseFloat(params[1].toString());
-
                 synchronized (this) {
                     setX(newX);
                     setY(newY);
                 }
-
                 System.out.println("Processed MOVE for platform " + getName() +
                         ": new position x=" + newX + ", y=" + newY);
             }
         }
     }
 
-
+    /**
+     * Renders the platform as a gray rectangle and its name above it.
+     *
+     * @param gc the JavaFX GraphicsContext to draw on
+     */
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw the platform as a gray rectangle.
         gc.setFill(Color.GRAY);
         gc.fillRect(getX(), getY(), getWidth(), getHeight());
-
-        // Optionally, draw the platform's name above it.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         text.setFont(gc.getFont());
@@ -174,26 +195,27 @@ public class MovingPlatform extends GameObject implements IMovable {
         gc.fillText(getName(), getX() + getWidth() / 2 - textWidth / 2, getY() - 5);
     }
 
+    /**
+     * Creates a "SNAPSHOT" Message containing the current position.
+     * concealedParameters are set to this object's ID and gameId.
+     *
+     * @return a Message of type "SNAPSHOT" with parameters [ x, y ]
+     */
     @Override
     public Message createSnapshot() {
-        // Pack the position, velocity, and acceleration into an Object array.
-        Object[] params = new Object[]{
-            x, y,   // Position
-           
-            
-        };
-        // Create a new message with type "SNAPSHOT" and an appropriate option (e.g., "UPDATE").
+        Object[] params = new Object[]{ x, y };
         Message snapshotMsg = new Message("SNAPSHOT", params, "GAME");
-        
-        // Set the concealed parameters so receivers know the source of the snapshot.
         snapshotMsg.setConcealedParameters(new String[]{ getId(), getGameId() });
-        
         return snapshotMsg;
     }
 
+    /**
+     * Returns the constructor parameters in the same order as the signature.
+     *
+     * @return an Object array of constructor arguments
+     */
     @Override
     public Object[] getConstructorParamValues() {
-        // Return parameters in the same order as the constructor.
         return new Object[]{ getName(), startX, endX, startY, endY, getWidth(), getHeight(), periodX, periodY, getGameId() };
     }
 }

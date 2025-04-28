@@ -11,7 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.mockito.*;
 
 /**
- * A base class for all command‐handler unit tests.
+ * A base class for all command handler unit tests.
  * <p>
  * Provides:
  * <ul>
