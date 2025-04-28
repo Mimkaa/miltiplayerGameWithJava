@@ -41,9 +41,8 @@ public class ThinkOutsideTheRoom {
         }
 
         String mode = args[0].toLowerCase();
-
         switch (mode) {
-            case "server":
+            case "server": {
                 if (args.length != 2) {
                     System.err.println("Usage: server <port>");
                     return;
@@ -51,7 +50,8 @@ public class ThinkOutsideTheRoom {
                 String port = args[1];
                 startServer(port);
                 break;
-            case "client":
+            }
+            case "client": {
                 if (args.length < 2 || args.length > 3) {
                     System.err.println("Usage: client <host:port> [username]");
                     return;
@@ -68,11 +68,47 @@ public class ThinkOutsideTheRoom {
                 prepareClientAndContext(host, clientPort, username);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
+            }
+            case "client-headless": {
+                if (args.length != 5) {
+                    System.err.println("Usage: client-headless <host> <port> <username> <gameName>");
+                    return;
+                }
+                String host     = args[1];
+                int    port     = Integer.parseInt(args[2]);
+                String username = args[3];
+                String gameName = args[4];
 
-            default:
-                System.err.println("Unknown mode. Use: server or client");
+                prepareClientAndContext(host, port, username);
+
+                // 1) Game anlegen
+                Client.sendMessageStatic(new Message("CREATEGAME",
+                        new Object[]{ gameName }, "REQUEST"));
+
+                // Warte kurz auf SessionId
+                try { Thread.sleep(500); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+
+                // 2) Joinen
+                String sessionId = GameContext.getCurrentGameId();
+                Client.sendMessageStatic(new Message("JOINGAME",
+                        new Object[]{ sessionId, username, sessionId }, "REQUEST"));
+
+                // 3) Bestätigung
+                System.out.println("Joined game: " + gameName);
+
+                // kurz leben bleiben, damit der Test die Zeile lesen kann
+                try { Thread.sleep(500); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+
+                return;
+            }
+            default: {
+                System.err.println("Unknown mode. Use: server, client, or client-headless");
+            }
         }
     }
+
 
     /**
      * Prints usage instructions to the console.

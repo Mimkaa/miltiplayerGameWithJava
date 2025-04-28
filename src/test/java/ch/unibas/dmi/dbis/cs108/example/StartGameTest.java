@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.nio.file.Files;
@@ -16,24 +18,24 @@ import static org.junit.jupiter.api.Assertions.*;
 class StartGameTest {
 
     private static Process serverProcess;
-    private static Path jar =
+    private static final Path JAR =
             Paths.get("build","libs","Think_Outside_The_Room-0.0.1-ALPHA-all.jar");
-
+    private static final int SERVER_PORT = 8888;
 
     @BeforeAll
     static void launchServer() throws Exception {
-        assertTrue(Files.exists(jar),
-                "Expected to find jar at " + jar.toAbsolutePath());
+        assertTrue(Files.exists(JAR),
+                "Expected to find jar at " + JAR.toAbsolutePath());
 
         serverProcess = new ProcessBuilder(
-                "java", "-jar", jar.toString(),
-                "server", "8888"
+                "java","-jar", JAR.toString(),
+                "server", String.valueOf(SERVER_PORT)
         )
                 .redirectErrorStream(true)
                 .inheritIO()
                 .start();
 
-        // give the server a moment to start up
+        // kurz warten, bis der Server hochgefahren ist
         Thread.sleep(1000);
     }
 
@@ -48,48 +50,49 @@ class StartGameTest {
     }
 
     @Test
-    void serverShouldBindUdpPort8888() {
-        // Try to bind our own UDP socket on 8888. If the server holds it, we'll get a SocketException.
-        boolean boundByServer;
-        try (DatagramSocket probe = new DatagramSocket(8888)) {
-            // if we get here, the port was NOT bound by the server
-            boundByServer = false;
+    void serverShouldBindUdpPort8888() throws Exception {
+        try (DatagramSocket probe = new DatagramSocket(SERVER_PORT)) {
+            fail("Port " + SERVER_PORT + " war nicht vom Server belegt");
         } catch (SocketException e) {
-            // expected: server has bound UDP/8888
-            boundByServer = true;
+            // gewuenscht: Server belegt den Port
         }
-
-        assertTrue(boundByServer, "Server did not bind UDP port 8888");
     }
 
     @Test
-    void clientShouldStartAndNotImmediatelyExit() throws Exception {
-        // Launch the client against our running server
-        Process clientProcess = new ProcessBuilder(
-                "java", "-jar", jar.toString(),
-                "client", "localhost:8888", "testUser"
+    void clientHeadlessCreatesAndJoinsGame() throws Exception {
+        String user     = "testUser";
+        String gameName = "MyGame";
+
+        Process client = new ProcessBuilder(
+                "java","-jar", JAR.toString(),
+                "client-headless",
+                "localhost",
+                String.valueOf(SERVER_PORT),
+                user,
+                gameName
         )
                 .redirectErrorStream(true)
-                .inheritIO()
                 .start();
 
-        try {
-            // Give the client a moment to attempt startup
-            Thread.sleep(500);
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(client.getInputStream())
+        );
 
-            // If the client has already exited, that's a failure.
-            try {
-                int exitCode = clientProcess.exitValue();
-                fail("Client exited immediately with code " + exitCode);
-            } catch (IllegalThreadStateException ise) {
-                // process is still running => good
-            }
-        } finally {
-            // Clean up the client
-            clientProcess.destroy();
-            if (!clientProcess.waitFor(2, TimeUnit.SECONDS)) {
-                clientProcess.destroyForcibly();
+        String line;
+        boolean joined = false;
+        long deadline = System.currentTimeMillis() + 5000;  // Timeout 5s
+
+        while (System.currentTimeMillis() < deadline
+                && (line = reader.readLine()) != null) {
+            if (line.contains("Joined game: " + gameName)) {
+                joined = true;
+                break;
             }
         }
+
+        client.destroy();
+        client.waitFor(2, TimeUnit.SECONDS);
+
+        assertTrue(joined, "Client hat das Game nicht erfolgreich erstellt und gejoint");
     }
 }
