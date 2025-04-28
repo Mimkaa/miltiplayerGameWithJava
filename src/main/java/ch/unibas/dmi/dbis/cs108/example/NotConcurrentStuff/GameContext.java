@@ -645,6 +645,8 @@ public class GameContext {
 
             // finally add to the layer stack
             layeredRoot.getChildren().add(renameBar);
+            renameBar.setPickOnBounds(false);
+
 
             CentralGraphicalUnit.getInstance().addNode(layeredRoot);
 
