@@ -1,10 +1,8 @@
-package ch.unibas.dmi.dbis.cs108.example;
+package ch.unibas.dmi.dbis.cs108.example.gameLogicTests;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AckProcessor;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.chat.ChatManager;
-import ch.unibas.dmi.dbis.cs108.example.chat.ChatPanel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -18,7 +16,6 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;

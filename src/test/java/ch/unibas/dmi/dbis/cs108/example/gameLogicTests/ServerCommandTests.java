@@ -1,5 +1,6 @@
-package ch.unibas.dmi.dbis.cs108.example;
+package ch.unibas.dmi.dbis.cs108.example.gameLogicTests;
 
+import ch.unibas.dmi.dbis.cs108.example.BaseTest;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -23,7 +24,7 @@ import java.util.UUID;
  * so you can confirm the server processes each message.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class ServerCommandTests extends BaseTest{
+public class ServerCommandTests extends BaseTest {
 
     /** The UDP socket for sending messages to the server. */
     private static DatagramSocket clientSocket;

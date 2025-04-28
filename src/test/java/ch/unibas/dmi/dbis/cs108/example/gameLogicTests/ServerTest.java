@@ -1,5 +1,6 @@
-package ch.unibas.dmi.dbis.cs108.example;
+package ch.unibas.dmi.dbis.cs108.example.gameLogicTests;
 
+import ch.unibas.dmi.dbis.cs108.example.BaseTest;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -29,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * </ul>
  * </p>
  */
-class ServerTest extends BaseTest{
+class ServerTest extends BaseTest {
 
     private Server server;
 

@@ -1,5 +1,8 @@
-package ch.unibas.dmi.dbis.cs108.example;
+package ch.unibas.dmi.dbis.cs108.example.gameLogicTests;
 
+import ch.unibas.dmi.dbis.cs108.example.BaseTest;
+import ch.unibas.dmi.dbis.cs108.example.Main;
+import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * An example test class.
  * Checks the output of the {@link Main} class and verifies that it contains "Suggested Nickname:".
  */
-public class MainTest extends BaseTest{
+public class MainTest extends BaseTest {
 
     // Streams to capture System.out and System.err output.
     private final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
