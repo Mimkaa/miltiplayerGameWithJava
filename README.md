@@ -86,5 +86,5 @@ Members: William Tran, Illia Solohub, Senanur Ates, Aiysha Frutiger
 
 [Network Protocol](docs/NetworkProtocol.pdf)
 
-[Manual](docs/Manual.pdf)
+[Manual](docs/Manual_THINKOUTSIDETHEROOM.pdf)
 
