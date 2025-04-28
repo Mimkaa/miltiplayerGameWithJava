@@ -73,7 +73,6 @@ public class BandageGuy extends GameObject {
      * If an image is loaded, it is drawn at (x, y) with the current width and height;
      * otherwise a placeholder text is displayed.
      *
-     * @param gc the JavaFX GraphicsContext to draw on
      */
     @Override
     public Object[] getConstructorParamValues() {
