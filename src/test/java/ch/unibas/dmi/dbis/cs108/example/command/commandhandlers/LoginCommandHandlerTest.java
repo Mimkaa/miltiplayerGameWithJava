@@ -14,6 +14,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link LoginCommandHandler}.
+ * <p>
+ * Verifies that the handler correctly looks up game objects by name,
+ * enqueues a response message with the found object’s ID, and handles
+ * scenarios where no matching object or no game instance is present.
+ * </p>
+ */
 class LoginCommandHandlerTest {
 
     private Server mockServer;
@@ -21,6 +29,9 @@ class LoginCommandHandlerTest {
     private ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game mockGame;
     private LoginCommandHandler handler;
 
+    /**
+     * Sets up mocks and the handler before each test.
+     */
     @BeforeEach
     void setUp() {
         mockServer = mock(Server.class);
@@ -31,6 +42,10 @@ class LoginCommandHandlerTest {
         when(mockServer.getMyGameInstance()).thenReturn(mockGame);
     }
 
+    /**
+     * Tests that when a matching game object exists,
+     * the handler enqueues a response message to the correct client address.
+     */
     @Test
     void testLoginFindsGameObjectAndResponds() {
         String senderUsername = "testUser";
@@ -56,6 +71,10 @@ class LoginCommandHandlerTest {
         verify(mockServer, times(1)).enqueueMessage(any(Message.class), any(), anyInt());
     }
 
+    /**
+     * Tests that when no game object matches the requested name,
+     * the handler still enqueues a message (with empty ID) to the client.
+     */
     @Test
     void testLoginNoMatchingGameObject() {
         String senderUsername = "testUser";
@@ -75,6 +94,10 @@ class LoginCommandHandlerTest {
         verify(mockServer, times(1)).enqueueMessage(any(Message.class), any(), anyInt());
     }
 
+    /**
+     * Tests that when there is no active game instance,
+     * the handler does not enqueue any message.
+     */
     @Test
     void testLoginNoGameInstance() {
         String senderUsername = "testUser";

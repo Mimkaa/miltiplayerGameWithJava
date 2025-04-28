@@ -13,6 +13,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link UserJoinedCommandHandler}.
+ * <p>
+ * These tests verify that when a new user attempts to join:
+ * <ul>
+ *   <li>If the chosen nickname is already taken, the handler suggests a new one.</li>
+ *   <li>If the nickname is available, no response is sent.</li>
+ * </ul>
+ * </p>
+ */
 class UserJoinedCommandHandlerTest {
 
     private Server mockServer;
@@ -28,6 +38,11 @@ class UserJoinedCommandHandlerTest {
         when(mockServer.getClientsMap()).thenAnswer(invocation -> clientsMap);
     }
 
+    /**
+     * Verifies that when a user attempts to join with a nickname
+     * that's already in use, the handler uses {@link Nickname_Generator}
+     * to generate and return a suggested alternative.
+     */
     @Test
     void testHandle_NicknameAlreadyTaken_ShouldSuggestNewNickname() throws Exception {
         // Arrange
@@ -61,13 +76,17 @@ class UserJoinedCommandHandlerTest {
         }
     }
 
+    /**
+     * Verifies that when a user joins with a nickname that's not yet taken,
+     * the handler does nothing (no response is enqueued).
+     */
     @Test
     void testHandle_NicknameAvailable_ShouldDoNothing() throws Exception {
         // Arrange
         String newNickname = "availableUser";
         Message incomingMessage = new Message("USERJOINED", new Object[]{newNickname}, "COMMAND");
 
-        // The clientsMap is empty, meaning the nickname is available
+        // The clientsMap is empty, so the nickname is available
 
         // Act
         handler.handle(mockServer, incomingMessage, "availableUser");

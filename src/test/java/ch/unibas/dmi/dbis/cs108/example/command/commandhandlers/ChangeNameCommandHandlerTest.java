@@ -14,6 +14,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link ChangeNameCommandHandler}.
+ * <p>
+ * These tests verify that the ChangeNameCommandHandler correctly handles
+ * valid name-change requests, gracefully ignores messages with missing
+ * parameters, handles non-existent game sessions, and avoids broadcasting
+ * when the target object is not found.
+ * </p>
+ */
 class ChangeNameCommandHandlerTest {
 
     private Server mockServer;
@@ -22,6 +31,9 @@ class ChangeNameCommandHandlerTest {
     private GameSessionManager mockGameSessionManager;
     private ChangeNameCommandHandler handler;
 
+    /**
+     * Sets up common mocks and the handler before each test.
+     */
     @BeforeEach
     public void setUp() {
         mockServer = mock(Server.class);
@@ -33,6 +45,10 @@ class ChangeNameCommandHandlerTest {
         when(mockServer.getGameSessionManager()).thenReturn(mockGameSessionManager);
     }
 
+    /**
+     * Tests that a valid CHANGENAME request updates the target object's name
+     * and broadcasts the change to all clients.
+     */
     @Test
     public void testValidChangeName() {
         // Arrange
@@ -61,6 +77,9 @@ class ChangeNameCommandHandlerTest {
         verify(mockServer).broadcastMessageToAll(any(Message.class));
     }
 
+    /**
+     * Tests that the handler does nothing if parameters are missing.
+     */
     @Test
     public void testMissingParametersHandledGracefully() {
         // Arrange
@@ -73,10 +92,13 @@ class ChangeNameCommandHandlerTest {
         // Act
         handler.handle(mockServer, message, "Alice");
 
-        // Assert
+        // Assert: no interactions with the server should occur
         verifyNoInteractions(mockServer);
     }
 
+    /**
+     * Tests that no broadcast occurs when the specified game session does not exist.
+     */
     @Test
     public void testGameSessionNotFound() {
         // Arrange
@@ -95,10 +117,14 @@ class ChangeNameCommandHandlerTest {
         // Act
         handler.handle(mockServer, message, "Alice");
 
-        // Assert
+        // Assert: should never broadcast
         verify(mockServer, never()).broadcastMessageToAll(any(Message.class));
     }
 
+    /**
+     * Tests that no broadcast occurs when the target object ID is not found
+     * in the game session's object list.
+     */
     @Test
     public void testObjectNotFound() {
         // Arrange
@@ -115,14 +141,13 @@ class ChangeNameCommandHandlerTest {
         when(mockGameSessionManager.getGameSession(gameSessionId)).thenReturn(mockGame);
         when(mockServer.findUniqueName(requestedName)).thenReturn(requestedName);
 
-        // Empty game object list (so no object will be found)
-        CopyOnWriteArrayList<GameObject> emptyGameObjects = new CopyOnWriteArrayList<>();
-        when(mockGame.getGameObjects()).thenReturn(emptyGameObjects);
+        // Empty game object list to simulate missing object
+        when(mockGame.getGameObjects()).thenReturn(new CopyOnWriteArrayList<>());
 
         // Act
         handler.handle(mockServer, message, "Alice");
 
-        // Assert
+        // Assert: should never broadcast
         verify(mockServer, never()).broadcastMessageToAll(any(Message.class));
     }
 }

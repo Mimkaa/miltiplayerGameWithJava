@@ -12,12 +12,26 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link GetObjectIdCommandHandler}.
+ * <p>
+ * These tests verify that GETOBJECTID commands:
+ * <ul>
+ *   <li>Are ignored when no game instance exists</li>
+ *   <li>Return the correct object ID when a matching object is found</li>
+ *   <li>Return an empty string when no matching object is present</li>
+ * </ul>
+ * </p>
+ */
 class GetObjectIdCommandHandlerTest {
 
     private Server mockServer;
     private Game mockGame;
     private GetObjectIdCommandHandler handler;
 
+    /**
+     * Sets up mocks and handler before each test.
+     */
     @BeforeEach
     void setUp() {
         mockServer = mock(Server.class);
@@ -25,38 +39,37 @@ class GetObjectIdCommandHandlerTest {
         handler = new GetObjectIdCommandHandler();
     }
 
+    /**
+     * Tests that when no game instance exists, the handler does not broadcast any message.
+     */
     @Test
     void testHandle_NoGameInstance_ShouldNotBroadcast() {
-        // Arrange
         Message incomingMessage = new Message("GETOBJECTID", new Object[]{"TestObject"}, "COMMAND");
 
         when(mockServer.getMyGameInstance()).thenReturn(null);
 
-        // Act
         handler.handle(mockServer, incomingMessage, "testUser");
 
-        // Assert
         verify(mockServer, never()).broadcastMessageToAll(any(Message.class));
     }
 
+    /**
+     * Tests that when a matching object exists in the game, the handler broadcasts its ID.
+     */
     @Test
     void testHandle_GameInstanceWithMatchingObject_ShouldBroadcastCorrectId() {
-        // Arrange
         GameObject mockGameObject = mock(GameObject.class);
         when(mockGameObject.getName()).thenReturn("TestObject");
         when(mockGameObject.getId()).thenReturn("ObjectId123");
 
         CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>(Collections.singletonList(mockGameObject));
-
         Message incomingMessage = new Message("GETOBJECTID", new Object[]{"TestObject"}, "COMMAND");
 
         when(mockServer.getMyGameInstance()).thenReturn(mockGame);
         when(mockGame.getGameObjects()).thenReturn(gameObjects);
 
-        // Act
         handler.handle(mockServer, incomingMessage, "testUser");
 
-        // Assert
         verify(mockServer).broadcastMessageToAll(argThat(msg ->
                 msg.getMessageType().equals("GETOBJECTID")
                         && msg.getParameters()[0].equals("ObjectId123")
@@ -64,23 +77,22 @@ class GetObjectIdCommandHandlerTest {
         ));
     }
 
+    /**
+     * Tests that when no matching object is found, the handler broadcasts an empty ID.
+     */
     @Test
     void testHandle_GameInstanceWithoutMatchingObject_ShouldBroadcastEmptyId() {
-        // Arrange
         GameObject mockGameObject = mock(GameObject.class);
         when(mockGameObject.getName()).thenReturn("AnotherObject");
 
         CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>(Collections.singletonList(mockGameObject));
-
         Message incomingMessage = new Message("GETOBJECTID", new Object[]{"TestObject"}, "COMMAND");
 
         when(mockServer.getMyGameInstance()).thenReturn(mockGame);
         when(mockGame.getGameObjects()).thenReturn(gameObjects);
 
-        // Act
         handler.handle(mockServer, incomingMessage, "testUser");
 
-        // Assert
         verify(mockServer).broadcastMessageToAll(argThat(msg ->
                 msg.getMessageType().equals("GETOBJECTID")
                         && msg.getParameters()[0].equals("")

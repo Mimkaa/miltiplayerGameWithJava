@@ -16,6 +16,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Unit tests for {@link DeleteGoCommandHandler}.
+ * <p>
+ * These tests cover parameter validation, session lookup,
+ * removal of game objects, and broadcasting of deletion events.
+ * </p>
  */
 class DeleteGoCommandHandlerTest {
 
@@ -24,6 +28,9 @@ class DeleteGoCommandHandlerTest {
 
     DeleteGoCommandHandler handler;
 
+    /**
+     * Initializes Mockito mocks and the handler before each test.
+     */
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -31,6 +38,10 @@ class DeleteGoCommandHandlerTest {
         when(server.getGameSessionManager()).thenReturn(gsm);
     }
 
+    /**
+     * Verifies that requests with too few parameters are ignored
+     * and no broadcast occurs.
+     */
     @Test
     void testHandle_withTooFewParameters_doesNothing() {
         Message msg = new Message(
@@ -45,6 +56,9 @@ class DeleteGoCommandHandlerTest {
         verify(server, never()).broadcastMessageToAll(any());
     }
 
+    /**
+     * Verifies that unknown sessions are ignored and no broadcast occurs.
+     */
     @Test
     void testHandle_withUnknownSession_doesNothing() {
         String sess = "sessX", obj = "obj1";
@@ -62,11 +76,15 @@ class DeleteGoCommandHandlerTest {
         verify(server, never()).broadcastMessageToAll(any());
     }
 
+    /**
+     * Verifies that valid DELETEGO requests remove the specified object
+     * from the game session and broadcast a deletion message with original parameters.
+     */
     @Test
     void testHandle_validRequest_removesAndBroadcasts() {
         String sess = "sess1", obj = "obj1";
 
-        // 1) prepare the incoming DELETEGO request
+        // Prepare request
         Message msg = new Message(
                 "DELETEGO",
                 new Object[]{ sess, obj },
@@ -74,11 +92,10 @@ class DeleteGoCommandHandlerTest {
                 new String[]{ "charlie" }
         );
 
-        // 2) stub out session lookup
+        // Stub session lookup and game objects
         Game mockGame = mock(Game.class);
         when(gsm.getGameSession(sess)).thenReturn(mockGame);
 
-        // 3) use CopyOnWriteArrayList for stubbing getGameObjects()
         CopyOnWriteArrayList<GameObject> objects = new CopyOnWriteArrayList<>();
         GameObject go1 = mock(GameObject.class);
         when(go1.getId()).thenReturn("obj1");
@@ -86,17 +103,16 @@ class DeleteGoCommandHandlerTest {
         when(go2.getId()).thenReturn("obj2");
         objects.add(go1);
         objects.add(go2);
-
         when(mockGame.getGameObjects()).thenReturn(objects);
 
-        // ACT
+        // Act
         handler.handle(server, msg, "charlie");
 
-        // ASSERT removal
+        // Assert removal
         assertFalse(objects.stream().anyMatch(o -> "obj1".equals(o.getId())),
                 "object obj1 should have been removed");
 
-        // ASSERT broadcast
+        // Assert broadcast
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Message> cap = ArgumentCaptor.forClass(Message.class);
         verify(server).broadcastMessageToAll(cap.capture());

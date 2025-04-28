@@ -13,12 +13,23 @@ import java.util.concurrent.Future;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link CreateCommandHandler}.
+ * <p>
+ * These tests verify that the CreateCommandHandler correctly handles
+ * the creation of new game objects in the current game instance and
+ * broadcasts the appropriate messages both on success and on failure.
+ * </p>
+ */
 class CreateCommandHandlerTest {
 
     private Server mockServer;
     private Game mockGame;
     private CreateCommandHandler handler;
 
+    /**
+     * Initializes mocks and handler before each test.
+     */
     @BeforeEach
     void setUp() {
         mockServer = mock(Server.class);
@@ -28,6 +39,12 @@ class CreateCommandHandlerTest {
         when(mockServer.getMyGameInstance()).thenReturn(mockGame);
     }
 
+    /**
+     * Tests that when an object is successfully created, the handler
+     * broadcasts a message to all clients.
+     *
+     * @throws Exception if the asynchronous creation fails unexpectedly
+     */
     @Test
     void testHandleCreatesGameObjectAndBroadcastsMessage() throws Exception {
         // Arrange
@@ -48,6 +65,12 @@ class CreateCommandHandlerTest {
         verify(mockServer, atLeastOnce()).broadcastMessageToAll(any(Message.class));
     }
 
+    /**
+     * Tests that when object creation fails, the handler still broadcasts
+     * an error response message to all clients.
+     *
+     * @throws Exception if the test setup fails unexpectedly
+     */
     @Test
     void testHandleWithFailedObjectCreation() throws Exception {
         // Arrange

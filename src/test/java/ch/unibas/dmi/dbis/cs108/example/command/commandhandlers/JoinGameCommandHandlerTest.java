@@ -13,6 +13,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link JoinGameCommandHandler}.
+ * <p>
+ * Verifies that JOINGAME commands:
+ * <ul>
+ *   <li>Broadcast to all clients and enqueue individual messages when joining an existing game</li>
+ *   <li>Send error responses when attempting to join non-existent games</li>
+ *   <li>Handle missing parameters gracefully without broadcasting or enqueuing messages</li>
+ * </ul>
+ * </p>
+ */
 class JoinGameCommandHandlerTest {
 
     private Server mockServer;
@@ -20,6 +31,9 @@ class JoinGameCommandHandlerTest {
     private Game mockGame;
     private JoinGameCommandHandler handler;
 
+    /**
+     * Initializes the mocks and handler before each test.
+     */
     @BeforeEach
     void setUp() {
         mockServer = mock(Server.class);
@@ -30,6 +44,9 @@ class JoinGameCommandHandlerTest {
         when(mockServer.getGameSessionManager()).thenReturn(mockGameSessionManager);
     }
 
+    /**
+     * Tests successful join of an existing game: broadcasts to all and enqueues to the joining client.
+     */
     @Test
     void testJoinExistingGameSuccessfully() {
         String senderUsername = "testUser";
@@ -54,6 +71,9 @@ class JoinGameCommandHandlerTest {
         verify(mockServer, times(1)).enqueueMessage(any(Message.class), any(), anyInt());
     }
 
+    /**
+     * Tests joining a non-existent game: should enqueue an error message and not broadcast.
+     */
     @Test
     void testJoinNonExistingGameSendsError() {
         String senderUsername = "testUser";
@@ -74,6 +94,9 @@ class JoinGameCommandHandlerTest {
         verify(mockServer, never()).broadcastMessageToAll(any());
     }
 
+    /**
+     * Tests handling of missing parameters: no broadcasting or enqueuing should occur.
+     */
     @Test
     void testHandleWithMissingParams() {
         String senderUsername = "testUser";

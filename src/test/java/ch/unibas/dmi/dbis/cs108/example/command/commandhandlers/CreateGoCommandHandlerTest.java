@@ -27,6 +27,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Unit tests for {@link CreateGoCommandHandler}.
+ * <p>
+ * Verifies that CREATEGO commands are correctly handled by:
+ * <ul>
+ *   <li>Ignoring requests with too few parameters</li>
+ *   <li>Creating game objects via the GameSessionManager</li>
+ *   <li>Broadcasting a RESPONSE message with the new object's details</li>
+ * </ul>
+ * </p>
+ */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateGoCommandHandlerTest extends BaseTest {
@@ -39,41 +50,36 @@ class CreateGoCommandHandlerTest extends BaseTest {
 
     private CreateGoCommandHandler handler;
 
+    /**
+     * Sets up the handler and mocks before each test.
+     * <p>
+     * Stubs GameSessionManager, Game.getGameObjects(), getAllGameSessions(),
+     * Server.getClientsMap(), Game.containsObjectByName(), and async creation.
+     * </p>
+     */
     @BeforeEach
     void setUp() {
         handler = new CreateGoCommandHandler();
 
-        // 1) Server → GameSessionManager → fakeGame
         when(server.getGameSessionManager()).thenReturn(gsm);
         when(gsm.getGameSession("sess1")).thenReturn(fakeGame);
+        when(fakeGame.getGameObjects()).thenReturn(new CopyOnWriteArrayList<>());
+        when(gsm.getAllGameSessions()).thenReturn(new ConcurrentHashMap<>());
 
-        // 1a) game.getGameObjects() darf nicht null sein
-        when(fakeGame.getGameObjects())
-                .thenReturn(new CopyOnWriteArrayList<>());
-
-        // 1b) getAllGameSessions() darf nicht null sein
-        when(gsm.getAllGameSessions())
-                .thenReturn(new ConcurrentHashMap<>());  // leere Map
-
-        // 2) Sorge dafür, dass getClientsMap() nie null ist.
         ConcurrentHashMap<String, InetSocketAddress> clients = new ConcurrentHashMap<>();
         clients.put("alice", new InetSocketAddress("127.0.0.1", 12345));
         when(server.getClientsMap()).thenReturn(clients);
 
-        // 3) simuliere, dass noch kein Objekt mit Namen „Alice“ existiert
         when(fakeGame.containsObjectByName("Alice")).thenReturn(false);
-
-        // 4) stubpe das async-Add, damit es sofort unser fakeObj liefert
         when(fakeGame.addGameObjectAsync(
-                eq("Player"),
-                anyString(),
-                any(Object[].class)
+                eq("Player"), anyString(), any(Object[].class)
         )).thenReturn(CompletableFuture.completedFuture(fakeObj));
-
-        // 5) stub für fakeObj.getName()
         when(fakeObj.getName()).thenReturn("Alice");
     }
 
+    /**
+     * Tests that a CREATEGO message with too few parameters is ignored.
+     */
     @Test
     void testHandle_withTooFewParameters_doesNothing() {
         Message bad = new Message("CREATEGO", new Object[]{"sess1"}, "REQUEST");
@@ -81,6 +87,9 @@ class CreateGoCommandHandlerTest extends BaseTest {
         verify(server, never()).broadcastMessageToAll(any());
     }
 
+    /**
+     * Tests that a valid CREATEGO request triggers async creation and broadcasts the RESPONSE.
+     */
     @Test
     void testHandle_validRequest_createsAndBroadcasts() {
         Message req = new Message(
@@ -92,14 +101,12 @@ class CreateGoCommandHandlerTest extends BaseTest {
 
         handler.handle(server, req, "alice");
 
-        // verify we asked the fakeGame to create a new obj
+        // verify asynchronous creation
         verify(fakeGame).addGameObjectAsync(
-                eq("Player"),
-                anyString(),
-                any(Object[].class)
+                eq("Player"), anyString(), any(Object[].class)
         );
 
-        // capture the broadcasted response
+        // capture and assert broadcast message
         verify(server).broadcastMessageToAll(msgCap.capture());
         Message bc = msgCap.getValue();
 
@@ -107,7 +114,6 @@ class CreateGoCommandHandlerTest extends BaseTest {
         assertEquals("RESPONSE", bc.getOption());
 
         Object[] params = bc.getParameters();
-        // params[0] = generated UUID
         assertEquals("sess1", params[1],  "second param should be sessionId");
         assertEquals("Player", params[2], "third param should be type");
         assertEquals("Alice", params[3],  "fourth param should be ctor-arg name");

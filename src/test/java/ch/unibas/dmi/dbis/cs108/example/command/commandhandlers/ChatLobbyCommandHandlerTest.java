@@ -15,7 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit tests for the ChatLobbyCommandHandler class.
+ * Unit tests for {@link ChatLobbyCommandHandler}.
+ * <p>
+ * These tests verify that lobby chat messages are correctly enqueued
+ * to each connected client in the current game session, and that
+ * invalid or missing parameters are handled gracefully without enqueuing.
+ * </p>
  */
 public class ChatLobbyCommandHandlerTest {
 
@@ -23,6 +28,9 @@ public class ChatLobbyCommandHandlerTest {
     private GameSessionManager mockGameSessionManager;
     private Game mockGame;
 
+    /**
+     * Sets up fresh mocks for Server, GameSessionManager, and Game before each test.
+     */
     @BeforeEach
     public void setUp() {
         mockServer = mock(Server.class);
@@ -32,6 +40,10 @@ public class ChatLobbyCommandHandlerTest {
         when(mockServer.getGameSessionManager()).thenReturn(mockGameSessionManager);
     }
 
+    /**
+     * Tests that a valid CHATLOBBY message is enqueued for every other user
+     * in the specified game session.
+     */
     @Test
     public void testValidLobbyChatMessageIsBroadcasted() {
         // Arrange
@@ -55,25 +67,38 @@ public class ChatLobbyCommandHandlerTest {
         // Act
         handler.handle(mockServer, message, sender);
 
-        // Assert: Bob and Charlie should receive the message
-        verify(mockServer).enqueueMessage(any(Message.class), eq(clientsMap.get("Bob").getAddress()), eq(5000));
-        verify(mockServer).enqueueMessage(any(Message.class), eq(clientsMap.get("Charlie").getAddress()), eq(5001));
+        // Assert: Bob and Charlie each receive the message
+        verify(mockServer).enqueueMessage(
+                any(Message.class),
+                eq(clientsMap.get("Bob").getAddress()),
+                eq(5000)
+        );
+        verify(mockServer).enqueueMessage(
+                any(Message.class),
+                eq(clientsMap.get("Charlie").getAddress()),
+                eq(5001)
+        );
     }
 
+    /**
+     * Tests that missing parameters result in no message enqueues.
+     */
     @Test
     public void testMissingParametersAreHandledGracefully() {
-        // Arrange
+        // Arrange: empty parameter array
         Message message = new Message("CHATLOBBY", new String[]{}, "REQUEST");
-
         ChatLobbyCommandHandler handler = new ChatLobbyCommandHandler();
 
         // Act
         handler.handle(mockServer, message, "Alice");
 
-        // Assert
+        // Assert: no enqueueMessage calls should occur
         verify(mockServer, never()).enqueueMessage(any(), any(), anyInt());
     }
 
+    /**
+     * Tests that no messages are enqueued if the specified game session does not exist.
+     */
     @Test
     public void testGameSessionNotFound() {
         // Arrange
@@ -89,7 +114,7 @@ public class ChatLobbyCommandHandlerTest {
         // Act
         handler.handle(mockServer, message, sender);
 
-        // Assert
+        // Assert: should never enqueue any message
         verify(mockServer, never()).enqueueMessage(any(), any(), anyInt());
     }
 }
