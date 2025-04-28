@@ -43,7 +43,6 @@ import java.net.UnknownHostException;
  * <ol>
  *   <li>Create an instance of {@code Client} with a desired game session name.</li>
  *   <li>Set the client's username (e.g., {@link #setUsername(String)}).</li>
- *   <li>Initialize chat with {@link #initChatManager()} (optional, if chat is used).</li>
  *   <li>Configure the game UI (e.g., 2D or 3D viewport).</li>
  *   <li>Start console reading via {@link #startConsoleReaderLoop()} if needed.</li>
  *   <li>Run the main loop in a separate thread using {@link #run()}.</li>

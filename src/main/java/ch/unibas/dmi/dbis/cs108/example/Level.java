@@ -4,17 +4,29 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 
+/**
+ * Represents a game level that can be initialized with a responsive layout.
+ * This class is responsible for creating and positioning the platforms, key, players,
+ * and other objects within the level, adapting to the screen size.
+ */
 public class Level {
 
     private boolean initialised = false;
 
+    /**
+     * Constructs a new Level instance.
+     * Initializes the level only once when called for the first time.
+     */
     public Level() {
         // Konstruktor
     }
 
     /**
-     * Initialize the level with layout adapted to screen size.
-     * Ensures that initialization runs only once.
+     * Initializes the level with a layout adapted to the screen size.
+     * Ensures that initialization happens only once by checking the {@code initialised} flag.
+     *
+     * @param screenWidth  The width of the screen.
+     * @param screenHeight The height of the screen.
      */
     public void initializeLevel(double screenWidth, double screenHeight) {
         if (initialised) {
@@ -22,12 +34,14 @@ public class Level {
         }
         initialised = true;
 
+        // Get the current game session ID from the GameContext
         String sessionId = GameContext.getCurrentGameId();
         if (sessionId == null) {
             System.out.println("No session ID. Cannot initialize level.");
             return;
         }
 
+        // Print out screen size information for debugging
         System.out.println("Initializing level for screen size: " + screenWidth + " x " + screenHeight);
 
         // === 1. Create 4 floor platforms ===
