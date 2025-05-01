@@ -239,10 +239,6 @@ public class Server {
 
             commandRegistry.initCommandHandlers();
 
-            // Initialize the game instance so commands can work properly.
-            myGameInstance = new Game("DefaultSessionID", "DefaultGameName");
-            myGameInstance.startPlayersCommandProcessingLoop();
-
             reliableSender = new ReliableUDPSender(serverSocket, 100, 200);
             ackProcessor = new AckProcessor(serverSocket);
             //ackProcessor.start();
@@ -425,7 +421,7 @@ public class Server {
                 byte[] data = encoded.getBytes();
                 DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
                 serverSocket.send(packet);
-                System.out.println("Key event sent to " + entry.getKey() + " at " + entry.getValue());
+                //System.out.println("Key event sent to " + entry.getKey() + " at " + entry.getValue());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -543,7 +539,7 @@ public class Server {
                 byte[] data = encoded.getBytes();
                 DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
                 serverSocket.send(packet);
-                System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
+                //System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -572,9 +568,9 @@ public class Server {
             enqueueMessage(perClient, dest.getAddress(), dest.getPort());
             
           } catch (Exception e) {
-            System.err.println("Error enqueuing to " 
-              + clientUsername 
-              + " at " + dest + ": " + e.getMessage());
+            //System.err.println("Error enqueuing to " 
+            //  + clientUsername 
+            //  + " at " + dest + ": " + e.getMessage());
           }
         }
       }
@@ -597,9 +593,9 @@ public class Server {
             enqueueMessage(perClient, dest.getAddress(), dest.getPort());
             
           } catch (Exception e) {
-            System.err.println("Error enqueuing to " 
-              + clientUsername 
-              + " at " + dest + ": " + e.getMessage());
+            //System.err.println("Error enqueuing to " 
+            //  + clientUsername 
+            //  + " at " + dest + ": " + e.getMessage());
           }
         }
       }

@@ -192,17 +192,17 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             }
         }
 
-        if (parentGame.isAuthoritative()) {
-            syncCounter++;
-            if (syncCounter >= SYNC_THRESHOLD) {
+        //if (parentGame.isAuthoritative()) {
+        //    syncCounter++;
+        //    if (syncCounter >= SYNC_THRESHOLD) {
                 // Broadcast a snapshot.
-                Message snapshot = createSnapshot();
-                Server.getInstance().sendMessageBestEffort(snapshot);
+        //        Message snapshot = createSnapshot();
+        //        Server.getInstance().sendMessageBestEffort(snapshot);
 
                 // Reset the counter.
-                syncCounter = 0;
-            }
-        }
+        //        syncCounter = 0;
+        //    }
+        //}
     }
 
     /**
@@ -234,7 +234,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             boolean horizontalOverlap = !(myRight <= otherLeft || myLeft >= otherRight);
 
             if (vel.y >= 0 && horizontalOverlap &&
-                    bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
+                bottom >= otherTop - tolerance && bottom <= otherTop + tolerance) {
 
                 setY(otherTop - getHeight());
                 vel.y = 0;
@@ -347,7 +347,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                         float throwVy = (float) (throwMagnitude * Math.sin(rad));
                         throwVy = -throwVy;
 
-                        // Check if the grabbed object implements IGrabbable
+                        // Check if the grabbed object implements `IGrabbable`
                         if (grabbedGuy instanceof IGrabbable) {
                             IGrabbable grabbableObject = (IGrabbable) grabbedGuy;
                             grabbableObject.setVelocity(throwVx, throwVy);
@@ -381,19 +381,19 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     interpStartPos.y = pos.y;
                     interpEndPos.x   = newX;
                     interpEndPos.y   = newY;
-
+                    
                     // --- New: store current and target velocity for interpolation ---
                     interpStartVel.x = vel.x;
                     interpStartVel.y = vel.y;
                     interpEndVel.x   = newVelX;
                     interpEndVel.y   = newVelY;
-
+                    
                     // --- New: store current and target acceleration for interpolation ---
                     interpStartAcc.x = acc.x;
                     interpStartAcc.y = acc.y;
                     interpEndAcc.x   = newAccX;
                     interpEndAcc.y   = newAccY;
-
+                    
                     interpolating = true;
                     interpElapsed = 0f;
 
@@ -403,7 +403,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     // acc.y = newAccY;
 
                     System.out.println("Processed SNAPSHOT for " + getId()
-                            + ": pos=(" + newX + ", " + newY + ")");
+                                       + ": pos=(" + newX + ", " + newY + ")");
                 } catch (NumberFormatException ex) {
                     System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
                 }
@@ -476,9 +476,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
         // Pack position, velocity, acceleration in the main parameter array.
         Object[] params = new Object[] {
-                pos.x, pos.y,   // Position
-                vel.x, vel.y,   // Velocity
-                acc.x, acc.y    // Acceleration
+            pos.x, pos.y,   // Position
+            vel.x, vel.y,   // Velocity
+            acc.x, acc.y    // Acceleration
         };
 
         // Create the snapshot message.
@@ -486,9 +486,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
         // Build the concealed array.
         snapshotMsg.setConcealedParameters(new String[] {
-                getId(),
-                getGameId(),
-                String.valueOf(currentTick)
+            getId(),
+            getGameId(),
+            String.valueOf(currentTick)
         });
 
         return snapshotMsg;

@@ -92,7 +92,7 @@ public class Level {
         // === 5. Door ===
         Object[] doorParams = new Object[]{
                 sessionId, "Door", "Door1",
-                (float) (screenWidth * 0.87), (float) (screenHeight * 0.50),
+                (float) (screenWidth * 0.12), (float) (screenHeight * 0.50),
                 50.0f, 120.0f, sessionId
         };
         Client.sendMessageStatic(new Message("CREATEGO", doorParams, "REQUEST"));
