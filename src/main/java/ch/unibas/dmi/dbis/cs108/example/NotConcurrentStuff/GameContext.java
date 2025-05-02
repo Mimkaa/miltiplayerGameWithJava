@@ -25,6 +25,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.Node;
 import lombok.Getter;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
+import javafx.geometry.VPos;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageRateMeter;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -744,19 +749,38 @@ public class GameContext {
     private void draw(GraphicsContext gc) {
         String gameId = currentGameId.get();
         if (gameId == null || gameId.isEmpty()) {
-            return;  // No game chosen.
+            return;                          // No game chosen
         }
-
+    
+        /* ── clear frame ─────────────────────────────────────────────────────── */
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-
+    
+        /* ── draw game scene ─────────────────────────────────────────────────── */
         Game game = gameSessionManager.getGameSession(gameId);
-        if (game == null) {
-            return;
+        if (game != null) {
+            game.draw(gc);
         }
-
-        game.draw(gc);
+    
+        /* ── overlay: messages‑per‑second meter ─────────────────────────────── */
+        int    mps       = MessageRateMeter.getMessagesPerSecond();
+        String rateText  = mps + " msg/s";
+    
+        gc.save();                                         // 1) push entire state
+    
+        gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 14));
+        gc.setFill(Color.BLACK);
+        gc.setTextAlign(TextAlignment.RIGHT);
+        gc.setTextBaseline(VPos.TOP);
+    
+        double x = gc.getCanvas().getWidth() - 10;   // 10‑px padding from right
+        double y = 100;                              // 100‑px from top
+        gc.fillText(rateText, x, y);
+    
+        gc.restore();                                      // 2) pop → previous state
     }
+    
+    
 
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);

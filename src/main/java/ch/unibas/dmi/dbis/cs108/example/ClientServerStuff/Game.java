@@ -81,6 +81,7 @@ public class Game {
 
         // Start the main loop for processing all game objects at a fixed framerate.
         startPlayersCommandProcessingLoop();
+        startCompositionLoop();
     }
 
     public void setAuthoritative(boolean authoritative) {
@@ -194,6 +195,32 @@ public class Game {
         
         Server.getInstance().sendMessageBestEffort(comp);
     }
+
+    public void startCompositionLoop() {
+        final long[] lastTime = { System.nanoTime() };
+    
+        AsyncManager.runLoop(() -> {
+            long start = System.nanoTime();
+            // (optionally) compute dt if you ever need it
+            // float deltaSec = (start - lastTime[0]) / 1_000_000_000f;
+            lastTime[0] = start;
+    
+            // send one snapshot
+            composeAndSendUpdate();
+    
+            // throttle to targetCompositionFps
+            long frameNanos = 1_000_000_000L / 800;
+            long elapsed  = System.nanoTime() - start;
+            long sleepN   = frameNanos - elapsed;
+            if (sleepN > 0) {
+                try {
+                    Thread.sleep(sleepN / 1_000_000, (int)(sleepN % 1_000_000));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+    }
     
 
     
@@ -249,7 +276,7 @@ public class Game {
                     }
                 }
             }
-            composeAndSendUpdate();
+            //composeAndSendUpdate();
 
             // 4) Increment the global tickCount
             tickCount++;

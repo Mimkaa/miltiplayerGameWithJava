@@ -2,6 +2,8 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageRateMeter;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -84,6 +86,7 @@ public class MessageHogger {
      * @param msg The message to be added to the appropriate queue.
      */
     public void addMessage(Message msg) {
+        MessageRateMeter.mark();
         if ("GAME".equalsIgnoreCase(msg.getOption())) {
             bestEffortQueue.offer(msg);
         } else {
