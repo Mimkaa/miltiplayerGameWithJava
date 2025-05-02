@@ -283,31 +283,28 @@ public class Server {
                     System.out.println("Received: " + raw + " from " + sender);
 
                     // 2) If it’s an ACK *for* one of our reliable sends, clear it immediately
-                    if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-                        String ackUuid = msg.getParameters()[0].toString();
-                        reliableSender.acknowledge(ackUuid);
-                        // don’t process it any further
-                        continue;
-                    }
-                    else
-                    {
-                        // 3) Best‑effort ACK back to the user who sent it:
+                    AsyncManager.run(() -> {
+                        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+                          String ackUuid = msg.getParameters()[0].toString();
+                          reliableSender.acknowledge(ackUuid);
+                          return;             // exit the lambda early
+                        }
+                  
+                        // best‐effort ACK back to sender (on another thread)
                         String[] concealed = msg.getConcealedParameters();
                         if (msg.getUUID() != null
                             && !msg.getUUID().isEmpty()
                             && concealed != null
                             && concealed.length > 0
-                            && !"GAME".equalsIgnoreCase(msg.getOption())
-                        ) {
-                        // last concealed parameter is the username
-                        String username = concealed[concealed.length - 1];
-                        sendPlainAckAsync(username, msg);
+                            && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                          String username = concealed[concealed.length - 1];
+                          sendPlainAckAsync(username, msg);
                         }
-
-                        // 4) Finally hand it off to the rest of your server logic
-                        AsyncManager.run(() -> processMessage(msg, sender));
+                  
+                        // hand off the real processing
+                        processMessage(msg, sender);
                         messageHub.dispatch(msg);
-                    }
+                      });
 
                     } catch (IOException e) {
                     e.printStackTrace();
@@ -406,27 +403,38 @@ public class Server {
      * but only if the message type contains "KEY".
      */
     public void sendKeyEvent(Message msg) {
-        try {
-            // Check if the message type contains "KEY" (case-insensitive).
-            if (!msg.getMessageType().toUpperCase().contains("KEY")) {
-                //System.out.println("sendKeyEvent: Message type does not contain 'KEY'; skipping key event send.");
-                return;
+        // offload entire broadcast into the background
+        AsyncManager.run(() -> {
+            try {
+                if (!msg.getMessageType().toUpperCase().contains("KEY")) {
+                    return;
+                }
+                byte[] data = MessageCodec.encode(msg)
+                                         .getBytes(StandardCharsets.UTF_8);
+    
+                // fire off sends in parallel
+                clientsMap.values()
+                          .parallelStream()
+                          .forEach(destAddr -> {
+                              try {
+                                  DatagramPacket packet = new DatagramPacket(
+                                      data, data.length,
+                                      destAddr.getAddress(),
+                                      destAddr.getPort()
+                                  );
+                                  serverSocket.send(packet);
+                              } catch (IOException ioe) {
+                                  ioe.printStackTrace();
+                              }
+                          });
+    
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            
-            // Iterate over all connected clients.
-            for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-                InetAddress dest = entry.getValue().getAddress();
-                int port = entry.getValue().getPort();
-                String encoded = MessageCodec.encode(msg);
-                byte[] data = encoded.getBytes();
-                DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
-                serverSocket.send(packet);
-                //System.out.println("Key event sent to " + entry.getKey() + " at " + entry.getValue());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        });
     }
+    
+    
 
     /**
      * Renames a connected user in every place the server knows about:
@@ -525,26 +533,34 @@ public class Server {
      * @param msg          the message to broadcast
      */
     public void sendMessageBestEffort(Message msg) {
-        try {
-            // Check if the message type contains "KEY"
-            //boolean isKeyMessage = msg.getMessageType().contains("KEY");
-            for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-                // If it's not a key message, then skip sending to the sender
-                //if (!isKeyMessage && entry.getValue().equals(senderSocket)) {
-                //    continue;
-                //}
-                InetAddress dest = entry.getValue().getAddress();
-                int port = entry.getValue().getPort();
-                String encoded = MessageCodec.encode(msg);
-                byte[] data = encoded.getBytes();
-                DatagramPacket packet = new DatagramPacket(data, data.length, dest, port);
-                serverSocket.send(packet);
-                //System.out.println("Best effort sent message to " + entry.getKey() + " at " + entry.getValue());
+        AsyncManager.run(() -> {
+            try {
+                byte[] data = MessageCodec.encode(msg)
+                                          .getBytes(StandardCharsets.UTF_8);
+    
+                // send to all clients in parallel
+                clientsMap.values()
+                          .parallelStream()
+                          .forEach(destAddr -> {
+                              try {
+                                  DatagramPacket packet = new DatagramPacket(
+                                      data, data.length,
+                                      destAddr.getAddress(),
+                                      destAddr.getPort()
+                                  );
+                                  serverSocket.send(packet);
+                              } catch (IOException ioe) {
+                                  ioe.printStackTrace();
+                              }
+                          });
+    
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        });
     }
+    
+    
 
     /**
      * Broadcasts a given message to <strong>all</strong> connected clients using the reliable queue.

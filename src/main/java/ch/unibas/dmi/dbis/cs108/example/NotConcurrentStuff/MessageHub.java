@@ -51,9 +51,10 @@ public class MessageHub {
      * Dispatches the given message to all registered MessageHoggers asynchronously.
      */
     public void dispatch(Message msg) {
-        for (MessageHogger hogger : hoggers) {
-            executor.submit(() -> hogger.addMessage(msg));
-        }
+        // turn the list into a parallel stream, and submit each hogger to the pool
+        hoggers
+          .parallelStream()
+          .forEach(h -> executor.submit(() -> h.addMessage(msg)));
     }
 
     /**

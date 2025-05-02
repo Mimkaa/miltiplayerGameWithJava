@@ -208,29 +208,23 @@ public class Client {
                         
 
                         Message receivedMessage = MessageCodec.decode(response);
-                        System.out.println("Received (UDP): " + receivedMessage);
+                        //System.out.println("Received (UDP): " + receivedMessage);
 
-                        // Immediate ACK handling: consume and loop again
-                        if ("ACK".equalsIgnoreCase(receivedMessage.getMessageType())) {
-                            if (receivedMessage.getParameters() != null
-                                && receivedMessage.getParameters().length > 0) {
-                                String ackUuid = receivedMessage.getParameters()[0].toString();
+                        AsyncManager.run(() -> {
+                            // 1) Immediate ACKs
+                            if ("ACK".equalsIgnoreCase(receivedMessage.getMessageType())) {
+                              Object[] params = receivedMessage.getParameters();
+                              if (params != null && params.length > 0) {
+                                String ackUuid = params[0].toString();
                                 myReliableUDPSender.acknowledge(ackUuid);
                                 System.out.println("Client: acknowledged UUID " + ackUuid);
+                              }
+                              return;  // done with this packet
                             }
-                            return;  // skip normal dispatch for ACKs
-                        }
-                        else{
-
-                            // Dispatch all other messages
+                    
+                            // 2) All other messages
                             messageHub.dispatch(receivedMessage);
-                            //if (!"Game".equalsIgnoreCase(receivedMessage.getOption())) {
-                                //InetSocketAddress dest = new InetSocketAddress(
-                                        //InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT);
-                                //ackProcessor.addAck(dest, receivedMessage.getUUID());
-                                //incomingQueue.offer(receivedMessage);
-                            //}
-                        }
+                          });
 
                     } catch (IOException e) {
                         e.printStackTrace();

@@ -23,7 +23,7 @@ public class AsyncManager {
     /**
      * A fixed-size thread pool used to handle all asynchronous tasks.
      */
-    private static final ExecutorService executor = Executors.newFixedThreadPool(100);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(50);
 
     /**
      * Submits a {@link Runnable} task for asynchronous execution.

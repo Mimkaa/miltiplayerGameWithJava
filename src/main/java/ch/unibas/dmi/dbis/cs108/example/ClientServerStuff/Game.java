@@ -47,42 +47,36 @@ public class Game {
         this.gameId = gameId;
         this.gameName = gameName;
 
-        // Initialize the dedicated message hogger for GAME messages.
+       
+
         this.gameMessageHogger = new MessageHogger() {
-            @Override
-            protected void processBestEffortMessage(Message msg) {
-                if (!"GAME".equalsIgnoreCase(msg.getOption())) return;
-        
-                String type = msg.getMessageType();
-                if ("COMPOSITION".equals(type)) {
-                    Object[] rawParams = msg.getParameters();
-                    //System.out.println("rawParams: " + Arrays.toString(rawParams));
-                    if (rawParams == null) return;
-        
-                    for (Object o : rawParams) {
-                        if (!(o instanceof String)) continue;
-                        // 1) get the safe‐encoded string
-                        String safe = (String) o;
-                        
-                        //System.out.println(safe);
-                        // 2) undo the comma‐escaping
-                        String withCommas = safe.replace("%", ",");
-                        withCommas = withCommas.replace("~","|");
-                       
-                        try {
-                            // 3) decode into a Message
-                            Message snap = MessageCodec.decode(withCommas);
-                            // 4) route to the correct GameObject
-                            routeMessageToGameObject(snap);
-                        } catch (Exception ex) {
-                            System.err.println("Failed to decode snapshot: " + withCommas);
-                        }
-                    }
-                } else {
-                    routeMessageToGameObject(msg);
-                }
+        @Override
+        protected void processBestEffortMessage(Message msg) {
+            if (!"GAME".equalsIgnoreCase(msg.getOption())) return;
+            if (!"COMPOSITION".equals(msg.getMessageType())) {
+            routeMessageToGameObject(msg);
+            return;
             }
+
+            Object[] rawParams = msg.getParameters();
+            if (rawParams == null) return;
+
+            Arrays.stream(rawParams)
+                .parallel()                   // <— split across the common fork/join pool
+                .filter(o -> o instanceof String)
+                .map(o -> (String) o)
+                .forEach(safe -> {
+                    String withCommas = safe.replace("%", ",").replace("~", "|");
+                    try {
+                    Message snap = MessageCodec.decode(withCommas);
+                    routeMessageToGameObject(snap);
+                    } catch (Exception ex) {
+                    System.err.println("Failed to decode snapshot: " + withCommas);
+                    }
+                });
+        }
         };
+
         
 
         // Start the main loop for processing all game objects at a fixed framerate.
@@ -111,17 +105,20 @@ public class Game {
      */
     private void routeMessageToGameObject(Message msg) {
         String[] concealed = msg.getConcealedParameters();
-        if (concealed != null && concealed.length > 0) {
-            String targetObjectUuid = concealed[0];
-            for (GameObject go : gameObjects) {
-                if (go.getId().equals(targetObjectUuid)) {
-                    go.addIncomingMessage(msg);
-                    System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
-                    return;
-                }
-            }
-        }
+        if (concealed == null || concealed.length == 0) return;
+    
+        String targetObjectUuid = concealed[0];
+        AsyncManager.run(() ->
+          gameObjects.stream()
+            .filter(go -> go.getId().equals(targetObjectUuid))
+            .findFirst()
+            .ifPresent(go -> {
+              go.addIncomingMessage(msg);
+              System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
+            })
+        );
     }
+    
 
     // starting level and start timer
     public void startLevel() {
