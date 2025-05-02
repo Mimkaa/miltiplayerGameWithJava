@@ -675,24 +675,24 @@ public class Server {
      * 2) For a given gameId, send CREATEGO for all of its objects.
      */
     public void syncGameObjects(InetSocketAddress clientSocket, String gameId) {
-        Game game = gameSessionManager.getGameSession(gameId);
-        if (game == null) return;
+        //Game game = gameSessionManager.getGameSession(gameId);
+        //if (game == null) return;
 
-        for (GameObject go : game.getGameObjects()) {
-            String objectUuid    = go.getId();
-            String objectType    = go.getClass().getSimpleName();
-            Object[] params      = go.getConstructorParamValues();
+        //for (GameObject go : game.getGameObjects()) {
+        //    String objectUuid    = go.getId();
+        //    String objectType    = go.getClass().getSimpleName();
+        //    Object[] params      = go.getConstructorParamValues();
 
             // Build [uuid, gameId, type, ...ctorParams]
-            Object[] createGoParams = new Object[3 + params.length];
-            createGoParams[0] = objectUuid;
-            createGoParams[1] = gameId;
-            createGoParams[2] = objectType;
-            System.arraycopy(params, 0, createGoParams, 3, params.length);
+        //    Object[] createGoParams = new Object[3 + params.length];
+        //    createGoParams[0] = objectUuid;
+        //    createGoParams[1] = gameId;
+        //    createGoParams[2] = objectType;
+        //    System.arraycopy(params, 0, createGoParams, 3, params.length);
 
-            Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
-            enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
-        }
+        //    Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
+        //    enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
+        //}
     }
 
     // ================================
