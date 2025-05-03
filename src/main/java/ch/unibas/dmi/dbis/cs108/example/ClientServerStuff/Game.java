@@ -244,8 +244,9 @@ public class Game {
 
             // 1) & 2) Process inbound messages & commands, then update each GameObject
             for (GameObject go : gameObjects) {
-                go.processIncomingMessages();
-                //go.processCommands();
+                go.applyLatestSnapshot();
+            }
+            for (GameObject go : gameObjects) {
                 go.myUpdateLocal(deltaTime);
             }
 
@@ -279,24 +280,24 @@ public class Game {
             //composeAndSendUpdate();
 
             // 4) Increment the global tickCount
-            tickCount++;
+            //tickCount++;
 
             // 5) Sleep to maintain the target framerate
-            long targetFrameTimeNanos = 1_000_000_000L / targetFps;
-            long frameProcessingTime = System.nanoTime() - startFrameTime;
-            long sleepTimeNanos = targetFrameTimeNanos - frameProcessingTime;
+            //long targetFrameTimeNanos = 1_000_000_000L / targetFps;
+            //long frameProcessingTime = System.nanoTime() - startFrameTime;
+            //long sleepTimeNanos = targetFrameTimeNanos - frameProcessingTime;
 
-            if (sleepTimeNanos > 0) {
-                try {
-                    // Sleep for the leftover time, in nanoseconds
-                    Thread.sleep(
-                        sleepTimeNanos / 1_000_000,
-                        (int) (sleepTimeNanos % 1_000_000)
-                    );
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
-                }
-            }
+            //if (sleepTimeNanos > 0) {
+            //    try {
+            //        // Sleep for the leftover time, in nanoseconds
+            //        Thread.sleep(
+            //            sleepTimeNanos / 1_000_000,
+            //            (int) (sleepTimeNanos % 1_000_000)
+            //        );
+            //    } catch (InterruptedException ex) {
+            //        Thread.currentThread().interrupt();
+            //    }
+            //}
         });
     }
 

@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import javafx.scene.canvas.GraphicsContext;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
@@ -22,7 +23,8 @@ public abstract class GameObject {
     private String id = UUID.randomUUID().toString();
     private final String gameId;
     protected String name;
-    protected final ConcurrentLinkedQueue<Message> incomingMessages = new ConcurrentLinkedQueue<>();
+    /** always holds the most‑recent snapshot for this object (may be {@code null}) */
+    private final AtomicReference<Message> latestSnapshot = new AtomicReference<>();
     public final ConcurrentLinkedQueue<Command> commandQueue = new ConcurrentLinkedQueue<>();
     protected Game parentGame;
 
@@ -117,23 +119,17 @@ public abstract class GameObject {
      */
     public void addIncomingMessage(Message message) {
         // Only add the message if the current queue size is less than or equal to 5.
-        if (incomingMessages.size() <= 5) {
-            incomingMessages.offer(message);
-        } else {
-            System.out.println("Incoming message queue full for object " + getId() + "; discarding message " + message.getMessageType());
-        }
+        latestSnapshot.set(message); 
     }
 
 
     /**
      * Processes all queued messages for this object.
      */
-    public void processIncomingMessages() {
-        Message msg;
-        while ((msg = incomingMessages.poll()) != null) {
-            // Instead of processing on this thread:
-            myUpdateGlobal(msg);
-
+    public void applyLatestSnapshot() {
+        Message snap = latestSnapshot.getAndSet(null);   // atomic swap‑&‑clear
+        if (snap != null) {
+            myUpdateGlobal(snap);
         }
     }
 
