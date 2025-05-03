@@ -174,7 +174,7 @@ public class ThinkOutsideTheRoom {
         }
 
         // Send registration message
-        Message register = new Message("REGISTER", new Object[]{}, "REQUEST");
+        Message register = new Message("REGISTER", new Object[]{username, host + ":" + port}, "REQUEST");
         Client.sendMessageStatic(register);
 
         // Create GameContext (UI setup will happen in GUI class)

@@ -221,6 +221,12 @@ public class Client {
                               }
                               return;  // done with this packet
                             }
+                            if (receivedMessage.getUUID() != null
+                                && !receivedMessage.getUUID().isEmpty()
+                                && !"GAME".equalsIgnoreCase(receivedMessage.getOption())) {
+
+                                sendPlainAckToServer(receivedMessage);
+                            }
                     
                             // 2) All other messages
                             messageHub.dispatch(receivedMessage);
@@ -405,6 +411,46 @@ public class Client {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Sends a one‑shot best‑effort ACK back to the server for the packet we
+     * just received.  Runs asynchronously so the network thread never blocks.
+     *
+     * @param original the reliable message we need to acknowledge
+     */
+    private void sendPlainAckToServer(Message original) {
+
+        // 1) sanity checks --------------------------------------------------
+        String uuid = original.getUUID();
+        if (uuid == null || uuid.isEmpty()) {
+            System.err.println("Client‑ACK: message has no UUID → skip");
+            return;
+        }
+
+        // 2) fire‑and‑forget -------------------------------------------------
+        AsyncManager.run(() -> {
+            try {
+                /* Build the bare‑minimum ACK packet */
+                Message ack = new Message("ACK", new Object[]{ uuid }, "GAME");
+                String encoded = MessageCodec.encode(ack);
+                byte[] data    = encoded.getBytes(StandardCharsets.UTF_8);
+
+                /* Destination = the server we are already talking to */
+                InetAddress addr = InetAddress.getByName(SERVER_ADDRESS);
+                DatagramPacket pkt =
+                    new DatagramPacket(data, data.length, addr, SERVER_PORT);
+
+                clientSocket.send(pkt);
+
+                System.out.println("→ Sent best‑effort ACK to server for UUID "
+                                + uuid);
+
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
+    }
+
 
 
 

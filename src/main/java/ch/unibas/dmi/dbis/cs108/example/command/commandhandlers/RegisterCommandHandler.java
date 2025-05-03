@@ -1,29 +1,51 @@
 package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
 /**
- * Handles the "REGISTER" command sent by a client when connecting to the server.
- * <p>
- * This command is used to notify all other clients that a new user has joined.
- * The server simply forwards the message to all connected clients with the option set to "Response".
- * </p>
+ * REGISTER  [ username , "ip:port" ]
  */
 public class RegisterCommandHandler implements CommandHandler {
 
-    /**
-     * Processes the REGISTER command by setting the message option to "Response"
-     * and broadcasting the message to all connected clients.
-     *
-     * @param server the server instance handling the message
-     * @param msg the REGISTER message sent by the client
-     * @param senderUsername the username of the client sending the message
-     */
     @Override
-    public void handle(Server server, Message msg, String senderUsername) {
-        msg.setOption("RESPONSE");
-        server.broadcastMessageToAll(msg);
+    public void handle(Server server, Message msg, String ignoredUsername) {
+
+        /* ----------------- extract params ----------------- */
+        Object[] p = msg.getParameters();
+        if (p == null || p.length < 2) {
+            System.err.println("REGISTER missing params");
+            return;
+        }
+        String username = p[0].toString();
+        String hostPort = p[1].toString();            // "127.0.0.1:54321"
+
+        /* ----------------- add to clientsMap -------------- */
+        try {
+            String[] hp = hostPort.split(":");
+            InetAddress ip = InetAddress.getByName(hp[0]);
+            int         pt = Integer.parseInt(hp[1]);
+
+            server.getClientsMap()
+                  .putIfAbsent(username, new InetSocketAddress(ip, pt));
+
+            System.out.println("REGISTER → added " + username + " @ " + hostPort);
+
+        } catch (Exception ex) {
+            System.err.println("Bad host:port in REGISTER: " + hostPort);
+            ex.printStackTrace();
+            return;
+        }
+
+        /* ----------------- optional broadcast ------------- */
+        //msg.setOption("RESPONSE");
+        //server.broadcastMessageToAll(msg);
+        InetSocketAddress dest = server.getClientsMap().get(username);
+        AsyncManager.run(() -> server.syncGames(dest));
     }
 }
