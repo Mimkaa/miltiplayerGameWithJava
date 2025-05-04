@@ -30,7 +30,7 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import javafx.geometry.VPos;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageRateMeter;
-
+import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -51,6 +51,11 @@ public class GameContext {
     // Singleton instance.
     @Getter
     private static GameContext instance;
+
+    /*
+    Add CubeDrawer as a field
+    */
+    private CubeDrawer cubeDrawer = new CubeDrawer();
 
     private final GameSessionManager gameSessionManager;
     private MessageHogger testHogger;
@@ -751,36 +756,45 @@ public class GameContext {
         if (gameId == null || gameId.isEmpty()) {
             return;                          // No game chosen
         }
-    
-        /* ── clear frame ─────────────────────────────────────────────────────── */
+
+        /* clear frame */
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-    
-        /* ── draw game scene ─────────────────────────────────────────────────── */
+
+        /* draw game scene  */
         Game game = gameSessionManager.getGameSession(gameId);
         if (game != null) {
             game.draw(gc);
         }
-    
-        /* ── overlay: messages‑per‑second meter ─────────────────────────────── */
+
+        /* draw 3D Cube on top of the game scene */
+        double centerX = gc.getCanvas().getWidth() / 2;  // Center X of the canvas
+        double centerY = gc.getCanvas().getHeight() / 2; // Center Y of the canvas
+        double fov = 500;  // Field of view (adjust this value to get a better perspective)
+        double size = 100; // Cube size
+
+        // Draw the 3D cube on the canvas
+        cubeDrawer.drawCube(gc, centerX, centerY, 500, 100);
+
+        /* overlay: messages‑per‑second meter */
         int    mps       = MessageRateMeter.getMessagesPerSecond();
         String rateText  = mps + " msg/s";
-    
+
         gc.save();                                         // 1) push entire state
-    
+
         gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 14));
         gc.setFill(Color.BLACK);
         gc.setTextAlign(TextAlignment.RIGHT);
         gc.setTextBaseline(VPos.TOP);
-    
+
         double x = gc.getCanvas().getWidth() - 10;   // 10‑px padding from right
         double y = 100;                              // 100‑px from top
         gc.fillText(rateText, x, y);
-    
+
         gc.restore();                                      // 2) pop → previous state
     }
-    
-    
+
+
 
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
