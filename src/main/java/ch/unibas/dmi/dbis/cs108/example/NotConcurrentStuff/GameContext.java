@@ -780,6 +780,9 @@ public class GameContext {
         // Draw the 3D cube on the canvas
         cubeDrawer.drawCube(gc, centerX, centerY, fov, size);
 
+            setupMouseEventHandlers();
+
+
         /* overlay: messages‑per‑second meter */
         int    mps       = MessageRateMeter.getMessagesPerSecond();
         String rateText  = mps + " msg/s";
@@ -813,8 +816,8 @@ public class GameContext {
             double deltaY = event.getSceneY() - lastMouseY;
 
             // Update rotation based on mouse movement
-            cubeDrawer.setAngleX(cubeDrawer.getAngleX() + deltaY * 0.01);  // Adjust sensitivity
-            cubeDrawer.setAngleY(cubeDrawer.getAngleY() - deltaX * 0.01);  // Adjust sensitivity
+            cubeDrawer.setAngleX(cubeDrawer.getAngleX() + deltaY * 0.5);  // Adjust sensitivity
+            cubeDrawer.setAngleY(cubeDrawer.getAngleY() - deltaX * 0.5);  // Adjust sensitivity
 
             // Update last mouse position
             lastMouseX = event.getSceneX();

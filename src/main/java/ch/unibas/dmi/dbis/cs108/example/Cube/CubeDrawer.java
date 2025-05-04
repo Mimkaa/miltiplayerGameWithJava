@@ -4,20 +4,20 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 public class CubeDrawer {
-    private double angleX = 0;  // Rotation angle for X-axis
-    private double angleY = 0;  // Rotation angle for Y-axis
 
-    // Getter and setter for rotation angles
+    private double angleX = 0;  // Rotation angle around X-axis
+    private double angleY = 0;  // Rotation angle around Y-axis
+
     public double getAngleX() {
         return angleX;
     }
 
-    public double getAngleY() {
-        return angleY;
-    }
-
     public void setAngleX(double angleX) {
         this.angleX = angleX;
+    }
+
+    public double getAngleY() {
+        return angleY;
     }
 
     public void setAngleY(double angleY) {
@@ -26,12 +26,6 @@ public class CubeDrawer {
 
     /**
      * Draws a 3D-like cube on a 2D canvas by applying perspective projection.
-     *
-     * @param gc The GraphicsContext on which the cube will be drawn.
-     * @param centerX The x-coordinate of the center of the canvas.
-     * @param centerY The y-coordinate of the center of the canvas.
-     * @param fov The field of view (controls how "deep" the cube appears).
-     * @param size The size of the cube.
      */
     public void drawCube(GraphicsContext gc, double centerX, double centerY, double fov, double size) {
         // Cube vertices in 3D space (x, y, z)
@@ -46,35 +40,39 @@ public class CubeDrawer {
                 {-size, size, size}    // Back-bottom-left
         };
 
-        // Apply rotations around the X and Y axes
-        for (int i = 0; i < vertices.length; i++) {
-            // Rotate around X axis
-            double x = vertices[i][0];
-            double y = vertices[i][1];
-            double z = vertices[i][2];
+        // Apply rotation to the vertices
+        double[][] rotatedVertices = new double[8][3];  // Store rotated vertices
 
-            double newY = y * Math.cos(angleX) - z * Math.sin(angleX);
-            double newZ = y * Math.sin(angleX) + z * Math.cos(angleX);
-
-            vertices[i][1] = newY;
-            vertices[i][2] = newZ;
-
-            // Rotate around Y axis
-            double newX = x * Math.cos(angleY) + z * Math.sin(angleY);
-            newZ = -x * Math.sin(angleY) + z * Math.cos(angleY);
-
-            vertices[i][0] = newX;
-            vertices[i][2] = newZ;
-        }
-
-        // Apply perspective transformation to each vertex
-        double[][] projectedVertices = new double[8][2];
         for (int i = 0; i < 8; i++) {
             double x = vertices[i][0];
             double y = vertices[i][1];
             double z = vertices[i][2];
 
-            // Perspective projection (simple version)
+            // Rotate around the X-axis
+            double tempY = y * Math.cos(angleX) - z * Math.sin(angleX);
+            double tempZ = y * Math.sin(angleX) + z * Math.cos(angleX);
+            y = tempY;
+            z = tempZ;
+
+            // Rotate around the Y-axis
+            double tempX = x * Math.cos(angleY) + z * Math.sin(angleY);
+            z = -x * Math.sin(angleY) + z * Math.cos(angleY);
+            x = tempX;
+
+            // Store rotated vertices
+            rotatedVertices[i][0] = x;
+            rotatedVertices[i][1] = y;
+            rotatedVertices[i][2] = z;
+        }
+
+        // Apply perspective projection to the rotated vertices
+        double[][] projectedVertices = new double[8][2];
+        for (int i = 0; i < 8; i++) {
+            double x = rotatedVertices[i][0];
+            double y = rotatedVertices[i][1];
+            double z = rotatedVertices[i][2];
+
+            // Perspective projection
             double projectedX = x / (z / fov + 1) + centerX;
             double projectedY = y / (z / fov + 1) + centerY;
 
@@ -82,19 +80,14 @@ public class CubeDrawer {
             projectedVertices[i][1] = projectedY;
         }
 
-        // Set line color
+        // Draw edges of the cube
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(2);
-
-        // Draw edges of the cube (connecting the appropriate vertices)
         drawCubeEdges(gc, projectedVertices);
     }
 
     /**
      * Draws the edges of the cube by connecting the projected vertices.
-     *
-     * @param gc The GraphicsContext on which the cube edges will be drawn.
-     * @param vertices The 2D projected vertices of the cube.
      */
     private void drawCubeEdges(GraphicsContext gc, double[][] vertices) {
         // Connect front face (vertices 0, 1, 2, 3)
