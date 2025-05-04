@@ -2,7 +2,8 @@ plugins {
     id 'java-library'
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.13'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'}
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
 
 
 
@@ -101,6 +102,7 @@ javadoc {
     options.memberLevel = JavadocMemberLevel.PROTECTED
     options.author = true
     options.version = true
+    failOnError = true
     options.links("https://docs.oracle.com/en/java/javase/17/docs/api/")
 }
 
