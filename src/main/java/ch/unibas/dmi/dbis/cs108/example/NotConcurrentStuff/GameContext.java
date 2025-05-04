@@ -15,6 +15,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Pos;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
@@ -56,6 +57,9 @@ public class GameContext {
     Add CubeDrawer as a field
     */
     private CubeDrawer cubeDrawer = new CubeDrawer();
+
+    private double lastMouseX = 0;
+    private double lastMouseY = 0;
 
     private final GameSessionManager gameSessionManager;
     private MessageHogger testHogger;
@@ -696,11 +700,11 @@ public class GameContext {
         AnimationTimer timer = new AnimationTimer() {
             GraphicsContext gc = CentralGraphicalUnit.getInstance().getGraphicsContext();
 
-
             @Override
             public void handle(long now) {
                 update();
                 draw(gc);
+
                 long elapsedTime = LevelTimer.getInstance().getElapsedTimeInSeconds();
                 Platform.runLater(() -> {
                     // Update your GUI element here with the elapsed time
@@ -774,7 +778,7 @@ public class GameContext {
         double size = 100; // Cube size
 
         // Draw the 3D cube on the canvas
-        cubeDrawer.drawCube(gc, centerX, centerY, 500, 100);
+        cubeDrawer.drawCube(gc, centerX, centerY, fov, size);
 
         /* overlay: messages‑per‑second meter */
         int    mps       = MessageRateMeter.getMessagesPerSecond();
@@ -792,6 +796,30 @@ public class GameContext {
         gc.fillText(rateText, x, y);
 
         gc.restore();                                      // 2) pop → previous state
+    }
+
+    private void setupMouseEventHandlers() {
+        Canvas canvas = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas();
+
+        // Mouse pressed event (stores the initial position)
+        canvas.setOnMousePressed(event -> {
+            lastMouseX = event.getSceneX();
+            lastMouseY = event.getSceneY();
+        });
+
+        // Mouse dragged event (updates the rotation angles based on mouse movement)
+        canvas.setOnMouseDragged(event -> {
+            double deltaX = event.getSceneX() - lastMouseX;
+            double deltaY = event.getSceneY() - lastMouseY;
+
+            // Update rotation based on mouse movement
+            cubeDrawer.setAngleX(cubeDrawer.getAngleX() + deltaY * 0.01);  // Adjust sensitivity
+            cubeDrawer.setAngleY(cubeDrawer.getAngleY() - deltaX * 0.01);  // Adjust sensitivity
+
+            // Update last mouse position
+            lastMouseX = event.getSceneX();
+            lastMouseY = event.getSceneY();
+        });
     }
 
 

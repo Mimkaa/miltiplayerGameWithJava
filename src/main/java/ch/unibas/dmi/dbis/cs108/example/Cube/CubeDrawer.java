@@ -4,6 +4,26 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 public class CubeDrawer {
+    private double angleX = 0;  // Rotation angle for X-axis
+    private double angleY = 0;  // Rotation angle for Y-axis
+
+    // Getter and setter for rotation angles
+    public double getAngleX() {
+        return angleX;
+    }
+
+    public double getAngleY() {
+        return angleY;
+    }
+
+    public void setAngleX(double angleX) {
+        this.angleX = angleX;
+    }
+
+    public void setAngleY(double angleY) {
+        this.angleY = angleY;
+    }
+
     /**
      * Draws a 3D-like cube on a 2D canvas by applying perspective projection.
      *
@@ -25,6 +45,27 @@ public class CubeDrawer {
                 {size, size, size},    // Back-bottom-right
                 {-size, size, size}    // Back-bottom-left
         };
+
+        // Apply rotations around the X and Y axes
+        for (int i = 0; i < vertices.length; i++) {
+            // Rotate around X axis
+            double x = vertices[i][0];
+            double y = vertices[i][1];
+            double z = vertices[i][2];
+
+            double newY = y * Math.cos(angleX) - z * Math.sin(angleX);
+            double newZ = y * Math.sin(angleX) + z * Math.cos(angleX);
+
+            vertices[i][1] = newY;
+            vertices[i][2] = newZ;
+
+            // Rotate around Y axis
+            double newX = x * Math.cos(angleY) + z * Math.sin(angleY);
+            newZ = -x * Math.sin(angleY) + z * Math.cos(angleY);
+
+            vertices[i][0] = newX;
+            vertices[i][2] = newZ;
+        }
 
         // Apply perspective transformation to each vertex
         double[][] projectedVertices = new double[8][2];
