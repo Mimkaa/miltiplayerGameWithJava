@@ -1,53 +1,69 @@
-<html>
-<!-- Dies ist ein html Kommentar -->
-<!-- Ändert in diesem File sämtliche Platzhalter, wie z.B. den Spielnamen in der nächsten Linie -->
-<head><title>Example Game</title><link rel="stylesheet" href="main.css"></head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Think Outside The Room</title>
+    <link rel="stylesheet" href="main.css">
+</head>
 
 <body>
-<!-- Header nicht verändern -->
-<header class="site-header"><div class="wrapper"><a class="site-title" href="/cs108/">Programmierprojekt - Computerspiele</a></div></header><div class="page-content"><div class="wrapper"><div class="home">
+<!-- Header with Logo -->
+<header class="site-header">
+    <div class="wrapper" style="display: flex; align-items: center;">
+        <img src="WISA_LOGO.png" alt="Group Logo" style="height: 40px; margin-right: 12px;">
+        <a class="site-title" href="#">Think Outside The Room</a>
+    </div>
+</header>
 
-<h1>Example Game</h1>
-Hier k&ouml;nnt ihr einen Satz &uuml;ber euer Spiel sagen.
+<div class="page-content">
+    <div class="wrapper">
+        <div class="home">
 
-<!-- Dieser Block ist dafür verantwortlich, den Trailer / das Gameplay Video und euren Screenshot einzubauen. Verändert ihn nicht, sondern überschreibt einfach die Dateien -->
-<br>
-<img width="250" src="screenshot.png">
-<br>
-<br>
-<h2>Trailer</h2>
-<video controls width="250">
-    <source src="video.mp4"
-            type="video/mp4">
-    Sorry, your browser doesn't support embedded videos.
-</video>
-<br>
-<br>
+            <!-- Main Headline -->
+            <h1>Two Players. One Character. Endless Puzzles.</h1>
+            <p>Jump, solve, and cooperate: Take on challenging levels in this unique 2D platformer where two players control a single character!</p>
 
-<!-- Entwickler anpassen -->
 
-<h3>Entwickler:</h3>
-<ul>
-<li> Edgar Codd </li>
-<li> Lynn Conway </li>
-<li> Ada Lovelace </li>
-<li> Alan Turing </li>
-</ul>
+            <h2>Trailer</h2>
+            <video controls width="250">
+                <source src="video.mp4" type="video/mp4">
+                Sorry, your browser doesn't support embedded videos.
+            </video>
 
-<!-- Nachfolgend sollt ihr die Tasten angeben, welche man braucht um euer Spiel zu Spielen. Um weitere Tasten hinzuzufügen könnt Ihr einfach eine Zeile kopieren und den Buchstaben oder das Wort zwischen <i>Beispiel:</i> ändern. -->
+            <!-- Download Button -->
+            <h2>Download</h2>
+            <p>Ready to try it out? Download the game here:</p>
+            <a href="game-download.zip" class="download-button">Download Now</a>
 
-<h2>Steuerung:</h2>
-<i>Pfeiltasten:</i> bewegen<br/>
-<i>Leertaste:</i> springen<br/>
-<i>I:</i> Inventar<br/>
-<i>Esc:</i> Spiel beenden<br/>
-<i>P:</i> Spiel pausieren
+            <!-- Developer Info -->
+            <h2>Developers</h2>
+            <ul>
+                <li>Senanur Ates</li>
+                <li>Illia Solohub</li>
+                <li>Aiysha Frutiger</li>
+                <li>William Tran</li>
+            </ul>
 
-<!-- Falls ihr noch zusätzliche Informationen wie Items oder andere Erklärungen angeben wollt, könnt Ihr das wie nachfolgend machen. -->
+            <!-- Controls -->
+            <h2>Controls</h2>
+            <ul>
+                <li><strong>Jump:</strong> Up Arrow</li>
+                <li><strong>Move:</strong> Left & Right Arrows</li>
+                <li><strong>Grab:</strong> Hold <kbd>E</kbd></li>
+                <li><strong>Throw:</strong> Hold <kbd>F</kbd></li>
+            </ul>
 
-<h2>Inventar:</h2>
-<i>Eisblock:</i> Gegner k&ouml;nnen sich nicht mehr bewegen<br/>
-<i>Schwarzes Loch:</i> Steuerung der Gegner wird invertiert
+            <!-- Multiplayer Twist -->
+            <h2>Multiplayer Twist</h2>
+            <p>
+                This is not your typical co-op game. In <strong>Think Outside The Room</strong>, each character is controlled by <strong>two players</strong> – one handles movement, the other handles actions like jumping or grabbing.
+            </p>
+            <p>
+                It’s a true test of communication, coordination, and patience. To succeed, you must think as one. Laugh together. Fail together. Win together.
+            </p>
 
-</div></div></div></div></body>
+        </div>
+    </div>
+</div>
+</body>
 </html>
