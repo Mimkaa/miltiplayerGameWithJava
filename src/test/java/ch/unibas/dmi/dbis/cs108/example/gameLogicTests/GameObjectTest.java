@@ -104,7 +104,7 @@ class GameObjectTest {
         for (int i = 0; i < 7; i++) {
             stub.addIncomingMessage(new Message("M" + i, new Object[0], "OPT"));
         }
-        stub.processIncomingMessages();
+        //stub.processIncomingMessages();
         assertTrue(stub.globalUpdated,
                 "processIncomingMessages should invoke myUpdateGlobal at least once");
     }

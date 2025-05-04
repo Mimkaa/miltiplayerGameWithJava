@@ -122,7 +122,7 @@ public class ChatManager {
             System.out.println("Processing chat message: " + msg);
             SwingUtilities.invokeLater(() -> chatPanel.appendMessage(fullMessage, isLocal));
             InetSocketAddress socketAddress = new InetSocketAddress("localhost", 9876);
-            ackProcessor.addAck(socketAddress, msg.getUUID());
+            //ackProcessor.addAck(socketAddress, msg.getUUID());
         }
     }
 
@@ -149,7 +149,7 @@ public class ChatManager {
             System.out.println("Broadcasted Message to all Clients");
 
             // Send an ACK to the sender.
-            ackProcessor.addAck(senderSocket, msg.getUUID());
+            //ackProcessor.addAck(senderSocket, msg.getUUID());
             System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
         }
     }

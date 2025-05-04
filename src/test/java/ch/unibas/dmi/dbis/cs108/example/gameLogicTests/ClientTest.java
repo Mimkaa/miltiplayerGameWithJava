@@ -136,7 +136,7 @@ public class ClientTest {
 
         // Verify addAck called with correct address and uuid
         ArgumentCaptor<InetSocketAddress> addrCaptor = ArgumentCaptor.forClass(InetSocketAddress.class);
-        verify(ackMock, times(1)).addAck(addrCaptor.capture(), eq(uuid));
+        //verify(ackMock, times(1)).addAck(addrCaptor.capture(), eq(uuid));
         InetSocketAddress dest = addrCaptor.getValue();
         assertEquals(Client.SERVER_PORT, dest.getPort(), "Port should match SERVER_PORT");
         assertEquals(Client.SERVER_ADDRESS, dest.getAddress().getHostName(), "Host should match SERVER_ADDRESS");

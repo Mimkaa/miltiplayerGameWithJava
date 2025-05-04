@@ -65,6 +65,7 @@ public class Client {
      * The default server port, set to 9876 by default.
      */
     public static int SERVER_PORT = 9876;
+    public int CLIENT_PORT = 9876;
 
     /**
      * Manages all chat functionality on the client side.
@@ -184,13 +185,15 @@ public class Client {
         try {
             // Initialize the client socket once.
             clientSocket = new DatagramSocket();
+            int chosenPort = clientSocket.getLocalPort();
+            CLIENT_PORT = chosenPort;
 
             // Initialize the reliable sender without a fixed destination.
             myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000);
 
-            // Initialize the AckProcessor using the same socket.
-            ackProcessor = new AckProcessor(clientSocket);
-            ackProcessor.start();
+            ackProcessor = new AckProcessor();
+            ackProcessor.init(clientSocket);
+         
 
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
         
@@ -206,9 +209,9 @@ public class Client {
                             StandardCharsets.UTF_8
                         );
                         
-
+                        System.out.println(response);
                         Message receivedMessage = MessageCodec.decode(response);
-                        //System.out.println("Received (UDP): " + receivedMessage);
+                        
                         
                         AsyncManager.run(() -> {
                             // 1) Immediate ACKs
@@ -221,12 +224,18 @@ public class Client {
                               }
                               return;  // done with this packet
                             }
+
+                            //System.out.println("Received (UDP): " + receivedMessage);
                             if (receivedMessage.getUUID() != null
                                 && !receivedMessage.getUUID().isEmpty()
                                 && !"GAME".equalsIgnoreCase(receivedMessage.getOption())) {
+                                InetSocketAddress dest =
+                                new InetSocketAddress(receivePacket.getAddress(),
+                                                        receivePacket.getPort());
 
-                                sendPlainAckToServer(receivedMessage);
+                                AckProcessor.enqueue(dest, receivedMessage.getUUID());
                             }
+                            
                     
                             // 2) All other messages
                             messageHub.dispatch(receivedMessage);
@@ -259,7 +268,7 @@ public class Client {
                                 InetSocketAddress dest = new InetSocketAddress(
                                         InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT
                                 );
-                                ackProcessor.addAck(dest, msg.getUUID());
+                                //ackProcessor.addAck(dest, msg.getUUID());
                             }
                             // Dispatch the message via the MessageHub.
                             //messageHub.dispatch(msg);
@@ -313,6 +322,13 @@ public class Client {
             e.printStackTrace();
         }
     }
+
+    public int getClientPort() {
+        return (clientSocket == null) ? CLIENT_PORT
+                                      : clientSocket.getLocalPort();
+    }
+
+
 
     /**
      * Sends a {@link Message} in a static context by updating its concealed parameters
@@ -405,7 +421,7 @@ public class Client {
         try {
             InetAddress addr = InetAddress.getByName(SERVER_ADDRESS);
             InetSocketAddress dest = new InetSocketAddress(addr, SERVER_PORT);
-            self.ackProcessor.addAck(dest, uuid);
+            //self.ackProcessor.addAck(dest, uuid);
             System.out.println("Sent ACK for UUID " + uuid + " to " + dest);
         } catch (UnknownHostException e) {
             e.printStackTrace();

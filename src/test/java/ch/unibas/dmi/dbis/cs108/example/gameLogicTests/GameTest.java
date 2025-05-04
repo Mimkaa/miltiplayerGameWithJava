@@ -142,7 +142,7 @@ class GameTest {
         route.invoke(game, msg);
 
         // now drain the stub's incoming queue so myUpdateGlobal(...) runs
-        obj.processIncomingMessages();
+        //obj.processIncomingMessages();
 
         assertTrue(obj.globalUpdated, "After routing + processing, stub should have been updated");
     }

@@ -240,7 +240,9 @@ public class Server {
             commandRegistry.initCommandHandlers();
 
             reliableSender = new ReliableUDPSender(serverSocket, 100, 200);
-            ackProcessor = new AckProcessor(serverSocket);
+            ackProcessor = new AckProcessor();
+            ackProcessor.init(serverSocket);
+
             //ackProcessor.start();
 
             // Process outgoing messages.
@@ -270,47 +272,53 @@ public class Server {
 
             // Listen for incoming packets.
             new Thread(() -> {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+            
                 while (true) {
                     try {
-                    byte[] buffer = new byte[1024];
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                    serverSocket.receive(packet);
-
-                    // 1) Decode
-                    String raw = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.UTF_8);
-                    InetSocketAddress sender = new InetSocketAddress(packet.getAddress(), packet.getPort());
-                    Message msg = MessageCodec.decode(raw);
-                    System.out.println("Received: " + raw + " from " + sender);
-
-                    // 2) If it’s an ACK *for* one of our reliable sends, clear it immediately
-                    AsyncManager.run(() -> {
+                        serverSocket.receive(pkt);
+            
+                        String raw   = new String(pkt.getData(), pkt.getOffset(),
+                                                   pkt.getLength(), StandardCharsets.UTF_8);
+                        InetSocketAddress sender =
+                            new InetSocketAddress(pkt.getAddress(), pkt.getPort());
+                        Message msg   = MessageCodec.decode(raw);
+            
+                        /* a) ACKs for *our* reliable sends --------------------- */
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-                          String ackUuid = msg.getParameters()[0].toString();
-                          reliableSender.acknowledge(ackUuid);
-                          return;             // exit the lambda early
+                            reliableSender.acknowledge(msg.getParameters()[0].toString());
+                            continue;                       // done with this packet
                         }
-                  
-                        // best‐effort ACK back to sender (on another thread)
-                        String[] concealed = msg.getConcealedParameters();
-                        if (msg.getUUID() != null
-                            && !msg.getUUID().isEmpty()
-                            && concealed != null
-                            && concealed.length > 0
-                            && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                          String username = concealed[concealed.length - 1];
-                          sendPlainAckAsync(username, msg);
+            
+                        /* b) queue best‑effort ACK back to the client ---------- */
+                        if (msg.getUUID()!=null && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                            AckProcessor.enqueue(sender, msg.getUUID());
                         }
-                  
-                        // hand off the real processing
-                        processMessage(msg, sender);
+            
+                        /* c) application‑level handling ------------------------ */
+                        //System.out.println(username);
+                        //System.out.println(sender);
+                        if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                            sendKeyEvent(msg);              // fire‑and‑forget
+                        } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
+                            String username = findUserBySocket(sender);
+                            System.out.println(username);
+                            System.out.println(sender);
+                            handleRequest(msg, username);
+                        } else {
+                            String username = findUserBySocket(sender);
+                            broadcastMessageToOthers(msg, username);
+                        }
+            
+                        /* d) notify higher‑level subsystems -------------------- */
                         messageHub.dispatch(msg);
-                      });
-
-                    } catch (IOException e) {
-                    e.printStackTrace();
+            
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
                     }
                 }
-            }).start();
+            }, "udp-receiver").start();
 
 
         } catch (IOException e) {
@@ -330,74 +338,25 @@ public class Server {
     // ================================
 
     /**
-     * Processes an incoming {@link Message} from a specified sender address.
-     * <p>
-     * The method first normalizes the message type (e.g., "ACK", "CHAT", "REQUEST", etc.)
-     * and optionally registers or verifies the user if the message includes concealed
-     * parameters (e.g., username). It then attempts to find an appropriate
-     * <ul>
-     *   <li>If a matching handler exists, the server delegates processing by invoking
-     *       {@code handler.handle(this, msg, senderSocket)}.</li>
-     *   <li>If no matching handler is found, the method logs a message indicating that
-     *       no handler is available for the given message type.</li>
-     * </ul>
+     * Reverse‑lookup: return the username that is mapped to the given
+     * socket (IP + port) or {@code null} if we don’t know that socket yet.
      *
-     * @param msg          the {@link Message} object from the client
-     * @param senderSocket the network socket (IP + port) of the message sender
+     * We simply scan the clientsMap; for the typical multiplayer‑game
+     * server (tens, not thousands, of players) the O(n) cost is negligible.
+     * If you expect hundreds‑plus clients, keep a second map
+     *   socket → username
+     * instead.
      */
-    private void processMessage(Message msg, InetSocketAddress senderSocket) {
-
-        
-        if ("CHAT".equalsIgnoreCase(msg.getMessageType())) {
-            System.out.println("Processed CHAT message 1 ");
-            if (serverChatManager == null) {
-                serverChatManager = new ChatManager.ServerChatManager();
+    private String findUserBySocket(InetSocketAddress socket) {
+        for (Map.Entry<String, InetSocketAddress> e : clientsMap.entrySet()) {
+            if (e.getValue().equals(socket)) {
+                return e.getKey();       // found it
             }
-            if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-            }
-            AsyncManager.run(() -> broadcastMessageToAll(msg));
-            System.out.println("Processed CHAT message 2");
-            return;
         }
-
-        String[] concealed = msg.getConcealedParameters();
-        if (concealed != null && concealed.length >= 2) {
-            String username = concealed[concealed.length - 1];
-            if (clientsMap.containsKey(username)) {
-                InetSocketAddress existingSocket = clientsMap.get(username);
-                if (!existingSocket.equals(senderSocket)) {
-                    if (msg.getUUID() != null && !msg.getUUID().isEmpty()) {
-                        ackProcessor.addAck(senderSocket, msg.getUUID());
-                    }
-                    String suggestedNickname = Nickname_Generator.generateNickname();
-                    Message collisionResponse = new Message("NAME_TAKEN", new Object[]{suggestedNickname}, "RESPONSE");
-                    collisionResponse.setUUID("");
-                    enqueueMessage(collisionResponse, senderSocket.getAddress(), senderSocket.getPort());
-                    return;
-                }
-            } else {
-                clientsMap.put(username, senderSocket);
-                syncGames(senderSocket);
-            }
-            System.out.println("Registered user: " + username + " at " + senderSocket + ". Total clients: " + clientsMap.size());
-            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                ackProcessor.addAck(senderSocket, msg.getUUID());
-                System.out.println("Added message UUID " + msg.getUUID() + " to ACK handler");
-            }
-            if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                //processMessageBestEffort(msg, senderSocket);
-                AsyncManager.run(() -> sendKeyEvent(msg));
-            } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
-                AsyncManager.run(() -> handleRequest(msg, username));
-            } else {
-                broadcastMessageToOthers(msg, username);
-            }
-        } else {
-            System.out.println("Concealed parameters missing or too short.");
-        }
+        return null;                     // unknown connection
     }
 
+    
     /**
      * Sends a key event message to all connected clients in a best-effort manner,
      * but only if the message type contains "KEY".
