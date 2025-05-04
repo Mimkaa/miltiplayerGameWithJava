@@ -3,108 +3,116 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * The {@code AckProcessor} class is responsible for processing and sending acknowledgment (ACK) messages
- * for received data packets. It uses a {@link DatagramSocket} to send these ACK messages asynchronously.
+ * Central ACK sender.
  *
- * <p>When you call {@link #addAck(InetSocketAddress, String)}, an {@link AckProcessor.AckEntry} is created
- * and placed in a queue. Once {@link #start()} is invoked, a continuous background loop handles these entries
- * by constructing the ACK messages and sending them to the specified destinations.</p>
+ * <pre>
+ * AckProcessor.init(socket);                 // once at start‑up
+ *
+ * AckProcessor.enqueue(dest, uuid);          // anywhere in code
+ *
+ * int backlog = AckProcessor.getQueueSize(); // optional stats
+ * </pre>
+ *
+ * All ACKs are fired by one daemon thread (“ack‑sender”) so they leave
+ * the process in order and you never create extra threads / runnables
+ * under high load.
  */
-public class AckProcessor {
+public final class AckProcessor {
 
-    /**
-     * The socket used for sending ACK messages.
-     */
-    private final DatagramSocket socket;
+    /* =============================================================
+     * public API
+     * =========================================================== */
 
-    /**
-     * A thread-safe queue that holds acknowledgment entries (destination and UUID).
-     * Entries are polled and processed asynchronously to avoid blocking the main thread.
-     */
-    private final ConcurrentLinkedQueue<AckEntry> ackQueue = new ConcurrentLinkedQueue<>();
-
-    /**
-     * Constructs a new {@code AckProcessor} with the specified {@link DatagramSocket}.
-     *
-     * @param socket The {@link DatagramSocket} used for sending ACK messages.
-     */
-    public AckProcessor(DatagramSocket socket) {
-        this.socket = socket;
-    }
-
-    /**
-     * Adds an acknowledgment entry to the queue for the specified destination and message UUID.
-     * <p>
-     * This method enqueues the ACK request asynchronously, so it returns immediately.
-     * The actual sending of the ACK is handled by the background loop once {@link #start()} is called.
-     * </p>
-     *
-     * @param destination The network address and port to which the ACK should be sent.
-     * @param uuid        The unique identifier of the message to acknowledge.
-     */
-    public void addAck(InetSocketAddress destination, String uuid) {
-        AsyncManager.run(() -> ackQueue.offer(new AckEntry(destination, uuid)));
-    }
-
-    /**
-     * Starts an asynchronous loop that continuously polls the {@link #ackQueue} for pending ACK requests.
-     * <p>
-     * For each queued {@link AckEntry}, this loop constructs an ACK {@link Message} and sends it to the
-     * corresponding destination. A log message is printed to the console upon successful transmission.
-     * </p>
-     */
-    public void start() {
-        AsyncManager.runLoop(() -> {
-            AckEntry entry = ackQueue.poll();
-            if (entry != null) {
-                try {
-                    // Create an ACK message with type "ACK" and the UUID as a parameter.
-                    Message ackMsg = new Message("ACK", new Object[] { entry.uuid }, null);
-                    // Optionally, you could also call ackMsg.setUUID(entry.uuid) if your protocol requires it.
-                    String encodedAck = MessageCodec.encode(ackMsg);
-                    byte[] data = encodedAck.getBytes();
-                    DatagramPacket packet = new DatagramPacket(
-                            data,
-                            data.length,
-                            entry.destination.getAddress(),
-                            entry.destination.getPort()
-                    );
-                    socket.send(packet);
-                    System.out.println("Sent ACK for UUID " + entry.uuid + " to " + entry.destination);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-    /**
-     * Represents an acknowledgment entry containing the destination address and port,
-     * along with the UUID of the message to be acknowledged.
-     */
-    private static class AckEntry {
-        /**
-         * The network address and port for sending this acknowledgment.
-         */
-        private final InetSocketAddress destination;
-
-        /**
-         * The unique identifier of the message being acknowledged.
-         */
-        private final String uuid;
-
-        /**
-         * Constructs a new {@code AckEntry} with the specified destination and UUID.
-         *
-         * @param destination The network address and port associated with this acknowledgment.
-         * @param uuid        The unique identifier of the message being acknowledged.
-         */
-        public AckEntry(InetSocketAddress destination, String uuid) {
-            this.destination = destination;
-            this.uuid = uuid;
+    /** Must be called exactly once – typically after the socket is opened. */
+    public static void init(DatagramSocket socket) {
+        if (!SOCKET.compareAndSet(null, socket)) {
+            throw new IllegalStateException("AckProcessor already initialised");
         }
     }
+
+    /** Queue an ACK for the given UUID & destination. */
+    public static void enqueue(InetSocketAddress dest, String uuid) {
+        QUEUE.add(new AckEntry(dest, uuid));
+    }
+
+    /** Optional – see how far we’re lagging behind. */
+    public static int getQueueSize() {
+        return QUEUE.size();
+    }
+
+    /** Optional clean shutdown (not required for daemon threads). */
+    public static void shutdown() {
+        SCHEDULER.shutdownNow();
+    }
+
+    /* =============================================================
+     * implementation details
+     * =========================================================== */
+
+    /** holds (destination, uuid) pairs */
+    private static final ConcurrentLinkedQueue<AckEntry> QUEUE =
+            new ConcurrentLinkedQueue<>();
+
+    /** socket is injected once via init() */
+    private static final AtomicReference<DatagramSocket> SOCKET =
+            new AtomicReference<>();
+
+    /** single daemon that wakes up every few ms and flushes the queue */
+    private static final ScheduledExecutorService SCHEDULER =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "ack‑sender");
+                t.setDaemon(true);
+                return t;
+            });
+
+    static {
+        // drain & send every 2 ms – tweak if you need a different cadence
+        SCHEDULER.scheduleAtFixedRate(AckProcessor::flush,
+                                      0, 2, TimeUnit.MILLISECONDS);
+    }
+
+    /** grab everything in the queue and send it in FIFO order */
+    private static void flush() {
+        DatagramSocket sock = SOCKET.get();
+        if (sock == null) {                // not yet initialised
+            return;
+        }
+
+        // drain without allocating one packet per entry
+        List<AckEntry> batch = new ArrayList<>(64);
+        for (AckEntry e; (e = QUEUE.poll()) != null; ) {
+            batch.add(e);
+        }
+        if (batch.isEmpty()) return;
+
+        try {
+            for (AckEntry e : batch) {
+                Message ack = new Message("ACK",
+                        new Object[]{ e.uuid }, "GAME");
+                ack.setUUID("");           // ACKs have no own‑UUID
+                byte[] data = MessageCodec.encode(ack)
+                                          .getBytes(StandardCharsets.UTF_8);
+
+                DatagramPacket pkt = new DatagramPacket(
+                        data, data.length,
+                        e.destination.getAddress(),
+                        e.destination.getPort());
+
+                sock.send(pkt);
+            }
+        } catch (Exception ex) {
+            // log & carry on – we don’t want to kill the scheduler
+            ex.printStackTrace();
+        }
+    }
+
+    /** tiny value‑object for the queue */
+    private record AckEntry(InetSocketAddress destination, String uuid) {}
 }
