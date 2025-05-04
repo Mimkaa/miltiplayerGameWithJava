@@ -488,6 +488,10 @@ public class Client {
         }
     }
 
+    public InetAddress getClientIp() {
+        return (clientSocket == null) ? null : clientSocket.getLocalAddress();
+    }
+
     /**
      * Processes server responses not related to ACK.
      * Common types include:

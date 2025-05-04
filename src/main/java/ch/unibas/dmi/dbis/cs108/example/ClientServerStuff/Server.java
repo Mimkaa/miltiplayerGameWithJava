@@ -540,7 +540,7 @@ public class Server {
           );
       
           try {
-            enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+            enqueueMessage(original, dest.getAddress(), dest.getPort());
             
           } catch (Exception e) {
             //System.err.println("Error enqueuing to " 
@@ -557,15 +557,10 @@ public class Server {
           InetSocketAddress dest = entry.getValue();
       
           // again, new instance with its own UUID
-          Message perClient = new Message(
-            original.getMessageType(),
-            original.getParameters(),
-            original.getOption(),
-            original.getConcealedParameters()
-          );
+          
       
           try {
-            enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+            enqueueMessage(original, dest.getAddress(), dest.getPort());
             
           } catch (Exception e) {
             //System.err.println("Error enqueuing to " 
