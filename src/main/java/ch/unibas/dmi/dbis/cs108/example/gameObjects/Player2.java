@@ -3,15 +3,13 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 import java.util.Arrays;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
-import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
-import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
+
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
-import org.dyn4j.geometry.Vector2;
 
 /**
  * A JavaFX-based translation of the Pygame Player snippet:
@@ -33,7 +31,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private float throwMagnitude = 20f;
 
     // ---------------------------------
-    // Constants matching the Python snippet
+    // Movement constants
     // ---------------------------------
     private static final float PLAYER_ACC = 3.5f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
@@ -47,7 +45,6 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private Vector2 pos;      // Current position
     private Vector2 vel;      // Velocity
     private Vector2 acc;      // Acceleration
-
     // (Optional) Store previous position if you want to compare changes later.
     private Vector2 prevPos;
 
@@ -83,18 +80,18 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private boolean interpolating = false;         // true if we're currently smoothing from an old state to a new state
     private Vector2 interpStartPos = new Vector2();  // starting position
     private Vector2 interpEndPos   = new Vector2();  // target position
-
-    // --- New: interpolation fields for velocity ---
+    // --- New: interpolation fields for velocity
     private Vector2 interpStartVel = new Vector2();  // starting velocity
     private Vector2 interpEndVel   = new Vector2();  // target velocity
-
-    // --- New: interpolation fields for acceleration ---
+    // --- New: interpolation fields for acceleration
     private Vector2 interpStartAcc = new Vector2();  // starting acceleration
     private Vector2 interpEndAcc   = new Vector2();  // target acceleration
-
     private float interpElapsed  = 0f;              // time elapsed during interpolation
     private float interpDuration = 0.05f;            // duration (in seconds) over which to interpolate
 
+    //-----------------------------------
+    // Network sync
+    //-----------------------------------
     private int syncCounter = 0;
     private static final int SYNC_THRESHOLD = 0;     // only send snapshot every 50 KEY_PRESS messages
 
