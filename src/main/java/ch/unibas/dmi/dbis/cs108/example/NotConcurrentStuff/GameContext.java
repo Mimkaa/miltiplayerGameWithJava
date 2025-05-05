@@ -80,6 +80,7 @@ public class GameContext {
 
     private Set<KeyCode> prevPressedKeys = new HashSet<>();
 
+    private boolean isRotating = false;
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
@@ -570,13 +571,6 @@ public class GameContext {
             uiManager.registerComponent("startGamePane", startGamePane);
 
             Button startGameButton = (Button) uiManager.getComponent("startGameButton"); // start button
-            /*
-            if (startGameButton != null) {
-                startGameButton.setOnAction(event -> {
-                    startGame();  // Start the game und the timer
-                });
-            }
-             */
 
             Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
             uiManager.registerComponent("adminUIPane", adminPane);
@@ -599,6 +593,13 @@ public class GameContext {
                     whisperChatPane,
                     lobbyChatPane
             );
+
+            // initialise the cube
+            CubeDrawer cubeDrawer = new CubeDrawer();
+            cubeDrawer.setAngleX(0);
+            cubeDrawer.setAngleY(0);
+
+            setupMouseEventHandlers();
 
             mainUIPane.setVisible(true);
             startGamePane.setVisible(false);
@@ -771,16 +772,10 @@ public class GameContext {
             game.draw(gc);
         }
 
-        /* draw 3D Cube on top of the game scene */
-        double centerX = gc.getCanvas().getWidth() / 2;  // Center X of the canvas
-        double centerY = gc.getCanvas().getHeight() / 2; // Center Y of the canvas
-        double fov = 500;  // Field of view (adjust this value to get a better perspective)
-        double size = 100; // Cube size
-
-        // Draw the 3D cube on the canvas
-        cubeDrawer.drawCube(gc, centerX, centerY, fov, size);
-
-            setupMouseEventHandlers();
+        if (cubeDrawer != null) {
+            cubeDrawer.drawCube(gc, gc.getCanvas().getWidth() / 2, gc.getCanvas().getHeight() / 2, 500, 100);
+            System.out.println("CubeDrawer drawn.");
+        }
 
 
         /* overlay: messages‑per‑second meter */
@@ -804,28 +799,68 @@ public class GameContext {
     private void setupMouseEventHandlers() {
         Canvas canvas = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas();
 
-        // Mouse pressed event (stores the initial position)
+        if (canvas == null) {
+            System.out.println("Canvas is null! The Canvas was not initialized properly.");
+            return;
+        }
+
+        canvas.setVisible(true);  // Ensure canvas is visible
+
+        // MousePressed Event: Check if the mouse clicks on the cube (like a button)
         canvas.setOnMousePressed(event -> {
-            lastMouseX = event.getSceneX();
-            lastMouseY = event.getSceneY();
-        });
+            double mouseX = event.getSceneX();
+            double mouseY = event.getSceneY();
 
-        // Mouse dragged event (updates the rotation angles based on mouse movement)
-        canvas.setOnMouseDragged(event -> {
-            double deltaX = event.getSceneX() - lastMouseX;
-            double deltaY = event.getSceneY() - lastMouseY;
-
-            // Update rotation based on mouse movement
-            cubeDrawer.setAngleX(cubeDrawer.getAngleX() + deltaY * 0.5);  // Adjust sensitivity
-            cubeDrawer.setAngleY(cubeDrawer.getAngleY() - deltaX * 0.5);  // Adjust sensitivity
-
-            // Update last mouse position
-            lastMouseX = event.getSceneX();
-            lastMouseY = event.getSceneY();
+            // Check if the mouse is over the cube
+            if (isMouseOverCube(mouseX, mouseY)) {
+                // If clicked on the cube, perform rotation or other action
+                System.out.println("Cube clicked, rotating...");
+                rotateCube();  // Call the rotation function or any action
+            }
         });
     }
 
+    private boolean isMouseOverCube(double mouseX, double mouseY) {
+        // Perspective projection parameters
+        double fov = 500;  // Field of View (adjust for visual effect)
+        double size = 100;  // Size of the cube
+        double centerX = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas().getWidth() / 2;
+        double centerY = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas().getHeight() / 2;
 
+        // Let's project the cube's 3D coordinates to 2D
+        double[][] vertices = cubeDrawer.getProjectedVertices(fov, size, centerX, centerY);
+
+        // Now check if the mouse is inside the projected 2D cube's boundaries
+        for (int i = 0; i < 4; i++) {  // Check only the front face (4 vertices)
+            double x1 = vertices[i][0];
+            double y1 = vertices[i][1];
+            double x2 = vertices[(i + 1) % 4][0];
+            double y2 = vertices[(i + 1) % 4][1];
+
+            // Check if the mouse is inside the 2D square formed by the front face
+            if (isPointInTriangle(mouseX, mouseY, x1, y1, x2, y2)) {
+                return true;  // Mouse is over the cube
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isPointInTriangle(double px, double py, double x1, double y1, double x2, double y2) {
+        // This is a simple check to determine if the point is within the triangle.
+        double area = 0.5 * (-y2 * x1 + y1 * x2 + x2 * py - y2 * px - x1 * py + x1 * y2);
+        double s = 1 / (2 * area) * (py * x2 - px * y2 + y2 * x1 - x2 * y1 + x1 * y2 - y1 * x2);
+        double t = 1 / (2 * area) * (px * y1 - py * x1 + y1 * x2 - x1 * y2 + x2 * y1 - y2 * x1);
+
+        return (s > 0 && t > 0 && 1 - s - t > 0);
+    }
+
+    private void rotateCube() {
+        // Rotate the cube by a fixed angle when clicked
+        cubeDrawer.setAngleX(cubeDrawer.getAngleX() + 10);  // Rotate by a fixed angle (adjust as needed)
+        cubeDrawer.setAngleY(cubeDrawer.getAngleY() + 10);  // Rotate by a fixed angle (adjust as needed)
+        System.out.println("Cube rotated to angleX: " + cubeDrawer.getAngleX() + ", angleY: " + cubeDrawer.getAngleY());
+    }
 
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
