@@ -155,12 +155,12 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             return;
         }
         // 1) Reset acceleration and apply gravity.
-        acc.y = 0.5f;
+        acc.y = 0.1f;
         acc.x += vel.x * PLAYER_FRICTION;
 
         // 2) Update velocity.
-        vel.x += acc.x;
-        vel.y += acc.y;
+        vel.x += acc.x ;
+        vel.y += acc.y ;
 
         // 3) Update position.
         pos.x += vel.x + 0.5f * acc.x;

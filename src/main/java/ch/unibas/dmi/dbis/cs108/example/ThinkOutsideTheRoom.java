@@ -52,8 +52,11 @@ public class ThinkOutsideTheRoom {
                 break;
             }
             case "client": {
-                if (args.length < 2 || args.length > 3) {
-                    System.err.println("Usage: client <host:port> [username]");
+                // allow: client <host:port>
+                //        client <host:port> [username]
+                //        client <host:port> [username] [clientIP]
+                if (args.length < 2 || args.length > 4) {
+                    System.err.println("Usage: client <host:port> [username] [clientIP]");
                     return;
                 }
                 String[] parts = args[1].split(":");
@@ -61,43 +64,54 @@ public class ThinkOutsideTheRoom {
                     System.err.println("Invalid host:port format.");
                     return;
                 }
-                String host = parts[0];
-                int clientPort = Integer.parseInt(parts[1]);
-                String username = args.length == 3 ? args[2] : null;
+                String host       = parts[0];
+                int    clientPort = Integer.parseInt(parts[1]);
+                String username   = args.length >= 3 ? args[2] : null;
+                String clientIp   = args.length == 4 ? args[3] : null;
 
-                prepareClientAndContext(host, clientPort, username);
+                prepareClientAndContext(host, clientPort, username, clientIp);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
             }
+
             case "client-headless": {
-                if (args.length != 5) {
-                    System.err.println("Usage: client-headless <host> <port> <username> <gameName>");
+                // allow: client-headless <host> <port> <username> <gameName>
+                //        client-headless <host> <port> <username> <gameName> [clientIP]
+                if (args.length < 5 || args.length > 6) {
+                    System.err.println("Usage: client-headless <host> <port> <username> <gameName> [clientIP]");
                     return;
                 }
-                String host     = args[1];
-                int    port     = Integer.parseInt(args[2]);
-                String username = args[3];
-                String gameName = args[4];
+                String host       = args[1];
+                int    port       = Integer.parseInt(args[2]);
+                String username   = args[3];
+                String gameName   = args[4];
+                String clientIp   = args.length == 6 ? args[5] : null;
 
-                prepareClientAndContext(host, port, username);
+                prepareClientAndContext(host, port, username, clientIp);
 
-                // 1) Game anlegen
-                Client.sendMessageStatic(new Message("CREATEGAME",
-                        new Object[]{ gameName }, "REQUEST"));
+                // 1) Create game
+                Client.sendMessageStatic(new Message(
+                    "CREATEGAME",
+                    new Object[]{ gameName },
+                    "REQUEST"
+                ));
 
-                // Warte kurz auf SessionId
+                // wait for sessionId
                 try { Thread.sleep(500); }
                 catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
-                // 2) Joinen
+                // 2) Join game
                 String sessionId = GameContext.getCurrentGameId();
-                Client.sendMessageStatic(new Message("JOINGAME",
-                        new Object[]{ sessionId, username, sessionId }, "REQUEST"));
+                Client.sendMessageStatic(new Message(
+                    "JOINGAME",
+                    new Object[]{ sessionId, username, sessionId },
+                    "REQUEST"
+                ));
 
-                // 3) Bestätigung
+                // 3) Confirmation
                 System.out.println("Joined game: " + gameName);
 
-                // kurz leben bleiben, damit der Test die Zeile lesen kann
+                // keep alive briefly so tests can read output
                 try { Thread.sleep(500); }
                 catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
@@ -139,7 +153,7 @@ public class ThinkOutsideTheRoom {
      * @param port     The server port.
      * @param username The optional username to use (or null to prompt/generate).
      */
-    private static void prepareClientAndContext(String host, int port, String username) {
+    private static void prepareClientAndContext(String host, int port, String username, String clientIp) {
         // Generate or request username
         if (username == null || username.trim().isEmpty()) {
             String suggested = Nickname_Generator.generateNickname();
@@ -174,7 +188,7 @@ public class ThinkOutsideTheRoom {
         }
 
         // Send registration message
-        Message register = new Message("REGISTER", new Object[]{username, "25.16.205.103" + ":" + Client.getInstance().getClientPort()}, "REQUEST");
+        Message register = new Message("REGISTER", new Object[]{username, clientIp + ":" + Client.getInstance().getClientPort()}, "REQUEST");
         Client.sendMessageStatic(register);
 
         // Create GameContext (UI setup will happen in GUI class)

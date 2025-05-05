@@ -135,31 +135,7 @@ public class Server {
     // Outgoing Message Inner Class
     // ================================
 
-    /**
-     * Represents a message to be sent to a particular network address.
-     * Used internally by the {@code outgoingQueue}.
-     */
-    private static class OutgoingMessage {
-        /** The message to be sent */
-        Message msg;
-        /** Destination IP address */
-        InetAddress address;
-        /** Destination UDP port */
-        int port;
-
-        /**
-         * Constructs a new {@code OutgoingMessage}.
-         *
-         * @param msg     the message object to be sent
-         * @param address the destination IP address
-         * @param port    the destination UDP port
-         */
-        public OutgoingMessage(Message msg, InetAddress address, int port) {
-            this.msg = msg;
-            this.address = address;
-            this.port = port;
-        }
-    }
+   
 
     /**
      * Creates a new {@link Message} based on an original message, converting it
@@ -239,7 +215,7 @@ public class Server {
 
             commandRegistry.initCommandHandlers();
 
-            reliableSender = new ReliableUDPSender(serverSocket, 100, 200);
+            reliableSender = new ReliableUDPSender(serverSocket, 100, 200, outgoingQueue);
             ackProcessor = new AckProcessor();
             ackProcessor.init(serverSocket);
 
@@ -253,7 +229,7 @@ public class Server {
                         OutgoingMessage om = outgoingQueue.take();
             
                         // No null-check needed: take() never returns null
-                        reliableSender.sendMessage(om.msg, om.address, om.port);
+                        reliableSender.send(om);
                         System.out.println("Sent message to " + om.address + ":" + om.port);
             
                     } catch (InterruptedException ie) {
@@ -492,6 +468,9 @@ public class Server {
      * @param msg          the message to broadcast
      */
     public void sendMessageBestEffort(Message msg) {
+        if (reliableSender.hasBacklog() > 0) {
+            return;                       // postpone this update
+        }
         AsyncManager.run(() -> {
             try {
                 byte[] data = MessageCodec.encode(msg)

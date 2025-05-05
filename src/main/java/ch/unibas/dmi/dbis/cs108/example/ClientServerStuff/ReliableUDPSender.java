@@ -2,237 +2,131 @@ package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * The {@code ReliableUDPSender} class provides a mechanism for sending messages
- * over UDP with basic reliability. It uses a sliding window concept to control
- * how many messages can be unacknowledged at once, and retransmits messages that
- * are not acknowledged within a specified timeout period.
+ * Sends OutgoingMessage reliably over UDP using a sliding window + timeout.
+ * On timeout it re-offers the original OutgoingMessage back into your queue.
  */
 public class ReliableUDPSender {
 
-    /**
-     * The {@link DatagramSocket} used to send UDP packets.
-     */
     private final DatagramSocket socket;
-
-    /**
-     * The maximum number of unacknowledged messages allowed in the window.
-     * If the window is full, new messages are not sent until space is freed
-     * by acknowledgments.
-     */
     private final int windowSize;
-
-    /**
-     * The timeout duration (in milliseconds) after which a message is considered
-     * lost and eligible for retransmission if it is the base message or unblocked.
-     */
     private final long timeoutMillis;
-
-    /**
-     * An {@link AtomicInteger} used to generate sequence numbers for outgoing messages.
-     */
+    private final LinkedBlockingQueue<OutgoingMessage> requeueOnTimeout;
     private final AtomicInteger nextSeqNum = new AtomicInteger(1);
 
-    /**
-     * A map of UUID to {@link PendingMessage}, representing all unacknowledged messages.
-     */
-    private final ConcurrentHashMap<String, PendingMessage> pendingMessages = new ConcurrentHashMap<>();
+    // UUID → pending info
+    private final ConcurrentHashMap<String, PendingOutgoing> pending = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedQueue<String> inFlight = new ConcurrentLinkedQueue<>();
 
-    /**
-     * Encapsulates a message that has been sent but not yet acknowledged.
-     * Contains metadata required for potential retransmission.
-     */
-    private class PendingMessage {
-        Message message;
+    private static class PendingOutgoing {
+        final OutgoingMessage om;
         volatile long lastSentTime;
-        InetAddress destination;
-        int destPort;
+        final String uuid;
+        final int seq;
 
-        /**
-         * Constructs a {@code PendingMessage} with the given message, last-sent time,
-         * and destination details.
-         *
-         * @param message      the {@link Message} being sent
-         * @param lastSentTime the timestamp (in milliseconds) when the message was last sent
-         * @param destination  the destination {@link InetAddress}
-         * @param destPort     the destination port
-         */
-        PendingMessage(Message message, long lastSentTime, InetAddress destination, int destPort) {
-            this.message = message;
-            this.lastSentTime = lastSentTime;
-            this.destination = destination;
-            this.destPort = destPort;
+        PendingOutgoing(OutgoingMessage om, String uuid, int seq, long sentAt) {
+            this.om           = om;
+            this.uuid         = uuid;
+            this.seq          = seq;
+            this.lastSentTime = sentAt;
         }
     }
 
     /**
-     * Constructs a {@code ReliableUDPSender} bound to the given socket, with a specified
-     * window size and retransmission timeout. Starts a background loop to monitor
-     * retransmissions.
-     *
-     * @param socket        the {@link DatagramSocket} used for sending messages
-     * @param windowSize    the maximum number of unacknowledged messages
-     * @param timeoutMillis the timeout (in milliseconds) after which an unacknowledged
-     *                      message is eligible for retransmission
+     * @param socket           socket to send on
+     * @param windowSize       max unacked messages
+     * @param timeoutMillis    ms until retransmit+requeue
+     * @param requeueOnTimeout queue to re-offer timed-out OutgoingMessages
      */
-    public ReliableUDPSender(DatagramSocket socket, int windowSize, long timeoutMillis) {
-        this.socket = socket;
-        this.windowSize = windowSize;
-        this.timeoutMillis = timeoutMillis;
+    public ReliableUDPSender(DatagramSocket socket,
+                             int windowSize,
+                             long timeoutMillis,
+                             LinkedBlockingQueue<OutgoingMessage> requeueOnTimeout) {
+        this.socket           = socket;
+        this.windowSize       = windowSize;
+        this.timeoutMillis    = timeoutMillis;
+        this.requeueOnTimeout = requeueOnTimeout;
         AsyncManager.runLoop(this::checkTimeouts);
     }
 
-    /**
-     * Sends a message to a specified destination. Assigns a new sequence number and UUID
-     * to the message. If the window is full, the message is not sent.
-     *
-     * @param msg         the {@link Message} to send
-     * @param destination the destination {@link InetAddress}
-     * @param destPort    the destination port
-     */
-    public void sendMessage(Message msg, InetAddress destination, int destPort) {
+    /** Enqueue an OutgoingMessage for reliable send. */
+    public void send(OutgoingMessage om) {
+        AsyncManager.run(() -> {
+            if (pending.size() >= windowSize) {
+                System.out.println("Window full, dropping: " + om.msg);
+                return;
+            }
+            String uuid = om.msg.getUUID();
+            int seq     = nextSeqNum.getAndIncrement();
+            om.msg.setSequenceNumber(seq);
+            
+            if (!inFlight.contains(uuid))
+            {
+                pending.put(uuid, new PendingOutgoing(om, uuid, seq, System.currentTimeMillis()));
+            }
+            inFlight.offer(uuid);
+            sendPacket(om);
+        });
+    }
+
+    private void sendPacket(OutgoingMessage om) {
         AsyncManager.run(() -> {
             try {
-                String uuid = UUID.randomUUID().toString();
-                int seq = nextSeqNum.getAndIncrement();
-                msg.setSequenceNumber(seq);
-                msg.setUUID(uuid);
-
-                if (pendingMessages.size() < windowSize) {
-                    pendingMessages.put(uuid, new PendingMessage(msg, System.currentTimeMillis(), destination, destPort));
-                    sendPacket(msg, destination, destPort);
-                    System.out.println("Sent: " + MessageCodec.encode(msg));
-                } else {
-                    System.out.println("Window full. Message not sent: " + MessageCodec.encode(msg));
-                }
+                String encoded = MessageCodec.encode(om.msg);
+                byte[] data    = encoded.getBytes();
+                socket.send(new DatagramPacket(
+                    data, data.length,
+                    om.address, om.port
+                ));
+                System.out.println("[RELIABLE] Sending to " + om.address.getHostAddress() + ":" + om.port);
+                System.out.println("→ Sent reliably: " + encoded);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
     }
 
-    /**
-     * Sends the given message asynchronously as a UDP packet.
-     *
-     * @param msg         the {@link Message} to encode and send
-     * @param destination the destination IP address
-     * @param destPort    the destination port
-     */
-    private void sendPacket(Message msg, InetAddress destination, int destPort) {
-        AsyncManager.run(() -> {
-            try {
-                String encoded = MessageCodec.encode(msg);
-                byte[] data = encoded.getBytes();
-                DatagramPacket packet = new DatagramPacket(data, data.length, destination, destPort);
-                socket.send(packet);
-                System.out.println("Asynchronously sent packet: " + encoded);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+    /** Called by your ACK-handler to clear out a UUID. */
+    public void acknowledge(String uuid) {
+        inFlight.remove(uuid);
+        if (pending.remove(uuid) != null) {
+            System.out.println("ACKed UUID=" + uuid);
+        }
     }
 
-    /**
-     * Checks the list of pending messages and retransmits messages that have
-     * timed out based on {@link #timeoutMillis}.
-     *
-     * <p>Messages are retransmitted if:</p>
-     * <ul>
-     *   <li>They are the base message (lowest sequence number)</li>
-     *   <li>Their predecessor message is already acknowledged (gap-free logic)</li>
-     * </ul>
-     */
+    /** Periodically scans for timeouts, retransmits & re-queues. */
     private void checkTimeouts() {
         long now = System.currentTimeMillis();
-        if (pendingMessages.isEmpty()) {
-            return;
-        }
+        if (pending.isEmpty()) return;
 
-        List<PendingMessage> sorted = new ArrayList<>(pendingMessages.values());
-        sorted.sort(Comparator.comparingLong(pm -> pm.message.getSequenceNumber()));
-
-        for (PendingMessage pm : sorted) {
-            long seq = pm.message.getSequenceNumber();
-            if (now - pm.lastSentTime >= timeoutMillis) {
-                boolean canRetransmit = false;
-
-                if (sorted.get(0).message.getSequenceNumber() == seq) {
-                    canRetransmit = true;
-                } else {
-                    boolean predecessorExists = sorted.stream().anyMatch(
-                            p -> p.message.getSequenceNumber() == seq - 1
-                    );
-                    if (!predecessorExists) {
-                        canRetransmit = true;
-                    }
-                }
-
-                if (canRetransmit) {
-                    try {
-                        sendPacket(pm.message, pm.destination, pm.destPort);
-                        pm.lastSentTime = now;
-                        System.out.println("Retransmitted message with UUID "
-                                + pm.message.getUUID() + " (seq " + seq + "): "
-                                + MessageCodec.encode(pm.message));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    pm.lastSentTime = now;
-                    System.out.println("Updated timer for message with UUID "
-                            + pm.message.getUUID() + " (seq " + seq + ")");
-                }
+        List<PendingOutgoing> list = new ArrayList<>(pending.values());
+        list.sort(Comparator.comparingInt(po -> po.seq));
+        //System.out.println("[RELIABLE] requeueOnTimeout size=" + requeueOnTimeout.size());
+        for (PendingOutgoing po : list) {
+            if (now - po.lastSentTime >= timeoutMillis) {
+                // retransmit
+                //sendPacket(po.om);
+                // reset timer
+                po.lastSentTime = now;
+                // re-queue the original OutgoingMessage for any higher-level logic
+                requeueOnTimeout.offer(po.om);
+                System.out.println("Timeout → resent & requeued UUID="
+                    + po.uuid + " seq=" + po.seq);
             }
         }
     }
 
-    /**
-     * Immediately resends any pending message that has exceeded the timeout threshold,
-     * regardless of whether it’s the base message or unblocked.
-     */
-    public void forceResendTimeouts() {
-        long now = System.currentTimeMillis();
-        if (pendingMessages.isEmpty()) {
-            return;
-        }
-        for (PendingMessage pm : pendingMessages.values()) {
-            if (now - pm.lastSentTime >= timeoutMillis) {
-                try {
-                    sendPacket(pm.message, pm.destination, pm.destPort);
-                    pm.lastSentTime = now;
-                    System.out.println("Force resent message with UUID "
-                            + pm.message.getUUID() + " (seq "
-                            + pm.message.getSequenceNumber() + "): "
-                            + MessageCodec.encode(pm.message));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    /**
-     * Marks a message as acknowledged, removing it from the pending queue.
-     * This method is executed asynchronously.
-     *
-     * @param uuid the UUID of the acknowledged message
-     */
-    public void acknowledge(String uuid) {
-        // ===== SYNCHRONOUS removal =====
-        System.out.println("Received ACK for UUID " + uuid);
-        PendingMessage removed = pendingMessages.remove(uuid);
-        if (removed != null) {
-            System.out.println(" Removed pending message with UUID " + uuid);
-        } else {
-            System.err.println(" No pending message found for UUID " + uuid);
-        }
+    /** Returns how many are still un-acked. */
+    public int hasBacklog() {
+        return pending.size();
     }
 }
