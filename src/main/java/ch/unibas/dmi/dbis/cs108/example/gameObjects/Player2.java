@@ -37,7 +37,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     private static final float PLAYER_ACC = 3.5f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
-    private static final float JUMP_FORCE = -100;         // The lower, the higher player can jump
+    private static final float JUMP_FORCE = -10;         // The lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
     private static final float SCREEN_HEIGHT = 600;      // Height is stored even though vertical wrap isn't used
 
@@ -158,7 +158,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             return;
         }
         // 1) Reset acceleration and apply gravity.
-        acc.y = 0.1f;
+        acc.y = 0.01f;
         acc.x += vel.x * PLAYER_FRICTION;
 
         // 2) Update velocity.

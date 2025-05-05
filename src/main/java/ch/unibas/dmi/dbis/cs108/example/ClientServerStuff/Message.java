@@ -233,6 +233,7 @@ public class Message {
 
         // Create a new Message instance with the copied values.
         Message clone = new Message(this.messageType, clonedParams, this.option, clonedConcealed);
+        clone.setUUID(UUID.randomUUID().toString());
 
         // Copy the sequence number.
         clone.setSequenceNumber(this.sequenceNumber);

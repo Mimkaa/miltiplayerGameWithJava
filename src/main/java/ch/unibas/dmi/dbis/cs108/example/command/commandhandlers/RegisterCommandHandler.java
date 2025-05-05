@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.command.commandhandlers;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AsyncManager;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.BestEffortBroadcastManager;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 import java.net.InetAddress;
@@ -26,14 +27,14 @@ public class RegisterCommandHandler implements CommandHandler {
         String hostPort = p[1].toString();            // "127.0.0.1:54321"
 
         /* ----------------- add to clientsMap -------------- */
+        InetSocketAddress dest;
         try {
             String[] hp = hostPort.split(":");
             InetAddress ip = InetAddress.getByName(hp[0]);
-            int         pt = Integer.parseInt(hp[1]);
+            int pt = Integer.parseInt(hp[1]);
 
-            server.getClientsMap()
-                  .putIfAbsent(username, new InetSocketAddress(ip, pt));
-
+            dest = new InetSocketAddress(ip, pt);
+            server.getClientsMap().putIfAbsent(username, dest);
             System.out.println("REGISTER → added " + username + " @ " + hostPort);
 
         } catch (Exception ex) {
@@ -42,10 +43,12 @@ public class RegisterCommandHandler implements CommandHandler {
             return;
         }
 
+        /* ------------- register with BestEffortBroadcastManager ------------- */
+        BestEffortBroadcastManager bem = server.getBestEffortBroadcastManager();
+        bem.registerClient(username, dest);
+
         /* ----------------- optional broadcast ------------- */
-        //msg.setOption("RESPONSE");
-        //server.broadcastMessageToAll(msg);
-        InetSocketAddress dest = server.getClientsMap().get(username);
-        AsyncManager.run(() -> server.syncGames(dest));
+        InetSocketAddress clientAddr = server.getClientsMap().get(username);
+        AsyncManager.run(() -> server.syncGames(clientAddr));
     }
 }
