@@ -131,6 +131,8 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
+    private BestEffortBroadcastManager bem;
+
     // ================================
     // Outgoing Message Inner Class
     // ================================
@@ -214,6 +216,7 @@ public class Server {
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
 
             commandRegistry.initCommandHandlers();
+            bem = new BestEffortBroadcastManager(serverSocket);
 
             reliableSender = new ReliableUDPSender(serverSocket, 100, 200, outgoingQueue);
             ackProcessor = new AckProcessor();
@@ -471,33 +474,13 @@ public class Server {
         if (reliableSender.hasBacklog() > 0) {
             return;                       // postpone this update
         }
-        AsyncManager.run(() -> {
-            try {
-                byte[] data = MessageCodec.encode(msg)
-                                          .getBytes(StandardCharsets.UTF_8);
-    
-                // send to all clients in parallel
-                clientsMap.values()
-                          .parallelStream()
-                          .forEach(destAddr -> {
-                              try {
-                                  DatagramPacket packet = new DatagramPacket(
-                                      data, data.length,
-                                      destAddr.getAddress(),
-                                      destAddr.getPort()
-                                  );
-                                  serverSocket.send(packet);
-                              } catch (IOException ioe) {
-                                  ioe.printStackTrace();
-                              }
-                          });
-    
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        bem.broadcast(msg);
     }
     
+    public BestEffortBroadcastManager getBestEffortBroadcastManager()
+    {
+        return bem;
+    }
     
 
     /**
@@ -507,47 +490,38 @@ public class Server {
      */
     public void broadcastMessageToAll(Message original) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-          String clientUsername  = entry.getKey();
-          InetSocketAddress dest = entry.getValue();
-      
-          // clone the original so constructor gives us a new UUID
-          Message perClient = new Message(
-            original.getMessageType(),
-            original.getParameters(),
-            original.getOption(),
-            original.getConcealedParameters()
-          );
-      
-          try {
-            enqueueMessage(original, dest.getAddress(), dest.getPort());
-            
-          } catch (Exception e) {
-            //System.err.println("Error enqueuing to " 
-            //  + clientUsername 
-            //  + " at " + dest + ": " + e.getMessage());
-          }
+            InetSocketAddress dest = entry.getValue();
+    
+            // make a per-client clone (with its own UUID + seq#)
+            Message perClient = original.clone();
+            // optionally bump sequence number here:
+            // perClient.setSequenceNumber(nextSeqFor(dest));
+    
+            try {
+                // send the clone, not the original
+                enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+            } catch (Exception e) {
+                // handle or log
+            }
         }
-      }
-      
-      public void broadcastMessageToOthers(Message original, String excludedUsername) {
+    }
+    
+    public void broadcastMessageToOthers(Message original, String excludedUsername) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-          String clientUsername  = entry.getKey();
-          if (clientUsername.equals(excludedUsername)) continue;
-          InetSocketAddress dest = entry.getValue();
-      
-          // again, new instance with its own UUID
-          
-      
-          try {
-            enqueueMessage(original, dest.getAddress(), dest.getPort());
-            
-          } catch (Exception e) {
-            //System.err.println("Error enqueuing to " 
-            //  + clientUsername 
-            //  + " at " + dest + ": " + e.getMessage());
-          }
+            String clientUsername = entry.getKey();
+            if (clientUsername.equals(excludedUsername)) continue;
+    
+            InetSocketAddress dest = entry.getValue();
+            Message perClient = original.clone();
+    
+            try {
+                enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+            } catch (Exception e) {
+                // handle or log
+            }
         }
-      }
+    }
+    
       
 
     // ================================
