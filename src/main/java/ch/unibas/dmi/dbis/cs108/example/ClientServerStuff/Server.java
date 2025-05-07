@@ -218,7 +218,7 @@ public class Server {
             commandRegistry.initCommandHandlers();
             bem = new BestEffortBroadcastManager(serverSocket);
 
-            reliableSender = new ReliableUDPSender(serverSocket, 100, 200, outgoingQueue);
+            reliableSender = new ReliableUDPSender(serverSocket, 100, 1000, outgoingQueue);
             ackProcessor = new AckProcessor();
             ackProcessor.init(serverSocket);
 
@@ -499,7 +499,7 @@ public class Server {
     
             try {
                 // send the clone, not the original
-                enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+                enqueueMessage(original, dest.getAddress(), dest.getPort());
             } catch (Exception e) {
                 // handle or log
             }
@@ -515,7 +515,7 @@ public class Server {
             Message perClient = original.clone();
     
             try {
-                enqueueMessage(perClient, dest.getAddress(), dest.getPort());
+                enqueueMessage(original, dest.getAddress(), dest.getPort());
             } catch (Exception e) {
                 // handle or log
             }
