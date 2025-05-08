@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import java.util.Collection;
 
+import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
@@ -15,6 +16,8 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
@@ -634,7 +637,35 @@ public class GameUIComponents {
         return guiInterfaces;
     }
 
+    public static Canvas createCubeCanvas(CubeDrawer drawer) {
 
+        final double WIDTH  = 600;
+        final double HEIGHT = 400;
+        final double FOV    = 500;
+        final double SIZE   = 100;
+
+        Canvas canvas = new Canvas(WIDTH, HEIGHT);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        redraw(gc, drawer, WIDTH, HEIGHT, FOV, SIZE);
+
+        canvas.setOnMousePressed(e -> {
+            if (drawer.isMouseOverCube(e.getX(), e.getY(),
+                    WIDTH / 2, HEIGHT / 2, FOV, SIZE))
+            {
+                drawer.rotateBy(10);               // +10°
+                redraw(gc, drawer, WIDTH, HEIGHT, FOV, SIZE);
+            }
+        });
+        return canvas;
+    }
+
+    private static void redraw(GraphicsContext gc, CubeDrawer drawer,
+                               double w, double h, double fov, double size) {
+
+        gc.clearRect(0, 0, w, h);
+        drawer.drawCube(gc, w / 2, h / 2, fov, size);
+    }
 
 
 } 

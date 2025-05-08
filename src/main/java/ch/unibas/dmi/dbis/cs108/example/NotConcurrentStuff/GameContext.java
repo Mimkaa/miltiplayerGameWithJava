@@ -595,9 +595,8 @@ public class GameContext {
             );
 
             // initialise the cube
-            CubeDrawer cubeDrawer = new CubeDrawer();
-            cubeDrawer.setAngleX(0);
-            cubeDrawer.setAngleY(0);
+            Canvas cubeCanvas = GameUIComponents.createCubeCanvas(cubeDrawer);
+            layeredRoot.getChildren().add(cubeCanvas);
 
             setupMouseEventHandlers();
 
@@ -772,10 +771,6 @@ public class GameContext {
             game.draw(gc);
         }
 
-        if (cubeDrawer != null) {
-            cubeDrawer.drawCube(gc, gc.getCanvas().getWidth() / 2, gc.getCanvas().getHeight() / 2, 500, 100);
-            System.out.println("CubeDrawer drawn.");
-        }
 
 
         /* overlay: messages‑per‑second meter */
@@ -797,6 +792,8 @@ public class GameContext {
     }
 
     private void setupMouseEventHandlers() {
+
+        System.out.println("Setting up mouse event handlers");
         Canvas canvas = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas();
 
         if (canvas == null) {

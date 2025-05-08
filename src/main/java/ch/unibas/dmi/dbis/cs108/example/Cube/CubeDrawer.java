@@ -166,4 +166,27 @@ public class CubeDrawer {
 
         return projectedVertices;
     }
+
+    public boolean isMouseOverCube(double mx, double my,
+                                   double centerX, double centerY,
+                                   double fov, double size) {
+
+        double[][] v = getProjectedVertices(fov, size, centerX, centerY);
+
+        // Front-Face = Vertices 0–3
+        double minX = Math.min(Math.min(v[0][0], v[1][0]), Math.min(v[2][0], v[3][0]));
+        double maxX = Math.max(Math.max(v[0][0], v[1][0]), Math.max(v[2][0], v[3][0]));
+        double minY = Math.min(Math.min(v[0][1], v[1][1]), Math.min(v[2][1], v[3][1]));
+        double maxY = Math.max(Math.max(v[0][1], v[1][1]), Math.max(v[2][1], v[3][1]));
+
+        return mx >= minX && mx <= maxX && my >= minY && my <= maxY;
+    }
+
+    /** +10 radiant */
+    public void rotateBy(double deg) {
+        double rad = Math.toRadians(deg);
+        angleX += rad;
+        angleY += rad;
+    }
+
 }
