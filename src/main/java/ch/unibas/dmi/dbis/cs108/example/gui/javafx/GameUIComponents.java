@@ -588,7 +588,7 @@ public class GameUIComponents {
         StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
         guiInterfaces.setTranslateX(0);
         guiInterfaces.setTranslateY(0);
-        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "None");
+        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Whisper Chat", "Administration", "None");
         guiInterfaces.setPromptText("Select GUI Interface");
 
         guiInterfaces.getSelectionModel().select("None");
@@ -622,7 +622,7 @@ public class GameUIComponents {
             Node whisperChatPaneNode = uiManager.getComponent("whisperChatUIPane");
             if (whisperChatPaneNode instanceof Pane) {
                 Pane whisperChatPane = (Pane) whisperChatPaneNode;
-                whisperChatPane.setVisible("Wisper Chat".equals(selected));
+                whisperChatPane.setVisible("Whisper Chat".equals(selected));
             }
 
             // === Add the block for your "Lobby Chat" pane ===

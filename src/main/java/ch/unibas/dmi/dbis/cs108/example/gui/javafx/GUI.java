@@ -24,7 +24,7 @@ public class GUI extends Application {
             context.start();             // build UI components
             Platform.runLater(context::startGameLoop);
         } else {
-            System.err.println("Fehler: GameContext wurde nicht gesetzt!");
+            System.err.println("Error: GameContext wurde nicht gesetzt!");
         }
 
         // Get CentralGraphicalUnit root

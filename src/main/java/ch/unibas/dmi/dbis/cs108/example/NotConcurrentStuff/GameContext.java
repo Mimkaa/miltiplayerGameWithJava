@@ -666,12 +666,10 @@ public class GameContext {
 
 
             CentralGraphicalUnit.getInstance().addNode(layeredRoot);
-
-
-
-
             System.out.println("All UI components have been added via GameUIComponents.");
         });
+
+
 
 
     }
