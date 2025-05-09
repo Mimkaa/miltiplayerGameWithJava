@@ -17,6 +17,10 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
+import javafx.stage.Modality;
+
 
 public class GameUIComponents {
 
@@ -87,6 +91,61 @@ public class GameUIComponents {
         });
         uiManager.registerComponent("joinGameButton", joinGameButton);
 
+        // Button: How to Play (with scrollable popup)
+        Button howToPlayButton = new Button("How to Play");
+        howToPlayButton.setOnAction(e -> {
+            Stage instructionStage = new Stage();
+            instructionStage.setTitle("How to Play");
+
+            VBox contentBox = new VBox(10);
+            contentBox.setPadding(new Insets(15));
+            contentBox.setAlignment(Pos.TOP_LEFT);
+
+            Label title = new Label("Game Instructions");
+            title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+            Label content = new Label(
+
+                            "Collect the key, complete the platform, and reach the door to win.\n\n" +
+                            "Controls:\n" +
+                            "• Jump: Up Arrow\n" +
+                            "• Move: Left & Right Arrows\n" +
+                            "• Grab: Hold E\n" +
+                            "• Throw: Hold F\n\n" +
+                            "Steps:\n" +
+                            "1. Click 'Create Game' to start a new session.\n" +
+                            "2. Or select a game from the dropdown and click 'Join Game'.\n" +
+                            "3. After joining, select your character and click 'Start Game'.\n" +
+                            "4. Use the controls above to complete the level.\n\n" +
+                            "Have fun!"
+            );
+            content.setWrapText(true);
+            content.setStyle("-fx-font-size: 14px;");
+            content.setMaxWidth(460);
+
+            contentBox.getChildren().addAll(title, content);
+
+            ScrollPane scrollPane = new ScrollPane(contentBox);
+            scrollPane.setFitToWidth(true);
+            scrollPane.setPrefViewportHeight(260);
+            scrollPane.setPrefViewportWidth(480);
+
+            Button okButton = new Button("OK");
+            okButton.setOnAction(event -> instructionStage.close());
+
+            VBox layout = new VBox(10);
+            layout.setPadding(new Insets(20));
+            layout.setAlignment(Pos.CENTER);
+            layout.getChildren().addAll(scrollPane, okButton);
+
+            Scene scene = new Scene(layout, 500, 350);
+            instructionStage.setScene(scene);
+            instructionStage.initModality(Modality.APPLICATION_MODAL);
+            instructionStage.setResizable(false);
+            instructionStage.showAndWait();
+        });
+        uiManager.registerComponent("howToPlayButton", howToPlayButton);
+
 
 
         // Add all to VBox
@@ -94,8 +153,8 @@ public class GameUIComponents {
                 gameSelect,
                 createGameButton,
                 overlayInputField,
-                joinGameButton
-
+                joinGameButton,
+                howToPlayButton
         );
 
         return mainVBox;
