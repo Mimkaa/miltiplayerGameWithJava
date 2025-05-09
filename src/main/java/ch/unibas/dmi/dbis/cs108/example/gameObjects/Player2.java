@@ -130,13 +130,10 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 alpha = 1f;
                 interpolating = false;
             }
-            // Position interpolieren
             pos.x = lerp(interpStartPos.x, interpEndPos.x, alpha);
             pos.y = lerp(interpStartPos.y, interpEndPos.y, alpha);
-            // Geschwindigkeit interpolieren
             vel.x = lerp(interpStartVel.x, interpEndVel.x, alpha);
             vel.y = lerp(interpStartVel.y, interpEndVel.y, alpha);
-            // Beschleunigung interpolieren
             acc.x = lerp(interpStartAcc.x, interpEndAcc.x, alpha);
             acc.y = lerp(interpStartAcc.y, interpEndAcc.y, alpha);
             // KEIN return – danach Input & Physik
