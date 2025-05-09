@@ -96,8 +96,8 @@ public class Game {
 
     // Game.java  (inside class Game)
     private void initializeDefaultObjects() {
-        float screenW = (float)CentralGraphicalUnit.getWindowWidth();      // Stage width
-        float screenH = (float)CentralGraphicalUnit.getWindowHeight();     // Stage height
+        float screenW = 800f;      // Stage width
+        float screenH = 600f;     // Stage height
 
         /* ---------- 1. Floor platforms -------------------------------- */
         for (int i = 0; i < 4; i++) {
