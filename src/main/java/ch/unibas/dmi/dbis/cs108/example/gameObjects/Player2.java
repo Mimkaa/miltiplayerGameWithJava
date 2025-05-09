@@ -35,9 +35,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     // Constants matching the Python snippet
     // ---------------------------------
-    private static final float PLAYER_ACC = 3.5f;       // Acceleration magnitude when pressing left/right
+    private static final float PLAYER_ACC = 800f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
-    private static final float JUMP_FORCE = -10;         // The lower, the higher player can jump
+    private static final float JUMP_FORCE = -300;         // The lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
     private static final float SCREEN_HEIGHT = 600;      // Height is stored even though vertical wrap isn't used
 
@@ -125,62 +125,72 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        // If we're interpolating from a previous state to a new authoritative state, interpolate position, velocity, and acceleration.
+        // 1) Interpolation von Server-Snapshots (wenn aktiv)
         if (interpolating) {
-            // Update elapsed time
             interpElapsed += deltaTime;
-
-            // Compute the fraction of interpolation completed (0 to 1)
             float alpha = interpElapsed / interpDuration;
             if (alpha >= 1.0f) {
                 alpha = 1.0f;
-                interpolating = false; // Finished interpolation
+                interpolating = false;
             }
-
-            // Interpolate position.
+            // Position interpolieren
             pos.x = lerp(interpStartPos.x, interpEndPos.x, alpha);
             pos.y = lerp(interpStartPos.y, interpEndPos.y, alpha);
-
-            // Interpolate velocity.
+            // Geschwindigkeit interpolieren
             vel.x = lerp(interpStartVel.x, interpEndVel.x, alpha);
             vel.y = lerp(interpStartVel.y, interpEndVel.y, alpha);
-
-            // --- New: interpolate acceleration ---
+            // Beschleunigung interpolieren
             acc.x = lerp(interpStartAcc.x, interpEndAcc.x, alpha);
             acc.y = lerp(interpStartAcc.y, interpEndAcc.y, alpha);
-
-            return;
+            // KEIN return: danach weiter mit Eingabe & Physik
         }
 
-        // If not interpolating, execute normal local update logic:
+        // 2) INPUT-POLLING: Links/Rechts/Sprung
+        if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
+            acc.x -= PLAYER_ACC;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
+            acc.x += PLAYER_ACC;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.UP) && onGround && !jumped) {
+            vel.y = JUMP_FORCE;
+            jumped = true;
+        }
+
+        // 3) Wenn gegriffen, nur Positions-Update
         if (iAmGrabbed) {
             updateMovement();
             return;
         }
-        // 1) Reset acceleration and apply gravity.
-        acc.y = 0.01f;
+
+        // 4) Gravitation & Reibung
+        acc.y = GravityEngine.GRAVITY;
         acc.x += vel.x * PLAYER_FRICTION;
 
-        // 2) Update velocity.
-        vel.x += acc.x ;
-        vel.y += acc.y ;
+        // 5) Geschwindigkeit aktualisieren (px/s)
+        vel.x += acc.x * deltaTime;
+        vel.y += acc.y * deltaTime;
 
-        // 3) Update position.
-        pos.x += vel.x + 0.5f * acc.x;
-        pos.y += vel.y + 0.5f * acc.y;
+        // 6) Vertikale Geschwindigkeit begrenzen
+        if (vel.y < -600f) vel.y = -600f;
+        if (vel.y >  600f) vel.y =  600f;
 
-        // 4) Reset horizontal acceleration.
+        // 7) Position aktualisieren (px)
+        pos.x += vel.x * deltaTime;
+        pos.y += vel.y * deltaTime + 0.5f * acc.y * deltaTime * deltaTime;
+
+        // 8) Horizontale Beschleunigung zurücksetzen
         acc.x = 0;
 
-        // 5) Check for collision and update ground collision status.
+        // 9) Bodenkollision prüfen
         checkGroundCollision();
 
-        // Update the position of the grabbed object so it stays attached.
+        // 10) Gegriffene Objekte mitschleifen
         if (grabbedGuy != null) {
-            grabbedGuy.setPos(new Vector2(this.pos.x, this.pos.y - grabbedGuy.getHeight()));
+            grabbedGuy.setPos(new Vector2(pos.x, pos.y - grabbedGuy.getHeight()));
         }
 
-        // 6) If in throwing mode, update the throw angle with a windshield-wiper oscillation.
+        // 11) Throwing-Modus (ungeändert)
         if (isThrowing) {
             throwAngle += throwAngleDelta;
             if (throwAngle < MIN_THROW_ANGLE) {
@@ -191,19 +201,8 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 throwAngleDelta = -throwAngleDelta;
             }
         }
-
-        //if (parentGame.isAuthoritative()) {
-        //    syncCounter++;
-        //    if (syncCounter >= SYNC_THRESHOLD) {
-                // Broadcast a snapshot.
-        //        Message snapshot = createSnapshot();
-        //        Server.getInstance().sendMessageBestEffort(snapshot);
-
-                // Reset the counter.
-        //        syncCounter = 0;
-        //    }
-        //}
     }
+
 
     /**
      * Not used in this snippet but required by GameObject's contract.
@@ -261,19 +260,19 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
                 // Basic movement logic.
                 if (KeyCode.LEFT.toString().equals(keyString)) {
-                    acc.x += -PLAYER_ACC;
+                    acc.x -= PLAYER_ACC;
                 } else if (KeyCode.RIGHT.toString().equals(keyString)) {
                     acc.x += PLAYER_ACC;
-                } else if (KeyCode.UP.toString().equals(keyString)) {
-                    if (!jumped && onGround) {
-                        if (grabbedGuy != null) {
-                            vel.y += JUMP_FORCE / 2;
-                        } else {
-                            vel.y += JUMP_FORCE;
-                        }
-                        jumped = true;
+                } else if (KeyCode.UP.toString().equals(keyString) && onGround) {
+                    // Impuls-Style: überschreibt vel.y, stapelt also nicht
+                    if (grabbedGuy != null) {
+                        vel.y = JUMP_FORCE / 2;
+                    } else {
+                        vel.y = JUMP_FORCE;
                     }
+                    jumped = true;   // optional – ground-Flag reicht meist
                 }
+
 
                 // Grabbing Logic
                 if (KeyCode.E.toString().equals(keyString)) {
@@ -364,6 +363,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 }
             }
         }
+
         else if ("SNAPSHOT".equals(type)) {
             // Process SNAPSHOT messages for non-authoritative clients.
             Object[] params = msg.getParameters();
