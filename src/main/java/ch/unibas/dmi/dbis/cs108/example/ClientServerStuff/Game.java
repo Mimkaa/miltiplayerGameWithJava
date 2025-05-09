@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.ClientServerStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.*;
+import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.scene.canvas.GraphicsContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.MessageHogger;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
@@ -85,11 +87,81 @@ public class Game {
         // Start the main loop for processing all game objects at a fixed framerate.
         startPlayersCommandProcessingLoop();
         startCompositionLoop();
+        initializeDefaultObjects();
     }
 
     public void setAuthoritative(boolean authoritative) {
         this.authoritative = authoritative;
     }
+
+    // Game.java  (inside class Game)
+    private void initializeDefaultObjects() {
+        float screenW = (float)CentralGraphicalUnit.getWindowWidth();      // Stage width
+        float screenH = (float)CentralGraphicalUnit.getWindowHeight();     // Stage height
+
+        /* ---------- 1. Floor platforms -------------------------------- */
+        for (int i = 0; i < 4; i++) {
+            float x      = (float) (screenW * 0.05 + i * screenW * 0.20);
+            float y      = (float) (screenH * 0.75 - i * screenH * 0.05);
+            float width  = (float) (screenW * 0.20);
+            float height = 20f;
+
+            addGameObjectAsync(
+                "Platform",
+                UUID.randomUUID().toString(),              // unique id
+                "Floor" + (i + 1),                         // name
+                x, y, width, height,                       // geom
+                gameId                                     // session / owner
+            );                                      // ensure creation
+        }
+
+        /* ---------- 2. Key -------------------------------------------- */
+        addGameObjectAsync(
+            "Key", UUID.randomUUID().toString(),
+            "Key1",
+            (float)(screenW * 0.15), (float)(screenH * 0.15),
+            40f, 40f, 1f,                                 // 1f = (e.g.) weight
+            gameId
+        );
+
+        /* ---------- 3. Players ---------------------------------------- */
+        addGameObjectAsync(
+            "Player2", UUID.randomUUID().toString(),
+            "Alfred",
+            (float)(screenW * 0.20), (float)(screenH * 0.40),
+            40f, 40f,
+            gameId
+        );
+
+        addGameObjectAsync(
+            "Player2", UUID.randomUUID().toString(),
+            "Gerald",
+            (float)(screenW * 0.25), (float)(screenH * 0.40),
+            40f, 40f,
+            gameId
+        );
+
+        /* ---------- 4. Final platform --------------------------------- */
+        addGameObjectAsync(
+            "Platform", UUID.randomUUID().toString(),
+            "Floor5",
+            (float)(screenW * 0.85), (float)(screenH * 0.65),
+            (float)(screenW * 0.10), 20f,
+            gameId
+        );
+
+        /* ---------- 5. Door ------------------------------------------- */
+        addGameObjectAsync(
+            "Door", UUID.randomUUID().toString(),
+            "Door1",
+            (float)(screenW * 0.12), (float)(screenH * 0.50),
+            50f, 120f,
+            gameId
+        );
+
+        System.out.println("Level initialized (factory, no network).");
+    }
+
 
     public boolean isAuthoritative() {
         return authoritative;
