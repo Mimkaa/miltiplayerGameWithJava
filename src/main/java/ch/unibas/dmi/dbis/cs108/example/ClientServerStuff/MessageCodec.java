@@ -43,8 +43,8 @@ public class MessageCodec {
      * @return a string representing the encoded message
      */
     public static String encode(Message message) {
-        System.out.println(message);
-        System.out.println();
+        //System.out.println(message);
+        //System.out.println();
         StringBuilder sb = new StringBuilder();
         sb.append(message.getMessageType());
 
