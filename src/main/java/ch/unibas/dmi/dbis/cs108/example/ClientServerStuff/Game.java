@@ -43,6 +43,9 @@ public class Game {
     private volatile int targetFps = 60;         // desired frames per second
     private volatile long tickCount = 0;         // increments each loop
 
+    private static final long  NANOS_PER_COMPOSITION = 1_000_000_000L / 120;   // 8 333 333 ns
+    private              long  lastCompositionNanos  = 0L;                     // init = never sent
+
     public Game(String gameId, String gameName) {
         this.gameId = gameId;
         this.gameName = gameName;
@@ -177,22 +180,25 @@ public class Game {
     }
 
     void composeAndSendUpdate() {
+    
+        /* ---- 2) Original logic --------------------------------------- */
         if (!authoritative) return;
+    
         List<Object> encodedSnaps = new ArrayList<>();
         for (GameObject obj : gameObjects) {
             if (obj instanceof Player2) {
-                Player2 p = (Player2) obj;
-                Message snap = p.createSnapshot();
-                String encoded = MessageCodec.encode(snap);
-                // replace all commas with "%s"
-                String safe = encoded.replace(",", "%");
-                String safee = safe.replace("|", "~");
-                encodedSnaps.add(safee);
+                Player2 p       = (Player2) obj;
+                Message snap    = p.createSnapshot();
+                String encoded  = MessageCodec.encode(snap)
+                                        .replace(",", "%")
+                                        .replace("|", "~");
+                encodedSnaps.add(encoded);
             }
         }
-        Object[] params = encodedSnaps.toArray(new Object[0]);
-        Message comp = new Message("COMPOSITION", params, "GAME");
-        
+    
+        Message comp = new Message("COMPOSITION",
+                                   encodedSnaps.toArray(new Object[0]),
+                                   "GAME");
         Server.getInstance().sendMessageBestEffort(comp);
     }
 
@@ -209,7 +215,7 @@ public class Game {
             composeAndSendUpdate();
     
             // throttle to targetCompositionFps
-            long frameNanos = 1_000_000_000L / 800;
+            long frameNanos = 1_000_000_000L / 120;
             long elapsed  = System.nanoTime() - start;
             long sleepN   = frameNanos - elapsed;
             if (sleepN > 0) {
@@ -282,22 +288,22 @@ public class Game {
             // 4) Increment the global tickCount
             //tickCount++;
 
-            // 5) Sleep to maintain the target framerate
-            //long targetFrameTimeNanos = 1_000_000_000L / targetFps;
-            //long frameProcessingTime = System.nanoTime() - startFrameTime;
-            //long sleepTimeNanos = targetFrameTimeNanos - frameProcessingTime;
+          
+            long targetFrameTimeNanos = 1_000_000_000L / targetFps;
+            long frameProcessingTime = System.nanoTime() - startFrameTime;
+            long sleepTimeNanos = targetFrameTimeNanos - frameProcessingTime;
 
-            //if (sleepTimeNanos > 0) {
-            //    try {
-            //        // Sleep for the leftover time, in nanoseconds
-            //        Thread.sleep(
-            //            sleepTimeNanos / 1_000_000,
-            //            (int) (sleepTimeNanos % 1_000_000)
-            //        );
-            //    } catch (InterruptedException ex) {
-            //        Thread.currentThread().interrupt();
-            //    }
-            //}
+            if (sleepTimeNanos > 0) {
+                try {
+                    // Sleep for the leftover time, in nanoseconds
+                    Thread.sleep(
+                        sleepTimeNanos / 1_000_000,
+                        (int) (sleepTimeNanos % 1_000_000)
+                    );
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         });
     }
 
