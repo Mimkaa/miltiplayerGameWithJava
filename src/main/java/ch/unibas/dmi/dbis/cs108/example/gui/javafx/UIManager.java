@@ -36,9 +36,13 @@ public class UIManager {
 
     public void initializeUI(Runnable customInit) {
         // --- Execute custom initialization logic, if provided.
+        Platform.runLater(() -> {
+
+
         if (customInit != null) {
             customInit.run();
         }
+        });
     }
 
     public void hideAllComponents() {

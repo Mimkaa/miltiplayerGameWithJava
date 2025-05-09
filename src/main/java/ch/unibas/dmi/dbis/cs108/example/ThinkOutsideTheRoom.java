@@ -29,6 +29,7 @@ public class ThinkOutsideTheRoom {
     /** The game context instance used for UI and session management. */
     public static GameContext gameContext;
 
+    public static String chosenUserName = "";
     /**
      * Main method to parse arguments and start the application accordingly.
      *
@@ -61,6 +62,7 @@ public class ThinkOutsideTheRoom {
                     System.err.println("Invalid host:port format.");
                     return;
                 }
+                /*
                 String host = parts[0];
                 int clientPort = Integer.parseInt(parts[1]);
                 String username = args.length == 3 ? args[2] : null;
@@ -68,7 +70,29 @@ public class ThinkOutsideTheRoom {
                 prepareClientAndContext(host, clientPort, username);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
+
+                 */
+                String host = parts[0];
+                int port;
+                try {
+                    port = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException ex) {
+                    System.err.println("Invalid port number: " + parts[1]);
+                    return;
+                }
+
+                chosenUserName = (args.length == 3 ? args[2] : "");
+
+
+                client = new Client();
+                client.setServerAddress(host);
+                client.setServerPort(port);
+
+                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
+                break;
             }
+
+
             case "client-headless": {
                 if (args.length != 5) {
                     System.err.println("Usage: client-headless <host> <port> <username> <gameName>");

@@ -83,8 +83,10 @@ public class GameContext {
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
+        String id   = UUID.randomUUID().toString();
+        String name = "Session-" + id.substring(0,5);
+        this.game = new Game(id, name);
 
-        instance = this;
 
         // Initialize the custom MessageHogger.
         testHogger = new MessageHogger() {
