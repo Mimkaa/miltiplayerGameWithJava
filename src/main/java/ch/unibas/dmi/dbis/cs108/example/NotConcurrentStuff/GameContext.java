@@ -31,7 +31,6 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import javafx.geometry.VPos;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageRateMeter;
-import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -52,10 +51,6 @@ public class GameContext {
     private static GameContext instance;
 
     public Game game;
-    /*
-    Add CubeDrawer as a field
-    */
-    private CubeDrawer cubeDrawer = new CubeDrawer();
 
     private double lastMouseX = 0;
     private double lastMouseY = 0;
@@ -595,11 +590,6 @@ public class GameContext {
                     lobbyChatPane
             );
 
-            // initialise the cube
-            Canvas cubeCanvas = GameUIComponents.createCubeCanvas(cubeDrawer);
-            layeredRoot.getChildren().add(cubeCanvas);
-
-            setupMouseEventHandlers();
 
             mainUIPane.setVisible(true);
             startGamePane.setVisible(false);
@@ -788,74 +778,6 @@ public class GameContext {
         gc.fillText(rateText, x, y);
 
         gc.restore();                                      // 2) pop → previous state
-    }
-
-    private void setupMouseEventHandlers() {
-
-        System.out.println("Setting up mouse event handlers");
-        Canvas canvas = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas();
-
-        if (canvas == null) {
-            System.out.println("Canvas is null! The Canvas was not initialized properly.");
-            return;
-        }
-
-        canvas.setVisible(true);  // Ensure canvas is visible
-
-        // MousePressed Event: Check if the mouse clicks on the cube (like a button)
-        canvas.setOnMousePressed(event -> {
-            double mouseX = event.getSceneX();
-            double mouseY = event.getSceneY();
-
-            // Check if the mouse is over the cube
-            if (isMouseOverCube(mouseX, mouseY)) {
-                // If clicked on the cube, perform rotation or other action
-                System.out.println("Cube clicked, rotating...");
-                rotateCube();  // Call the rotation function or any action
-            }
-        });
-    }
-
-    private boolean isMouseOverCube(double mouseX, double mouseY) {
-        // Perspective projection parameters
-        double fov = 500;  // Field of View (adjust for visual effect)
-        double size = 100;  // Size of the cube
-        double centerX = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas().getWidth() / 2;
-        double centerY = CentralGraphicalUnit.getInstance().getGraphicsContext().getCanvas().getHeight() / 2;
-
-        // Let's project the cube's 3D coordinates to 2D
-        double[][] vertices = cubeDrawer.getProjectedVertices(fov, size, centerX, centerY);
-
-        // Now check if the mouse is inside the projected 2D cube's boundaries
-        for (int i = 0; i < 4; i++) {  // Check only the front face (4 vertices)
-            double x1 = vertices[i][0];
-            double y1 = vertices[i][1];
-            double x2 = vertices[(i + 1) % 4][0];
-            double y2 = vertices[(i + 1) % 4][1];
-
-            // Check if the mouse is inside the 2D square formed by the front face
-            if (isPointInTriangle(mouseX, mouseY, x1, y1, x2, y2)) {
-                return true;  // Mouse is over the cube
-            }
-        }
-
-        return false;
-    }
-
-    private boolean isPointInTriangle(double px, double py, double x1, double y1, double x2, double y2) {
-        // This is a simple check to determine if the point is within the triangle.
-        double area = 0.5 * (-y2 * x1 + y1 * x2 + x2 * py - y2 * px - x1 * py + x1 * y2);
-        double s = 1 / (2 * area) * (py * x2 - px * y2 + y2 * x1 - x2 * y1 + x1 * y2 - y1 * x2);
-        double t = 1 / (2 * area) * (px * y1 - py * x1 + y1 * x2 - x1 * y2 + x2 * y1 - y2 * x1);
-
-        return (s > 0 && t > 0 && 1 - s - t > 0);
-    }
-
-    private void rotateCube() {
-        // Rotate the cube by a fixed angle when clicked
-        cubeDrawer.setAngleX(cubeDrawer.getAngleX() + 10);  // Rotate by a fixed angle (adjust as needed)
-        cubeDrawer.setAngleY(cubeDrawer.getAngleY() + 10);  // Rotate by a fixed angle (adjust as needed)
-        System.out.println("Cube rotated to angleX: " + cubeDrawer.getAngleX() + ", angleY: " + cubeDrawer.getAngleY());
     }
 
     public static Game getGameById(String gameId) {
