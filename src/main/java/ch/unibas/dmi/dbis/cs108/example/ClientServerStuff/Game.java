@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
@@ -47,6 +48,10 @@ public class Game {
 
     private static final long  NANOS_PER_COMPOSITION = 1_000_000_000L / 120;   // 8 333 333 ns
     private              long  lastCompositionNanos  = 0L;                     // init = never sent
+
+    private static final ConcurrentLinkedQueue<Message> INIT_QUEUE =
+            new ConcurrentLinkedQueue<>();
+
 
     public Game(String gameId, String gameName) {
         this.gameId = gameId;
@@ -88,16 +93,109 @@ public class Game {
         startPlayersCommandProcessingLoop();
         startCompositionLoop();
         initializeDefaultObjects();
+        initializeLevel(800,600);
     }
 
     public void setAuthoritative(boolean authoritative) {
         this.authoritative = authoritative;
     }
 
+    public void enqueueInit(Message m) {
+        INIT_QUEUE.offer(m);
+    }
+
+    /** Called once by the authoritative Game when the match really starts. */
+    public  void flushInitQueue() {
+        Message m;
+        while ((m = INIT_QUEUE.poll()) != null)
+        {
+            Server.getInstance().broadcastMessageToAll(m);
+        }
+                           // your existing transport
+    }
+
     // Game.java  (inside class Game)
     private void initializeDefaultObjects() {
-        float screenW = 800f;      // Stage width
-        float screenH = 600f;     // Stage height
+        if(isAuthoritative())
+            {
+            float screenW = 800f;      // Stage width
+            float screenH = 600f;     // Stage height
+
+            /* ---------- 1. Floor platforms -------------------------------- */
+            for (int i = 0; i < 4; i++) {
+                float x      = (float) (screenW * 0.05 + i * screenW * 0.20);
+                float y      = (float) (screenH * 0.75 - i * screenH * 0.05);
+                float width  = (float) (screenW * 0.20);
+                float height = 20f;
+
+                addGameObjectAsync(
+                    "Platform",
+                    UUID.randomUUID().toString(),              // unique id
+                    "Floor" + (i + 1),                         // name
+                    x, y, width, height,                       // geom
+                    gameId                                     // session / owner
+                );                                      // ensure creation
+            }
+
+            /* ---------- 2. Key -------------------------------------------- */
+            addGameObjectAsync(
+                "Key", UUID.randomUUID().toString(),
+                "Key1",
+                (float)(screenW * 0.15), (float)(screenH * 0.15),
+                40f, 40f, 1f,                                 // 1f = (e.g.) weight
+                gameId
+            );
+
+            /* ---------- 3. Players ---------------------------------------- */
+            addGameObjectAsync(
+                "Player2", UUID.randomUUID().toString(),
+                "Alfred",
+                (float)(screenW * 0.20), (float)(screenH * 0.40),
+                40f, 40f,
+                gameId
+            );
+
+            addGameObjectAsync(
+                "Player2", UUID.randomUUID().toString(),
+                "Gerald",
+                (float)(screenW * 0.25), (float)(screenH * 0.40),
+                40f, 40f,
+                gameId
+            );
+
+            /* ---------- 4. Final platform --------------------------------- */
+            addGameObjectAsync(
+                "Platform", UUID.randomUUID().toString(),
+                "Floor5",
+                (float)(screenW * 0.85), (float)(screenH * 0.65),
+                (float)(screenW * 0.10), 20f,
+                gameId
+            );
+
+            /* ---------- 5. Door ------------------------------------------- */
+            addGameObjectAsync(
+                "Door", UUID.randomUUID().toString(),
+                "Door1",
+                (float)(screenW * 0.12), (float)(screenH * 0.50),
+                50f, 120f,
+                gameId
+            );
+
+            System.out.println("Level initialized (factory, no network).");
+        }
+    }
+
+    //  package ch.unibas.dmi.dbis.cs108.example;
+
+    //  Game.java   ––– place the method anywhere after the constructor
+    /**
+     * Queues CREATEGO messages that describe the whole level layout.
+     * The authoritative side calls this *before* flushInitQueue().
+     *
+     * @param screenW Stage width  in pixels
+     * @param screenH Stage height in pixels
+     */
+    public void initializeLevel(double screenW, double screenH) {
 
         /* ---------- 1. Floor platforms -------------------------------- */
         for (int i = 0; i < 4; i++) {
@@ -106,61 +204,50 @@ public class Game {
             float width  = (float) (screenW * 0.20);
             float height = 20f;
 
-            addGameObjectAsync(
-                "Platform",
-                UUID.randomUUID().toString(),              // unique id
-                "Floor" + (i + 1),                         // name
-                x, y, width, height,                       // geom
-                gameId                                     // session / owner
-            );                                      // ensure creation
+            Object[] p = { gameId, "Platform", "Floor" + (i + 1),
+                        x, y, width, height, gameId };
+            enqueueInit(new Message("CREATEGO", p, "REQUEST"));
         }
 
         /* ---------- 2. Key -------------------------------------------- */
-        addGameObjectAsync(
-            "Key", UUID.randomUUID().toString(),
-            "Key1",
-            (float)(screenW * 0.15), (float)(screenH * 0.15),
-            40f, 40f, 1f,                                 // 1f = (e.g.) weight
-            gameId
-        );
+        enqueueInit(new Message("CREATEGO",
+            new Object[]{ gameId, "Key", "Key1",
+                        (float)(screenW * 0.15), (float)(screenH * 0.15),
+                        40f, 40f, 1f, gameId },
+            "REQUEST"));
 
         /* ---------- 3. Players ---------------------------------------- */
-        addGameObjectAsync(
-            "Player2", UUID.randomUUID().toString(),
-            "Alfred",
-            (float)(screenW * 0.20), (float)(screenH * 0.40),
-            40f, 40f,
-            gameId
-        );
+        enqueueInit(new Message("CREATEGO",
+            new Object[]{ gameId, "Player2", "Alfred",
+                        (float)(screenW * 0.20), (float)(screenH * 0.40),
+                        40f, 40f, gameId },
+            "REQUEST"));
 
-        addGameObjectAsync(
-            "Player2", UUID.randomUUID().toString(),
-            "Gerald",
-            (float)(screenW * 0.25), (float)(screenH * 0.40),
-            40f, 40f,
-            gameId
-        );
+        enqueueInit(new Message("CREATEGO",
+            new Object[]{ gameId, "Player2", "Gerald",
+                        (float)(screenW * 0.25), (float)(screenH * 0.40),
+                        40f, 40f, gameId },
+            "REQUEST"));
 
         /* ---------- 4. Final platform --------------------------------- */
-        addGameObjectAsync(
-            "Platform", UUID.randomUUID().toString(),
-            "Floor5",
-            (float)(screenW * 0.85), (float)(screenH * 0.65),
-            (float)(screenW * 0.10), 20f,
-            gameId
-        );
+        enqueueInit(new Message("CREATEGO",
+            new Object[]{ gameId, "Platform", "Floor5",
+                        (float)(screenW * 0.85), (float)(screenH * 0.65),
+                        (float)(screenW * 0.10), 20f, gameId },
+            "REQUEST"));
 
         /* ---------- 5. Door ------------------------------------------- */
-        addGameObjectAsync(
-            "Door", UUID.randomUUID().toString(),
-            "Door1",
-            (float)(screenW * 0.12), (float)(screenH * 0.50),
-            50f, 120f,
-            gameId
-        );
+        enqueueInit(new Message("CREATEGO",
+            new Object[]{ gameId, "Door", "Door1",
+                        (float)(screenW * 0.12), (float)(screenH * 0.50),
+                        50f, 120f, gameId },
+            "REQUEST"));
 
-        System.out.println("Level initialized (factory, no network).");
+        System.out.println("Level initialized for '" + gameName +
+                        "' – queued " + INIT_QUEUE.size() + " CREATEGO messages.");
     }
+
+
 
 
     public boolean isAuthoritative() {
@@ -359,6 +446,10 @@ public class Game {
 
             // 4) Increment the global tickCount
             //tickCount++;
+            if(startedFlag)
+            {
+                flushInitQueue();
+            }
 
           
             long targetFrameTimeNanos = 1_000_000_000L / targetFps;
