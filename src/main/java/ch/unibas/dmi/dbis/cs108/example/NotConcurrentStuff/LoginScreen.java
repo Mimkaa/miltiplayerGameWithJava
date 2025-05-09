@@ -2,15 +2,19 @@ package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
+import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.CentralGraphicalUnit;
 import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.gui.javafx.GameUIComponents;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -33,6 +37,11 @@ public class LoginScreen extends VBox {
     public LoginScreen(Stage primaryStage, String prefilledName) {
         setSpacing(10);
         setPadding(new Insets(20));
+
+        CubeDrawer drawer = new CubeDrawer();
+        Canvas cubeCanvas = GameUIComponents.createCubeCanvas(drawer);
+        VBox.setVgrow(cubeCanvas, Priority.ALWAYS);
+        getChildren().add(cubeCanvas);
 
         // Entscheide, ob übergebener Name oder Nickname
         String baseName = (prefilledName == null || prefilledName.isBlank())
