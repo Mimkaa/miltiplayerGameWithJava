@@ -92,8 +92,8 @@ public class Game {
         // Start the main loop for processing all game objects at a fixed framerate.
         startPlayersCommandProcessingLoop();
         startCompositionLoop();
-        initializeDefaultObjects();
-        initializeLevel(800,600);
+        //initializeDefaultObjects();
+   
     }
 
     public void setAuthoritative(boolean authoritative) {
@@ -109,13 +109,14 @@ public class Game {
         Message m;
         while ((m = INIT_QUEUE.poll()) != null)
         {
+            System.out.println("sent Objects");
             Server.getInstance().broadcastMessageToAll(m);
         }
                            // your existing transport
     }
 
     // Game.java  (inside class Game)
-    private void initializeDefaultObjects() {
+    public void initializeDefaultObjects() {
         if(isAuthoritative())
             {
             float screenW = 800f;      // Stage width
@@ -127,126 +128,100 @@ public class Game {
                 float y      = (float) (screenH * 0.75 - i * screenH * 0.05);
                 float width  = (float) (screenW * 0.20);
                 float height = 20f;
-
+                String uuid = UUID.randomUUID().toString();
                 addGameObjectAsync(
                     "Platform",
-                    UUID.randomUUID().toString(),              // unique id
+                    uuid,              // unique id
                     "Floor" + (i + 1),                         // name
                     x, y, width, height,                       // geom
                     gameId                                     // session / owner
                 );                                      // ensure creation
+                Object[] p = {uuid, gameId, "Platform", "Floor" + (i + 1),
+                        x, y, width, height, gameId };
+                enqueueInit(new Message("CREATEGO", p, "RESPONSE"));
             }
 
             /* ---------- 2. Key -------------------------------------------- */
+            String KeyUuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Key", UUID.randomUUID().toString(),
+                "Key", KeyUuid,
                 "Key1",
                 (float)(screenW * 0.15), (float)(screenH * 0.15),
                 40f, 40f, 1f,                                 // 1f = (e.g.) weight
                 gameId
             );
+            enqueueInit(new Message("CREATEGO",
+            new Object[]{ KeyUuid, gameId, "Key", "Key1",
+                        (float)(screenW * 0.15), (float)(screenH * 0.15),
+                        40f, 40f, 1f, gameId },
+            "RESPONSE"));
+            
 
             /* ---------- 3. Players ---------------------------------------- */
+            String GeraldUuid = UUID.randomUUID().toString();
+            String AlfredUuid = UUID.randomUUID().toString();
+
             addGameObjectAsync(
-                "Player2", UUID.randomUUID().toString(),
+                "Player2", AlfredUuid,
                 "Alfred",
                 (float)(screenW * 0.20), (float)(screenH * 0.40),
                 40f, 40f,
                 gameId
             );
+            enqueueInit(new Message("CREATEGO",
+            new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
+                        (float)(screenW * 0.20), (float)(screenH * 0.40),
+                        40f, 40f, gameId },
+            "RESPONSE"));
 
             addGameObjectAsync(
-                "Player2", UUID.randomUUID().toString(),
+                "Player2", GeraldUuid,
                 "Gerald",
                 (float)(screenW * 0.25), (float)(screenH * 0.40),
                 40f, 40f,
                 gameId
             );
+            enqueueInit(new Message("CREATEGO",
+            new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
+                        (float)(screenW * 0.25), (float)(screenH * 0.40),
+                        40f, 40f, gameId },
+            "RESPONSE"));
 
             /* ---------- 4. Final platform --------------------------------- */
+            String fl5Uuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Platform", UUID.randomUUID().toString(),
+                "Platform", fl5Uuid,
                 "Floor5",
                 (float)(screenW * 0.85), (float)(screenH * 0.65),
                 (float)(screenW * 0.10), 20f,
                 gameId
             );
+            enqueueInit(new Message("CREATEGO",
+            new Object[]{fl5Uuid, gameId, "Platform", "Floor5",
+                        (float)(screenW * 0.85), (float)(screenH * 0.65),
+                        (float)(screenW * 0.10), 20f, gameId },
+            "RESPONSE"));
 
             /* ---------- 5. Door ------------------------------------------- */
+            String DoorUuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Door", UUID.randomUUID().toString(),
+                "Door", DoorUuid,
                 "Door1",
                 (float)(screenW * 0.12), (float)(screenH * 0.50),
                 50f, 120f,
                 gameId
             );
+            enqueueInit(new Message("CREATEGO",
+            new Object[]{DoorUuid, gameId, "Door", "Door1",
+                        (float)(screenW * 0.12), (float)(screenH * 0.50),
+                        50f, 120f, gameId },
+            "RESPONSE"));
 
             System.out.println("Level initialized (factory, no network).");
         }
     }
 
-    //  package ch.unibas.dmi.dbis.cs108.example;
-
-    //  Game.java   ––– place the method anywhere after the constructor
-    /**
-     * Queues CREATEGO messages that describe the whole level layout.
-     * The authoritative side calls this *before* flushInitQueue().
-     *
-     * @param screenW Stage width  in pixels
-     * @param screenH Stage height in pixels
-     */
-    public void initializeLevel(double screenW, double screenH) {
-
-        /* ---------- 1. Floor platforms -------------------------------- */
-        for (int i = 0; i < 4; i++) {
-            float x      = (float) (screenW * 0.05 + i * screenW * 0.20);
-            float y      = (float) (screenH * 0.75 - i * screenH * 0.05);
-            float width  = (float) (screenW * 0.20);
-            float height = 20f;
-
-            Object[] p = { gameId, "Platform", "Floor" + (i + 1),
-                        x, y, width, height, gameId };
-            enqueueInit(new Message("CREATEGO", p, "RESPONSE"));
-        }
-
-        /* ---------- 2. Key -------------------------------------------- */
-        enqueueInit(new Message("CREATEGO",
-            new Object[]{ gameId, "Key", "Key1",
-                        (float)(screenW * 0.15), (float)(screenH * 0.15),
-                        40f, 40f, 1f, gameId },
-            "RESPONSE"));
-
-        /* ---------- 3. Players ---------------------------------------- */
-        enqueueInit(new Message("CREATEGO",
-            new Object[]{ gameId, "Player2", "Alfred",
-                        (float)(screenW * 0.20), (float)(screenH * 0.40),
-                        40f, 40f, gameId },
-            "RESPONSE"));
-
-        enqueueInit(new Message("CREATEGO",
-            new Object[]{ gameId, "Player2", "Gerald",
-                        (float)(screenW * 0.25), (float)(screenH * 0.40),
-                        40f, 40f, gameId },
-            "RESPONSE"));
-
-        /* ---------- 4. Final platform --------------------------------- */
-        enqueueInit(new Message("CREATEGO",
-            new Object[]{ gameId, "Platform", "Floor5",
-                        (float)(screenW * 0.85), (float)(screenH * 0.65),
-                        (float)(screenW * 0.10), 20f, gameId },
-            "RESPONSE"));
-
-        /* ---------- 5. Door ------------------------------------------- */
-        enqueueInit(new Message("CREATEGO",
-            new Object[]{ gameId, "Door", "Door1",
-                        (float)(screenW * 0.12), (float)(screenH * 0.50),
-                        50f, 120f, gameId },
-            "RESPONSE"));
-
-        System.out.println("Level initialized for '" + gameName +
-                        "' – queued " + INIT_QUEUE.size() + " CREATEGO messages.");
-    }
-
+    
 
 
 

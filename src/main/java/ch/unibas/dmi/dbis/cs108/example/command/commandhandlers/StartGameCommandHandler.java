@@ -10,6 +10,7 @@ public class StartGameCommandHandler implements CommandHandler {
     {
         String gameId = msg.getParameters()[0].toString();
         server.getGameSessionManager().getGameSession(gameId).setStartedFlag(!server.getGameSessionManager().getGameSession(gameId).getStartedFlag());
+        server.getGameSessionManager().getGameSession(gameId).initializeDefaultObjects();
         msg.setOption("RESPONSE");
         server.broadcastMessageToAll(msg);
     }

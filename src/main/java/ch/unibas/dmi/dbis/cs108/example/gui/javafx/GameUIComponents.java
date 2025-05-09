@@ -153,13 +153,13 @@ public class GameUIComponents {
             Level level = new Level();
             double screenWidth = startLevelButton.getScene().getWidth();
             double screenHeight = startLevelButton.getScene().getHeight();
-            level.initializeLevel(screenWidth, screenHeight);
+            //level.initializeLevel(screenWidth, screenHeight);
 
             String gameId = GameContext.getCurrentGameId();
-            //Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
-            //Client.sendMessageStatic(msg);
+            Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
+            Client.sendMessageStatic(msg);
 
-            level.initializeLevel(screenWidth, screenHeight);
+            //level.initializeLevel(screenWidth, screenHeight);
 
             // Hide start button and show character selection buttons
             startLevelButton.setVisible(false);
