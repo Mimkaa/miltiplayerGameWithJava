@@ -130,9 +130,10 @@ public class GameContext {
                     String gameID = receivedMessage.getParameters()[0].toString();
                     String username = receivedMessage.getParameters()[1].toString();
                     String prevGameId =  receivedMessage.getParameters()[2].toString();
+                    currentGameId.set(gameID);
                     if (Client.getInstance().getUsername().get().equals(username))
                     {
-                        currentGameId.set(gameID);
+                        
                         System.out.println(receivedMessage);
                         System.out.println("Current game id set to: " + currentGameId.get());
                         Platform.runLater(() -> {
@@ -711,6 +712,7 @@ public class GameContext {
      * Throttles updates to the configured FPS (60 FPS by default).
      */
     public void update() {
+        
         long now = System.currentTimeMillis();
         // Use the adjustable frame interval (target FPS).
         if (now - lastFrameTime < frameIntervalMs) {
