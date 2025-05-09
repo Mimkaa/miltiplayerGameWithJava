@@ -35,12 +35,10 @@ import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The {@code GameContext} class manages the game session, user interaction, and game updates.
@@ -53,6 +51,7 @@ public class GameContext {
     @Getter
     private static GameContext instance;
 
+    public Game game;
     /*
     Add CubeDrawer as a field
     */
@@ -860,6 +859,17 @@ public class GameContext {
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
     }
+
+    public List<GameObject> getGameObjects() {
+        return game.getGameObjects();
+    }
+
+    public List<String> getPlayerNames() {
+        return getGameObjects().stream()
+                .map(GameObject::getName)
+                .collect(Collectors.toList());
+    }
+
 
     public static void main(String[] args) {
         GameContext context = new GameContext();
