@@ -33,9 +33,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     // Movement constants
     // ---------------------------------
-    private static final float PLAYER_ACC = 800f;       // Acceleration magnitude when pressing left/right
+    private static final float PLAYER_ACC = 100f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
-    private static final float JUMP_FORCE = -300;         // The lower, the higher player can jump
+    private static final float JUMP_FORCE = -30;         // The lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
     private static final float SCREEN_HEIGHT = 600;      // Height is stored even though vertical wrap isn't used
 
@@ -130,10 +130,13 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 alpha = 1f;
                 interpolating = false;
             }
+            // Position interpolieren
             pos.x = lerp(interpStartPos.x, interpEndPos.x, alpha);
             pos.y = lerp(interpStartPos.y, interpEndPos.y, alpha);
+            // Geschwindigkeit interpolieren
             vel.x = lerp(interpStartVel.x, interpEndVel.x, alpha);
             vel.y = lerp(interpStartVel.y, interpEndVel.y, alpha);
+            // Beschleunigung interpolieren
             acc.x = lerp(interpStartAcc.x, interpEndAcc.x, alpha);
             acc.y = lerp(interpStartAcc.y, interpEndAcc.y, alpha);
             // KEIN return – danach Input & Physik
