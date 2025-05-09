@@ -156,8 +156,8 @@ public class GameUIComponents {
             level.initializeLevel(screenWidth, screenHeight);
 
             String gameId = GameContext.getCurrentGameId();
-            Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
-            Client.sendMessageStatic(msg);
+            //Message msg = new Message("STARTGAME", new Object[]{gameId}, "REQUEST");
+            //Client.sendMessageStatic(msg);
 
             level.initializeLevel(screenWidth, screenHeight);
 
