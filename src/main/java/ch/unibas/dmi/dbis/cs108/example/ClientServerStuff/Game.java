@@ -206,7 +206,7 @@ public class Game {
 
             Object[] p = { gameId, "Platform", "Floor" + (i + 1),
                         x, y, width, height, gameId };
-            enqueueInit(new Message("CREATEGO", p, "REQUEST"));
+            enqueueInit(new Message("CREATEGO", p, "RESPONSE"));
         }
 
         /* ---------- 2. Key -------------------------------------------- */
@@ -214,34 +214,34 @@ public class Game {
             new Object[]{ gameId, "Key", "Key1",
                         (float)(screenW * 0.15), (float)(screenH * 0.15),
                         40f, 40f, 1f, gameId },
-            "REQUEST"));
+            "RESPONSE"));
 
         /* ---------- 3. Players ---------------------------------------- */
         enqueueInit(new Message("CREATEGO",
             new Object[]{ gameId, "Player2", "Alfred",
                         (float)(screenW * 0.20), (float)(screenH * 0.40),
                         40f, 40f, gameId },
-            "REQUEST"));
+            "RESPONSE"));
 
         enqueueInit(new Message("CREATEGO",
             new Object[]{ gameId, "Player2", "Gerald",
                         (float)(screenW * 0.25), (float)(screenH * 0.40),
                         40f, 40f, gameId },
-            "REQUEST"));
+            "RESPONSE"));
 
         /* ---------- 4. Final platform --------------------------------- */
         enqueueInit(new Message("CREATEGO",
             new Object[]{ gameId, "Platform", "Floor5",
                         (float)(screenW * 0.85), (float)(screenH * 0.65),
                         (float)(screenW * 0.10), 20f, gameId },
-            "REQUEST"));
+            "RESPONSE"));
 
         /* ---------- 5. Door ------------------------------------------- */
         enqueueInit(new Message("CREATEGO",
             new Object[]{ gameId, "Door", "Door1",
                         (float)(screenW * 0.12), (float)(screenH * 0.50),
                         50f, 120f, gameId },
-            "REQUEST"));
+            "RESPONSE"));
 
         System.out.println("Level initialized for '" + gameName +
                         "' – queued " + INIT_QUEUE.size() + " CREATEGO messages.");
