@@ -125,35 +125,34 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
-        // 1) Interpolation von Server-Snapshots (wenn aktiv)
+        // 1) Interpolation überspringen …
         if (interpolating) {
             interpElapsed += deltaTime;
             float alpha = interpElapsed / interpDuration;
-            if (alpha >= 1.0f) {
-                alpha = 1.0f;
+            if (alpha >= 1f) {
+                alpha = 1f;
                 interpolating = false;
             }
-            // Position interpolieren
             pos.x = lerp(interpStartPos.x, interpEndPos.x, alpha);
             pos.y = lerp(interpStartPos.y, interpEndPos.y, alpha);
-            // Geschwindigkeit interpolieren
             vel.x = lerp(interpStartVel.x, interpEndVel.x, alpha);
             vel.y = lerp(interpStartVel.y, interpEndVel.y, alpha);
-            // Beschleunigung interpolieren
             acc.x = lerp(interpStartAcc.x, interpEndAcc.x, alpha);
             acc.y = lerp(interpStartAcc.y, interpEndAcc.y, alpha);
-            // KEIN return: danach weiter mit Eingabe & Physik
+            // KEIN return – danach Input & Physik
         }
 
         // 2) INPUT-POLLING: Links/Rechts/Sprung
+        acc.x = 0;
         if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
             acc.x -= PLAYER_ACC;
         }
         if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
             acc.x += PLAYER_ACC;
         }
+        // Springen nur einmal pro Taste und nur wenn auf dem Boden
         if (KeyboardState.isKeyPressed(KeyCode.UP) && onGround && !jumped) {
-            vel.y = JUMP_FORCE;
+            vel.y = JUMP_FORCE;   // JUMP_FORCE aus Deinem ersten Snippet (z.B. -300)
             jumped = true;
         }
 
@@ -164,25 +163,25 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         // 4) Gravitation & Reibung
-        acc.y = GravityEngine.GRAVITY;
-        acc.x += vel.x * PLAYER_FRICTION;
+        acc.y = GravityEngine.GRAVITY;              // z.B. +500 oder was immer Deine Engine nutzt
+        acc.x += vel.x * PLAYER_FRICTION;           // PLAYER_FRICTION aus zweitem Snippet
 
-        // 5) Geschwindigkeit aktualisieren (px/s)
+        // 5) Geschwindigkeit aktualisieren
         vel.x += acc.x * deltaTime;
         vel.y += acc.y * deltaTime;
 
-        // 6) Vertikale Geschwindigkeit begrenzen
+        // 6) Vertikale Geschwindigkeit begrenzen (optional)
         if (vel.y < -600f) vel.y = -600f;
         if (vel.y >  600f) vel.y =  600f;
 
-        // 7) Position aktualisieren (px)
+        // 7) Position aktualisieren
         pos.x += vel.x * deltaTime;
         pos.y += vel.y * deltaTime + 0.5f * acc.y * deltaTime * deltaTime;
 
-        // 8) Horizontale Beschleunigung zurücksetzen
+        // 8) Reset Horizontal-Beschleunigung für die nächste Runde
         acc.x = 0;
 
-        // 9) Bodenkollision prüfen
+        // 9) Bodenkollision prüfen und Jump-Flag ggf. zurücksetzen
         checkGroundCollision();
 
         // 10) Gegriffene Objekte mitschleifen
@@ -190,18 +189,20 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             grabbedGuy.setPos(new Vector2(pos.x, pos.y - grabbedGuy.getHeight()));
         }
 
-        // 11) Throwing-Modus (ungeändert)
+        // 11) Throwing-Modus beibehalten …
         if (isThrowing) {
             throwAngle += throwAngleDelta;
-            if (throwAngle < MIN_THROW_ANGLE) {
-                throwAngle = MIN_THROW_ANGLE;
+            if (throwAngle < MIN_THROW_ANGLE || throwAngle > MAX_THROW_ANGLE) {
                 throwAngleDelta = -throwAngleDelta;
-            } else if (throwAngle > MAX_THROW_ANGLE) {
-                throwAngle = MAX_THROW_ANGLE;
-                throwAngleDelta = -throwAngleDelta;
+                throwAngle = Clamp(throwAngle, MIN_THROW_ANGLE, MAX_THROW_ANGLE);
             }
         }
     }
+
+    private float Clamp(float v, float min, float max) {
+        return v < min ? min : (v > max ? max : v);
+    }
+
 
 
     /**
