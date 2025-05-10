@@ -30,6 +30,9 @@ public class ThinkOutsideTheRoom {
     public static GameContext gameContext;
 
     public static String chosenUserName = "";
+
+    public static String serverHost;
+    public static int    serverPort;
     /**
      * Main method to parse arguments and start the application accordingly.
      *
@@ -72,6 +75,8 @@ public class ThinkOutsideTheRoom {
                 break;
 
                  */
+
+                /*
                 String host = parts[0];
                 int port;
                 try {
@@ -90,6 +95,13 @@ public class ThinkOutsideTheRoom {
 
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
+
+                 */
+                serverHost     = parts[0];
+                serverPort     = Integer.parseInt(parts[1]);
+                chosenUserName = (args.length == 3 ? args[2] : "");
+                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
+                return;
             }
 
 
@@ -163,7 +175,7 @@ public class ThinkOutsideTheRoom {
      * @param port     The server port.
      * @param username The optional username to use (or null to prompt/generate).
      */
-    private static void prepareClientAndContext(String host, int port, String username) {
+    public static void prepareClientAndContext(String host, int port, String username) {
         // Generate or request username
         if (username == null || username.trim().isEmpty()) {
             String suggested = Nickname_Generator.generateNickname();

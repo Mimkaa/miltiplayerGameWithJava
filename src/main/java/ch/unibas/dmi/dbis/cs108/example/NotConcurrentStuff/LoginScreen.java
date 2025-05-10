@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
@@ -18,6 +19,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,34 +56,23 @@ public class LoginScreen extends VBox {
         getChildren().addAll(new Label("Login"), usernameField, loginButton);
 
         loginButton.setOnAction(e -> {
-            // Lese und valide eingetippten Namen
-            String input = usernameField.getText().trim();
-            String desired = input.isEmpty() ? baseName : input;
+            String input     = usernameField.getText().trim();
+            String finalName = input.isEmpty() ? baseName : input;
 
-            // Erzeuge GameContext VOR der Duplikat-Prüfung, damit gameContext nicht null ist
-            GameContext context = new GameContext();
-            ThinkOutsideTheRoom.gameContext = context;
+            ThinkOutsideTheRoom.prepareClientAndContext(
+                    ThinkOutsideTheRoom.serverHost,
+                    ThinkOutsideTheRoom.serverPort,
+                    finalName
+            );
 
-            // Prüfe auf Duplikate über GameContext.getGameObjects()
-            String finalName = resolveDuplicate(desired);
-
-            // Setze Client-Username
-            Client client = Client.getInstance();
-            client.setUsername(finalName);
-
-            // Starte Netzwerk-Client
-            new Thread(client::run).start();
-
-            // Wechsle zur Spiel-GUI
+            GameContext context = ThinkOutsideTheRoom.gameContext;
             Platform.runLater(() -> {
                 context.start();
                 Platform.runLater(context::startGameLoop);
-
-                // Aufbau der Spielszene
                 CentralGraphicalUnit cgu = CentralGraphicalUnit.getInstance();
                 Scene gameScene = new Scene(cgu.getMainContainer(), 800, 800);
                 primaryStage.setScene(gameScene);
-                primaryStage.setTitle("Game: " + finalName);
+                primaryStage.setTitle("Think Outside The Room");
                 cgu.getMainContainer().requestFocus();
             });
         });
