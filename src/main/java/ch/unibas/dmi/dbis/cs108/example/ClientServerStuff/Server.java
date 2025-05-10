@@ -493,7 +493,7 @@ public class Server {
             InetSocketAddress dest = entry.getValue();
     
             // make a per-client clone (with its own UUID + seq#)
-            Message perClient = original.clone();
+            original.setUUID(UUID.randomUUID().toString());
             // optionally bump sequence number here:
             // perClient.setSequenceNumber(nextSeqFor(dest));
     
@@ -512,7 +512,7 @@ public class Server {
             if (clientUsername.equals(excludedUsername)) continue;
     
             InetSocketAddress dest = entry.getValue();
-            Message perClient = original.clone();
+            original.setUUID(UUID.randomUUID().toString());
     
             try {
                 enqueueMessage(original, dest.getAddress(), dest.getPort());
