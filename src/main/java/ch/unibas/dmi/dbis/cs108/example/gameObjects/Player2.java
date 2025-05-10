@@ -256,7 +256,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         String type = msg.getMessageType();
-        if ("KEY_PRESS".equals(type)) {
+        if ("KEY_PRESS".equals(type) && parentGame.isAuthoritative()) {
             // Process key press events.
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 1) {
