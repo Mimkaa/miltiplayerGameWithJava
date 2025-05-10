@@ -20,7 +20,7 @@ public class GUI extends Application {
     public void start(Stage stage) {
         if (ThinkOutsideTheRoom.gameContext == null) {
             LoginScreen login = new LoginScreen(stage, ThinkOutsideTheRoom.chosenUserName);
-            Scene loginScene = new Scene(login, 400, 200);
+            Scene loginScene = new Scene(login, 600, 600);
             stage.setScene(loginScene);
             stage.setTitle("Login");
             stage.show();
