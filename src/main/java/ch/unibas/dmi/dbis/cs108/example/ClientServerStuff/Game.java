@@ -415,7 +415,7 @@ public class Game {
             composeAndSendUpdate();
     
             // throttle to targetCompositionFps
-            long frameNanos = 1_000_000_000L / 120;
+            long frameNanos = 1_000_000_000L / 30;
             long elapsed  = System.nanoTime() - start;
             long sleepN   = frameNanos - elapsed;
             if (sleepN > 0) {
