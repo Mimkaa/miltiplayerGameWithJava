@@ -543,7 +543,7 @@ public class Game {
                 go.draw(gc);
             }
             tutorialManager.draw(gc);
-            gc.restore(); 
+            //gc.restore(); 
         }
     }
 
