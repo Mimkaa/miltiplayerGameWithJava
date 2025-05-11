@@ -16,6 +16,7 @@ import javafx.scene.text.Text;
 import lombok.Getter;
 import lombok.Setter;
 import org.dyn4j.geometry.Vector2;
+import javafx.scene.image.Image;
 
 /**
  * A JavaFX-based translation of the Pygame Player snippet:
@@ -27,6 +28,12 @@ import org.dyn4j.geometry.Vector2;
 @Getter
 @Setter
 public class Player2 extends GameObject implements IThrowable, IGrabbable {
+
+    // Textures:
+    private Image stand, walk;
+    private boolean facingRight = true;
+
+
 
     // Constant for throwing mode and its parameters
     private boolean isThrowing = false;
@@ -130,6 +137,19 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         this.height = h;
         setCollidable(true);
         setMovable(true);
+
+        try {
+            stand = new Image(getClass()
+                    .getResource("/texture/playerStanding.png")
+                    .toExternalForm());
+            walk  = new Image(getClass()
+                    .getResource("/texture/playerWalking.gif")
+                    .toExternalForm());
+        } catch (Exception ex) {
+            System.err.println("Failed to load player sprites: " + ex);
+            stand = walk = null;
+        }
+        // start standing facing right
     }
 
 
@@ -280,10 +300,15 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 // Basic movement logic.
                 if (KeyCode.LEFT.toString().equals(keyString)) {
                     acc.x += -PLAYER_ACC;
-                } else if (KeyCode.RIGHT.toString().equals(keyString)) {
-                    acc.x += PLAYER_ACC;
+                    facingRight = false;
+                }
 
-                } else if (KeyCode.UP.toString().equals(keyString)) {
+                else if (KeyCode.RIGHT.toString().equals(keyString)) {
+                    acc.x += PLAYER_ACC;
+                    facingRight = true;
+                }
+
+                else if (KeyCode.UP.toString().equals(keyString)) {
                     if (!jumped && onGround) {
                         if (grabbedGuy != null) {
                             vel.y += JUMP_FORCE / 2;
@@ -412,6 +437,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     interpStartAcc.y = acc.y;
                     interpEndAcc.x   = newAccX;
                     interpEndAcc.y   = newAccY;
+
+                    // flip sprite to match motion direction
+                    facingRight = newVelX >= 0;
                     
                     interpolating = true;
                     interpElapsed = 0f;
@@ -461,10 +489,25 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw the player rectangle.
-        gc.setFill(Color.MEDIUMPURPLE);
-        gc.fillRect(pos.x, pos.y, width, height);
 
+        // 1. pick the right animation frame:
+        Image standSprite = stand;
+        Image walkSprite = walk;
+        Image sprite = (vel.x != 0) ? walk : stand;
+
+        // 2. flip if needed
+        gc.save();
+        if (facingRight) {
+            //normal draw
+            gc.drawImage(sprite, pos.x, pos.y, width, height);
+        } else {
+            gc.drawImage(sprite,
+                    pos.x + width, // shift to the right edge
+                    pos.y,
+                    - width, //flip image
+                    height);
+        }
+        gc.restore();
         // Draw the player's name above the rectangle.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
@@ -641,10 +684,14 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         * ---------------------------------------------------------- */
         if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
             acc.x += -PLAYER_ACC;
+            facingRight = false;
+
         }
         if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
             acc.x +=  PLAYER_ACC;
+            facingRight = true;
         }
+
         if (KeyboardState.isKeyPressed(KeyCode.UP)) {
             vel.y = JUMP_FORCE;
         }
