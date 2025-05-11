@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Nickname_Generator;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 
 import javafx.application.Application;
+import lombok.Getter;
 
 /**
  * Entry point class for starting the application in different modes:
@@ -27,6 +28,7 @@ public class ThinkOutsideTheRoom {
     public static Client client;
 
     /** The game context instance used for UI and session management. */
+    @Getter
     public static GameContext gameContext;
 
     /**

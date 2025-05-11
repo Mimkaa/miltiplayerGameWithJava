@@ -7,6 +7,8 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.SoundManager;
+import javafx.application.Platform;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
@@ -72,6 +74,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private float moveMsgTimer = 0;
 
     // Ground collision flag.
+    @Getter
     private boolean onGround = false;
 
     // Reference to the grabbed player, if any.
@@ -101,6 +104,10 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private static final int SYNC_THRESHOLD = 0;     // only send snapshot every 50 KEY_PRESS messages
 
 
+    //For Sound Effects:
+    private boolean prevUpPressed = false;
+
+
     /**
      * Simple constructor: place player in the middle of the screen with a fixed size.
      */
@@ -127,6 +134,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
+        // 1. interpolating
         // If we're interpolating from a previous state to a new authoritative state, interpolate position, velocity, and acceleration.
         if (interpolating) {
             // Update elapsed time
@@ -154,11 +162,13 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             return;
         }
 
+        // 2. being grabbed
         // If not interpolating, execute normal local update logic:
         if (iAmGrabbed) {
             updateMovement();
             return;
         }
+        //3. Physics: gravity + friction
         // 1) Reset acceleration and apply gravity.
         acc.y = 5f;
         acc.x += vel.x * PLAYER_FRICTION;
@@ -167,8 +177,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         vel.x += acc.x;
         vel.y += acc.y;
 
-        // 3) Update position.
-        // 3) Update position.  <<<<<<<<<<<<<<< ONLY change is the * deltaTime
+        // 3) Update position.  < ONLY change is the * deltaTime
         pos.x += vel.x  + 0.5f * acc.x * deltaTime ;
         pos.y += vel.y  + 0.5f * acc.y * deltaTime ;
 
@@ -184,6 +193,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             grabbedGuy.setPos(new Vector2(this.pos.x, this.pos.y - grabbedGuy.getHeight()));
         }
 
+        //4. Throwing
         // 6) If in throwing mode, update the throw angle with a windshield-wiper oscillation.
         if (isThrowing) {
             throwAngle += throwAngleDelta;
@@ -195,6 +205,8 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 throwAngleDelta = -throwAngleDelta;
             }
         }
+
+
 
         //if (parentGame.isAuthoritative()) {
         //    syncCounter++;
@@ -268,6 +280,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     acc.x += -PLAYER_ACC;
                 } else if (KeyCode.RIGHT.toString().equals(keyString)) {
                     acc.x += PLAYER_ACC;
+
                 } else if (KeyCode.UP.toString().equals(keyString)) {
                     if (!jumped && onGround) {
                         if (grabbedGuy != null) {
