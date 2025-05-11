@@ -97,9 +97,7 @@ public abstract class GameObject {
      *
      * @return the position of the object
      */
-    public Player2.Vector2 getPos() {
-        return pos;
-    }
+    
 
     /**
      * Handles the grabbing of the game object by a player.
