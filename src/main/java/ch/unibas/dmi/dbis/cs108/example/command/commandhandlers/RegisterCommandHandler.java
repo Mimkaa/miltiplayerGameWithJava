@@ -42,6 +42,12 @@ public class RegisterCommandHandler implements CommandHandler {
         String three = responseMsg.getConcealedParameters()[2].toString();
           System.out.println("one: " + one + " two: " + two + " three: " + three);
         responseMsg.setConcealedParameters(new String[]{assigned});
+
+        server.enqueueMessage(
+                responseMsg,
+                sender.getAddress(),
+                sender.getPort()
+        );
         AsyncManager.run(() -> server.syncGames(sender));
     }
 }
