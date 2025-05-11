@@ -18,34 +18,36 @@ public class RegisterCommandHandler implements CommandHandler {
 
         /* ----------------- extract params ----------------- */
         Object[] p = msg.getParameters();
-        if (p == null || p.length < 2) {
-            System.err.println("REGISTER missing params");
+        if (p == null || p.length < 1) {
+            System.err.println("REGISTER missing username");
             return;
         }
-        String username = p[0].toString();
-        String hostPort = p[1].toString();            // "127.0.0.1:54321"
+        String requested = p[0].toString();
+        InetSocketAddress sender = server.getLastSender();
+        String assigned = server.findUniqueName(requested);
+        System.out.printf("Register requested %s @ %s%n", requested, sender);
 
-        /* ----------------- add to clientsMap -------------- */
-        try {
-            String[] hp = hostPort.split(":");
-            InetAddress ip = InetAddress.getByName(hp[0]);
-            int         pt = Integer.parseInt(hp[1]);
+        server.getClientsMap().putIfAbsent(assigned, sender);
+        System.out.printf("Register added %s @ %s%n", assigned, sender);
 
-            server.getClientsMap()
-                  .putIfAbsent(username, new InetSocketAddress(ip, pt));
-
-            System.out.println("REGISTER → added " + username + " @ " + hostPort);
-
-        } catch (Exception ex) {
-            System.err.println("Bad host:port in REGISTER: " + hostPort);
-            ex.printStackTrace();
-            return;
-        }
 
         /* ----------------- optional broadcast ------------- */
         //msg.setOption("RESPONSE");
         //server.broadcastMessageToAll(msg);
-        InetSocketAddress dest = server.getClientsMap().get(username);
-        AsyncManager.run(() -> server.syncGames(dest));
+        //InetSocketAddress dest = server.getClientsMap().get(username);
+        Message responseMsg = Server.makeResponse(msg, new Object[]{assigned});
+        responseMsg.setOption("RESPONSE");
+        String one = responseMsg.getConcealedParameters()[0].toString();
+        String two = responseMsg.getConcealedParameters()[1].toString();
+        String three = responseMsg.getConcealedParameters()[2].toString();
+          System.out.println("one: " + one + " two: " + two + " three: " + three);
+        responseMsg.setConcealedParameters(new String[]{assigned});
+
+        server.enqueueMessage(
+                responseMsg,
+                sender.getAddress(),
+                sender.getPort()
+        );
+        AsyncManager.run(() -> server.syncGames(sender));
     }
 }

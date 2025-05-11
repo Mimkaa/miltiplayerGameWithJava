@@ -131,6 +131,9 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
+    @Getter private InetSocketAddress lastSender;
+    public void setLastSender(InetSocketAddress s) { this.lastSender = s; }
+
     // ================================
     // Outgoing Message Inner Class
     // ================================
@@ -278,11 +281,15 @@ public class Server {
                 while (true) {
                     try {
                         serverSocket.receive(pkt);
+
+                        InetSocketAddress sender =
+                                new InetSocketAddress(pkt.getAddress(), pkt.getPort());
+                        getInstance().setLastSender(sender);
             
                         String raw   = new String(pkt.getData(), pkt.getOffset(),
                                                    pkt.getLength(), StandardCharsets.UTF_8);
-                        InetSocketAddress sender =
-                            new InetSocketAddress(pkt.getAddress(), pkt.getPort());
+                        //InetSocketAddress sender =
+                          //  new InetSocketAddress(pkt.getAddress(), pkt.getPort());
                         Message msg   = MessageCodec.decode(raw);
             
                         /* a) ACKs for *our* reliable sends --------------------- */

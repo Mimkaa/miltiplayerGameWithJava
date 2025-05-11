@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.command.CommandHandler;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.UUID;
 
 /**
@@ -36,6 +37,9 @@ public class CreateGameCommandHandler implements CommandHandler {
     @Override
     public void handle(Server server, Message msg, String senderUsername) {
 
+        System.out.println("→ CREATEGAME parameters: " + Arrays.toString(msg.getParameters()));
+
+
         Object[] params = msg.getParameters();
         if (params == null || params.length < 1) {
             System.err.println("CREATEGAME request missing game name parameter.");
@@ -51,6 +55,13 @@ public class CreateGameCommandHandler implements CommandHandler {
 
         Message response = new Message("CREATEGAME", new Object[]{gameUuid, requestedGameName}, "RESPONSE", msg.getConcealedParameters());
         InetSocketAddress senderAddress = server.getClientsMap().get(senderUsername);
+        System.out.println("Senderadress: " + senderAddress);
+        System.out.println("SenderUsername: " + senderUsername);
+
+        if (senderUsername == null) {
+            System.err.println("CREATEGAME aborted: senderUsername is null");
+            return;
+        }
 
         if (senderAddress != null) {
             server.broadcastMessageToAll(response);

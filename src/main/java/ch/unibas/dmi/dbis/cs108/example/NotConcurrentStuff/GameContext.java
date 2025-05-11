@@ -15,6 +15,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Pos;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
@@ -30,16 +31,13 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import javafx.geometry.VPos;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageRateMeter;
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * The {@code GameContext} class manages the game session, user interaction, and game updates.
@@ -51,6 +49,11 @@ public class GameContext {
     // Singleton instance.
     @Getter
     private static GameContext instance;
+
+    public Game game;
+
+    private double lastMouseX = 0;
+    private double lastMouseY = 0;
 
     private final GameSessionManager gameSessionManager;
     private MessageHogger testHogger;
@@ -71,11 +74,14 @@ public class GameContext {
 
     private Set<KeyCode> prevPressedKeys = new HashSet<>();
 
+    private boolean isRotating = false;
     public GameContext() {
         instance = this;
         this.gameSessionManager = new GameSessionManager();
+        String id   = UUID.randomUUID().toString();
+        String name = "Session-" + id.substring(0,5);
+        this.game = new Game(id, name);
 
-        instance = this;
 
         // Initialize the custom MessageHogger.
         testHogger = new MessageHogger() {
@@ -561,13 +567,6 @@ public class GameContext {
             uiManager.registerComponent("startGamePane", startGamePane);
 
             Button startGameButton = (Button) uiManager.getComponent("startGameButton"); // start button
-            /*
-            if (startGameButton != null) {
-                startGameButton.setOnAction(event -> {
-                    startGame();  // Start the game und the timer
-                });
-            }
-             */
 
             Pane adminPane = GameUIComponents.createAdministrativePane(uiManager, gameSessionManager);
             uiManager.registerComponent("adminUIPane", adminPane);
@@ -590,6 +589,7 @@ public class GameContext {
                     whisperChatPane,
                     lobbyChatPane
             );
+
 
             mainUIPane.setVisible(true);
             startGamePane.setVisible(false);
@@ -657,12 +657,10 @@ public class GameContext {
 
 
             CentralGraphicalUnit.getInstance().addNode(layeredRoot);
-
-
-
-
             System.out.println("All UI components have been added via GameUIComponents.");
         });
+
+
 
 
     }
@@ -691,11 +689,11 @@ public class GameContext {
         AnimationTimer timer = new AnimationTimer() {
             GraphicsContext gc = CentralGraphicalUnit.getInstance().getGraphicsContext();
 
-
             @Override
             public void handle(long now) {
                 update();
                 draw(gc);
+
                 long elapsedTime = LevelTimer.getInstance().getElapsedTimeInSeconds();
                 Platform.runLater(() -> {
                     // Update your GUI element here with the elapsed time
@@ -751,40 +749,51 @@ public class GameContext {
         if (gameId == null || gameId.isEmpty()) {
             return;                          // No game chosen
         }
-    
-        /* ── clear frame ─────────────────────────────────────────────────────── */
+
+        /* clear frame */
         gc.setFill(Color.WHITE);
         gc.fillRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-    
-        /* ── draw game scene ─────────────────────────────────────────────────── */
+
+        /* draw game scene  */
         Game game = gameSessionManager.getGameSession(gameId);
         if (game != null) {
             game.draw(gc);
         }
-    
-        /* ── overlay: messages‑per‑second meter ─────────────────────────────── */
+
+
+
+        /* overlay: messages‑per‑second meter */
         int    mps       = MessageRateMeter.getMessagesPerSecond();
         String rateText  = mps + " msg/s";
-    
+
         gc.save();                                         // 1) push entire state
-    
+
         gc.setFont(Font.font("Monospaced", FontWeight.BOLD, 14));
         gc.setFill(Color.BLACK);
         gc.setTextAlign(TextAlignment.RIGHT);
         gc.setTextBaseline(VPos.TOP);
-    
+
         double x = gc.getCanvas().getWidth() - 10;   // 10‑px padding from right
         double y = 100;                              // 100‑px from top
         gc.fillText(rateText, x, y);
-    
+
         gc.restore();                                      // 2) pop → previous state
     }
-    
-    
 
     public static Game getGameById(String gameId) {
         return getInstance().getGameSessionManager().getGameSession(gameId);
     }
+
+    public List<GameObject> getGameObjects() {
+        return game.getGameObjects();
+    }
+
+    public List<String> getPlayerNames() {
+        return getGameObjects().stream()
+                .map(GameObject::getName)
+                .collect(Collectors.toList());
+    }
+
 
     public static void main(String[] args) {
         GameContext context = new GameContext();

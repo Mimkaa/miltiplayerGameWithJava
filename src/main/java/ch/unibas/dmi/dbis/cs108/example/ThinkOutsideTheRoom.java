@@ -29,6 +29,10 @@ public class ThinkOutsideTheRoom {
     /** The game context instance used for UI and session management. */
     public static GameContext gameContext;
 
+    public static String chosenUserName = "";
+
+    public static String serverHost;
+    public static int    serverPort;
     /**
      * Main method to parse arguments and start the application accordingly.
      *
@@ -61,6 +65,7 @@ public class ThinkOutsideTheRoom {
                     System.err.println("Invalid host:port format.");
                     return;
                 }
+                /*
                 String host = parts[0];
                 int clientPort = Integer.parseInt(parts[1]);
                 String username = args.length == 3 ? args[2] : null;
@@ -68,7 +73,38 @@ public class ThinkOutsideTheRoom {
                 prepareClientAndContext(host, clientPort, username);
                 Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
                 break;
+
+                 */
+
+                /*
+                String host = parts[0];
+                int port;
+                try {
+                    port = Integer.parseInt(parts[1]);
+                } catch (NumberFormatException ex) {
+                    System.err.println("Invalid port number: " + parts[1]);
+                    return;
+                }
+
+                chosenUserName = (args.length == 3 ? args[2] : "");
+
+
+                client = new Client();
+                client.setServerAddress(host);
+                client.setServerPort(port);
+
+                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
+                break;
+
+                 */
+                serverHost     = parts[0];
+                serverPort     = Integer.parseInt(parts[1]);
+                chosenUserName = (args.length == 3 ? args[2] : "");
+                Application.launch(ch.unibas.dmi.dbis.cs108.example.gui.javafx.GUI.class);
+                return;
             }
+
+
             case "client-headless": {
                 if (args.length != 5) {
                     System.err.println("Usage: client-headless <host> <port> <username> <gameName>");
@@ -139,7 +175,7 @@ public class ThinkOutsideTheRoom {
      * @param port     The server port.
      * @param username The optional username to use (or null to prompt/generate).
      */
-    private static void prepareClientAndContext(String host, int port, String username) {
+    public static void prepareClientAndContext(String host, int port, String username) {
         // Generate or request username
         if (username == null || username.trim().isEmpty()) {
             String suggested = Nickname_Generator.generateNickname();
@@ -174,7 +210,7 @@ public class ThinkOutsideTheRoom {
         }
 
         // Send registration message
-        Message register = new Message("REGISTER", new Object[]{username, "25.16.205.103" + ":" + Client.getInstance().getClientPort()}, "REQUEST");
+        Message register = new Message("REGISTER", new Object[]{username}, "REQUEST");
         Client.sendMessageStatic(register);
 
         // Create GameContext (UI setup will happen in GUI class)

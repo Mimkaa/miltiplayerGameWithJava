@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import java.util.Collection;
 
+import ch.unibas.dmi.dbis.cs108.example.Cube.CubeDrawer;
 import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameSessionManager;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
@@ -15,6 +16,8 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
@@ -644,7 +647,7 @@ public class GameUIComponents {
         StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
         guiInterfaces.setTranslateX(0);
         guiInterfaces.setTranslateY(0);
-        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "None");
+        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Whisper Chat", "Administration", "None");
         guiInterfaces.setPromptText("Select GUI Interface");
 
         guiInterfaces.getSelectionModel().select("None");
@@ -678,7 +681,7 @@ public class GameUIComponents {
             Node whisperChatPaneNode = uiManager.getComponent("whisperChatUIPane");
             if (whisperChatPaneNode instanceof Pane) {
                 Pane whisperChatPane = (Pane) whisperChatPaneNode;
-                whisperChatPane.setVisible("Wisper Chat".equals(selected));
+                whisperChatPane.setVisible("Whisper Chat".equals(selected));
             }
 
             // === Add the block for your "Lobby Chat" pane ===
@@ -693,7 +696,35 @@ public class GameUIComponents {
         return guiInterfaces;
     }
 
+    public static Canvas createCubeCanvas(CubeDrawer drawer) {
 
+        final double WIDTH  = 600;
+        final double HEIGHT = 400;
+        final double FOV    = 500;
+        final double SIZE   = 100;
+
+        Canvas canvas = new Canvas(WIDTH, HEIGHT);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        redraw(gc, drawer, WIDTH, HEIGHT, FOV, SIZE);
+
+        canvas.setOnMousePressed(e -> {
+            if (drawer.isMouseOverCube(e.getX(), e.getY(),
+                    WIDTH / 2, HEIGHT / 2, FOV, SIZE))
+            {
+                drawer.rotateBy(10);               // +10°
+                redraw(gc, drawer, WIDTH, HEIGHT, FOV, SIZE);
+            }
+        });
+        return canvas;
+    }
+
+    private static void redraw(GraphicsContext gc, CubeDrawer drawer,
+                               double w, double h, double fov, double size) {
+
+        gc.clearRect(0, 0, w, h);
+        drawer.drawCube(gc, w / 2, h / 2, fov, size);
+    }
 
 
 } 

@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.LoginScreen;
 import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -17,39 +18,32 @@ public class GUI extends Application {
 
     @Override
     public void start(Stage stage) {
-        System.out.println("Starting GUI");
-
-        GameContext context = ThinkOutsideTheRoom.gameContext;
-        if (context != null) {
-            context.start();             // build UI components
-            Platform.runLater(context::startGameLoop);
-        } else {
-            System.err.println("Fehler: GameContext wurde nicht gesetzt!");
+        if (ThinkOutsideTheRoom.gameContext == null) {
+            LoginScreen login = new LoginScreen(stage, ThinkOutsideTheRoom.chosenUserName);
+            Scene loginScene = new Scene(login, 600, 600);
+            stage.setScene(loginScene);
+            stage.setTitle("Login");
+            stage.show();
+            return;
         }
 
-        // Get CentralGraphicalUnit root
+
+        GameContext context = ThinkOutsideTheRoom.gameContext;
+        context.start();
+        Platform.runLater(context::startGameLoop);
+
         CentralGraphicalUnit cgu = CentralGraphicalUnit.getInstance();
-
-        // Determine usable screen size (excludes taskbar)
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-        double screenW = 800;
-        double screenH = 800;
+        double screenW = bounds.getWidth();
+        double screenH = bounds.getHeight();
 
-        // Create scene at full-screen size (without toggling maximize)
-        Scene scene = new Scene(cgu.getMainContainer(), screenW, screenH);
-
-        stage.setTitle("Central Graphical Unit Example");
-        stage.setScene(scene);
-
-        // Position window at top-left of visual bounds
+        Scene gameScene = new Scene(cgu.getMainContainer(), screenW, screenH);
+        stage.setScene(gameScene);
+        stage.setTitle("Game");
         stage.setX(bounds.getMinX());
         stage.setY(bounds.getMinY());
-
-        // Show window
-        //stage.setMaximized(true);
         stage.show();
 
-        // Ensure focus for keyboard events
         Platform.runLater(() -> cgu.getMainContainer().requestFocus());
     }
 
