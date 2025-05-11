@@ -1,6 +1,8 @@
 package ch.unibas.dmi.dbis.cs108.example.gameObjects;
-
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import java.util.Arrays;
+import java.util.Set;
+
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
@@ -604,4 +606,127 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private float lerp(float start, float end, float alpha) {
         return start + (end - start) * alpha;
     }
+
+
+
+    /**
+     * Client‑side keyboard polling.  Called every frame from myUpdateLocal().
+     * Mirrors the logic you already have in myUpdateGlobal(KEY_PRESS),
+     * but drives it directly from the static KeyboardState.
+     */
+    @Override
+    public void processKeyboardState() {
+
+        if (iAmGrabbed) {                      // still carried by somebody else
+            return;
+        }
+
+        /* ------------------------------------------------------------
+        *  Continuous actions  (while the key is held down)
+        * ---------------------------------------------------------- */
+        if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
+            acc.x += -PLAYER_ACC;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.RIGHT)) {
+            acc.x +=  PLAYER_ACC;
+        }
+        if (KeyboardState.isKeyPressed(KeyCode.UP)) {
+            if (!jumped && onGround) {
+                vel.y += (grabbedGuy != null ? JUMP_FORCE / 2 : JUMP_FORCE);
+                jumped = true;
+            }
+        }
+
+        /* ------------------------------------------------------------
+        *  Edge‑triggered actions  (once per key *press*)
+        *
+        *  We consider the moment the key is *released* as the
+        *  end‑of‑press so we can use KeyboardState.getAndClearReleasedKeys().
+        * ---------------------------------------------------------- */
+        Set<KeyCode> released = KeyboardState.getAndClearReleasedKeys();
+
+        /* ----------  Grab / release  -------------------------------- */
+        if (released.contains(KeyCode.E)) {
+            if (grabbedGuy != null) {                  // already holding → drop
+                if (grabbedGuy instanceof IGrabbable) {
+                    ((IGrabbable) grabbedGuy).onRelease();
+                }
+                grabbedGuy = null;
+            } else {                                   // otherwise try to grab
+                attemptGrabNearest();
+            }
+        }
+
+        /* ----------  Toggle throwing mode  -------------------------- */
+        if (released.contains(KeyCode.F)) {
+            isThrowing = !isThrowing;
+            if (isThrowing) {
+                throwAngle      = 90f;                 // reset arc UI
+                throwAngleDelta = 3.0f;
+                System.out.println("Entered throwing mode.");
+            } else {
+                System.out.println("Exited throwing mode.");
+            }
+        }
+
+        /* ----------  Perform the throw  ----------------------------- */
+        if (released.contains(KeyCode.R)) {
+            if (isThrowing && grabbedGuy != null) {
+                performThrow();                        // helper below
+                isThrowing = false;
+            }
+        }
+    }
+
+    /* --------------------------------------------------------------
+    *  Helper: grab the closest IGrabbable within GRAB_RADIUS
+    * ------------------------------------------------------------ */
+    private void attemptGrabNearest() {
+        Game parent = getParentGame();
+        if (parent == null) return;
+
+        IGrabbable closest = null;
+        double     minDist = Double.MAX_VALUE;
+        float      cx      = getX() + getWidth()  / 2f;
+        float      cy      = getY() + getHeight() / 2f;
+
+        for (GameObject obj : parent.getGameObjects()) {
+            if (obj == this || !(obj instanceof IGrabbable)) continue;
+            IGrabbable g = (IGrabbable) obj;
+            if (g.isGrabbed()) continue;
+
+            float ox = obj.getX() + obj.getWidth()  / 2f;
+            float oy = obj.getY() + obj.getHeight() / 2f;
+            double dx = cx - ox, dy = cy - oy;
+            double d  = Math.sqrt(dx * dx + dy * dy);
+
+            if (d < minDist) { minDist = d; closest = g; }
+        }
+
+        if (closest != null && minDist <= GRAB_RADIUS) {
+            grabbedGuy = (GameObject) closest;
+            closest.onGrab(getId());
+            System.out.println("Grabbed object at distance " + minDist);
+        } else {
+            System.out.println("No object within grab radius.");
+        }
+    }
+
+    /* --------------------------------------------------------------
+    *  Helper: apply velocity to the grabbed object, then release it
+    * ------------------------------------------------------------ */
+    private void performThrow() {
+        double rad      = Math.toRadians(throwAngle);
+        float  throwVx  = (float) (throwMagnitude * Math.cos(rad));
+        float  throwVy  = (float) (throwMagnitude * Math.sin(rad)) * -1f;
+
+        if (grabbedGuy instanceof IGrabbable gObj) {
+            gObj.setVelocity(throwVx, throwVy);
+            gObj.onRelease();
+            grabbedGuy = null;
+
+            System.out.printf("Thrown object: Vx=%.2f Vy=%.2f%n", throwVx, throwVy);
+        }
+    }
+
 }
