@@ -656,7 +656,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         /* ----------  Toggle throwing mode  -------------------------- */
-        if (released.contains(KeyCode.F)) {
+        if (KeyboardState.isKeyPressed(KeyCode.F)) {
             isThrowing = !isThrowing;
             if (isThrowing) {
                 throwAngle      = 90f;                 // reset arc UI
@@ -668,7 +668,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         /* ----------  Perform the throw  ----------------------------- */
-        if (released.contains(KeyCode.R)) {
+        if (KeyboardState.isKeyPressed(KeyCode.R)) {
             if (isThrowing && grabbedGuy != null) {
                 performThrow();                        // helper below
                 isThrowing = false;
