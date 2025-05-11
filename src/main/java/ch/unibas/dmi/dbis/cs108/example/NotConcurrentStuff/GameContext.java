@@ -99,10 +99,18 @@ public class GameContext {
                         System.out.println("REGISTER message missing concealed parameters.");
                         return;
                     }
+
+
+
                     // The last concealed parameter is assumed to be the username.
                     String receivedUsername = concealed[concealed.length - 1];
+
+                    Client.getInstance().setUsername(receivedUsername);
+
                     // Get the current client's username.
                     String currentUsername = Client.getInstance().getUsername().get();
+
+
 
                     if (currentUsername.equals(receivedUsername)) {
                         System.out.println("Welcome: " + receivedUsername);
