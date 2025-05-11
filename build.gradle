@@ -83,7 +83,7 @@ jar {
     duplicatesStrategy(DuplicatesStrategy.INCLUDE)
     manifest {
         attributes(
-                'Main-Class': mainClassName
+                'Main-Class': 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
         )
     }
     from {
@@ -128,6 +128,6 @@ shadowJar {
     archiveClassifier.set('all')
     mergeServiceFiles()
     manifest {
-        attributes 'Main-Class': mainClassName
+        attributes 'Main-Class': 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
     }
 }
