@@ -4,6 +4,7 @@ import java.util.Arrays;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
+import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
@@ -31,6 +32,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private static final float MIN_THROW_ANGLE = 0f;
     private static final float MAX_THROW_ANGLE = 180f;
     private float throwMagnitude = 20f;
+    private boolean needsRespawn = false;
 
     // ---------------------------------
     // Constants matching the Python snippet
@@ -190,6 +192,18 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 throwAngle = MAX_THROW_ANGLE;
                 throwAngleDelta = -throwAngleDelta;
             }
+        }
+        if (pos.y > SCREEN_HEIGHT && !needsRespawn) {
+            needsRespawn = true;
+        }
+
+        if (needsRespawn) {
+            pos.x = SCREEN_WIDTH / 2f;
+            pos.y = 50;
+            vel.set(0, 0);
+            acc.set(0, 0);
+
+            needsRespawn = false;
         }
 
         //if (parentGame.isAuthoritative()) {
@@ -363,8 +377,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     }
                 }
             }
-        }
-        else if ("SNAPSHOT".equals(type)) {
+        } else if ("SNAPSHOT".equals(type)) {
             // Process SNAPSHOT messages for non-authoritative clients.
             Object[] params = msg.getParameters();
             if (params != null && params.length >= 6) {
