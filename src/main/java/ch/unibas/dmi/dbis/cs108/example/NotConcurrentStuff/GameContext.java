@@ -483,8 +483,10 @@ public class GameContext {
                     }
                     Object raw = receivedMessage.getParameters()[1];   // compile-time type: Object
 
-                    long elapsedTime;
+                    receivedMessage.getParameters();
+                    long elapsedTime = LevelTimer.getInstance().getElapsedTimeInSeconds();
 
+                    /*
                     if (raw instanceof Number n) {        // Java 16 pattern-matching form
                         elapsedTime = n.longValue();      // works for Float, Double, Integer, Long …
                     } else if (raw instanceof String s) { // JSON or text payload?
@@ -494,7 +496,7 @@ public class GameContext {
                                 "Elapsed-time parameter must be numeric, but got " + raw.getClass());
                     }
 
-
+                     */
                     Platform.runLater(() -> {
                         String message = "Level Completed and Time: " + elapsedTime + " seconds";
 

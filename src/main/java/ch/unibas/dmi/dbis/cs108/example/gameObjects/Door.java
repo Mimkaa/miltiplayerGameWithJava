@@ -40,14 +40,15 @@ public class Door extends GameObject {
             if (go instanceof Key) {
                 Key key = (Key) go;
                 if (this.intersects(key, 1.5)) {
-                    if(!hasWon)
-                    {
+                    if(!hasWon) {
                         hasWon = true;
-                        //System.out.println("You won the game!");
+                        System.out.println("You won the game!");
 
                         LevelTimer levelTimer = LevelTimer.getInstance();
                         levelTimer.stop();
+
                         float elapsedTime = LevelTimer.getInstance().getElapsedTimeInSeconds();
+                        System.out.println("Elapsed time: " + levelTimer.getElapsedTimeInSeconds());
 
                         // sends message that the level is finished
                         if (parentGame.isAuthoritative()) {
