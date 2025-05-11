@@ -73,7 +73,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private boolean onGround = false;
 
     // Reference to the grabbed player, if any.
+    @Getter
     private GameObject grabbedGuy = null;
+
     private static final float GRAB_RADIUS = 50.0f;
     public boolean iAmGrabbed = false;
 
@@ -559,7 +561,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public boolean isGrabbed() {
-        return false;
+        return iAmGrabbed;
     }
 
     @Override
