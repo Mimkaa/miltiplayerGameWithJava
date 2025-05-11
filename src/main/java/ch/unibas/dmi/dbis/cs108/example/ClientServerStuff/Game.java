@@ -52,7 +52,7 @@ public class Game {
 
     private static final ConcurrentLinkedQueue<Message> INIT_QUEUE =
             new ConcurrentLinkedQueue<>();
-    
+
     // near other fields
     private final TutorialManager tutorialManager = new TutorialManager();
 
@@ -62,44 +62,44 @@ public class Game {
         this.gameId = gameId;
         this.gameName = gameName;
 
-       
+
 
         this.gameMessageHogger = new MessageHogger() {
-        @Override
-        protected void processBestEffortMessage(Message msg) {
-            if (!"GAME".equalsIgnoreCase(msg.getOption())) return;
-            if (!"COMPOSITION".equals(msg.getMessageType())) {
-            routeMessageToGameObject(msg);
-            return;
+            @Override
+            protected void processBestEffortMessage(Message msg) {
+                if (!"GAME".equalsIgnoreCase(msg.getOption())) return;
+                if (!"COMPOSITION".equals(msg.getMessageType())) {
+                    routeMessageToGameObject(msg);
+                    return;
+                }
+
+                Object[] rawParams = msg.getParameters();
+                if (rawParams == null) return;
+
+                Arrays.stream(rawParams)
+                        .parallel()                   // <— split across the common fork/join pool
+                        .filter(o -> o instanceof String)
+                        .map(o -> (String) o)
+                        .forEach(safe -> {
+                            String withCommas = safe.replace("%", ",").replace("~", "|");
+                            try {
+                                Message snap = MessageCodec.decode(withCommas);
+                                routeMessageToGameObject(snap);
+                            } catch (Exception ex) {
+                                System.err.println("Failed to decode snapshot: " + withCommas);
+                            }
+                        });
             }
-
-            Object[] rawParams = msg.getParameters();
-            if (rawParams == null) return;
-
-            Arrays.stream(rawParams)
-                .parallel()                   // <— split across the common fork/join pool
-                .filter(o -> o instanceof String)
-                .map(o -> (String) o)
-                .forEach(safe -> {
-                    String withCommas = safe.replace("%", ",").replace("~", "|");
-                    try {
-                    Message snap = MessageCodec.decode(withCommas);
-                    routeMessageToGameObject(snap);
-                    } catch (Exception ex) {
-                    System.err.println("Failed to decode snapshot: " + withCommas);
-                    }
-                });
-        }
         };
 
-        
+
 
         // Start the main loop for processing all game objects at a fixed framerate.
         startPlayersCommandProcessingLoop();
         startCompositionLoop();
         initializeTutorialObjects();
         //initializeDefaultObjects();
-   
+
     }
 
     public void setAuthoritative(boolean authoritative) {
@@ -118,13 +118,13 @@ public class Game {
             System.out.println("sent Objects");
             Server.getInstance().broadcastMessageToAll(m);
         }
-                           // your existing transport
+        // your existing transport
     }
 
     // Game.java  (inside class Game)
     public void initializeDefaultObjects() {
         if(isAuthoritative())
-            {
+        {
             float screenW = 800f;      // Stage width
             float screenH = 600f;     // Stage height
 
@@ -136,11 +136,11 @@ public class Game {
                 float height = 20f;
                 String uuid = UUID.randomUUID().toString();
                 addGameObjectAsync(
-                    "Platform",
-                    uuid,              // unique id
-                    "Floor" + (i + 1),                         // name
-                    x, y, width, height,                       // geom
-                    gameId                                     // session / owner
+                        "Platform",
+                        uuid,              // unique id
+                        "Floor" + (i + 1),                         // name
+                        x, y, width, height,                       // geom
+                        gameId                                     // session / owner
                 );                                      // ensure creation
                 Object[] p = {uuid, gameId, "Platform", "Floor" + (i + 1),
                         x, y, width, height, gameId };
@@ -151,104 +151,104 @@ public class Game {
             String keyUuid = UUID.randomUUID().toString();
 
             addGameObjectAsync(
-                "Key",                 // type
-                keyUuid,               // uuid
-                "Key1",                // name
-                (float)(screenW * 0.15),   // x
-                (float)(screenH * 0.15),   // y
-                40f, 40f,                  // width, height
-                gameId                     // session id
+                    "Key",                 // type
+                    keyUuid,               // uuid
+                    "Key1",                // name
+                    (float)(screenW * 0.15),   // x
+                    (float)(screenH * 0.15),   // y
+                    40f, 40f,                  // width, height
+                    gameId                     // session id
             );
 
 
             enqueueInit(
-            new Message(
-                "CREATEGO",
-                new Object[]{
-                    keyUuid,                 // 0  uuid
-                    gameId,                  // 1  destination game
-                    "Key",                   // 2  type
-                    "Key1",                  // 3  name
-                    (float)(screenW * 0.15), // 4  x
-                    (float)(screenH * 0.15), // 5  y
-                    40f,                     // 6  width
-                    40f,                     // 7  height
-                    gameId                   // 8  owner / session
-                },
-                "RESPONSE"
-            )
-        );
+                    new Message(
+                            "CREATEGO",
+                            new Object[]{
+                                    keyUuid,                 // 0  uuid
+                                    gameId,                  // 1  destination game
+                                    "Key",                   // 2  type
+                                    "Key1",                  // 3  name
+                                    (float)(screenW * 0.15), // 4  x
+                                    (float)(screenH * 0.15), // 5  y
+                                    40f,                     // 6  width
+                                    40f,                     // 7  height
+                                    gameId                   // 8  owner / session
+                            },
+                            "RESPONSE"
+                    )
+            );
 
 
-            
+
 
             /* ---------- 3. Players ---------------------------------------- */
             String GeraldUuid = UUID.randomUUID().toString();
             String AlfredUuid = UUID.randomUUID().toString();
 
             addGameObjectAsync(
-                "Player2", AlfredUuid,
-                "Alfred",
-                (float)(screenW * 0.20), (float)(screenH * 0.40),
-                40f, 40f,
-                gameId
+                    "Player2", AlfredUuid,
+                    "Alfred",
+                    (float)(screenW * 0.20), (float)(screenH * 0.40),
+                    40f, 40f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
-                        (float)(screenW * 0.20), (float)(screenH * 0.40),
-                        40f, 40f, gameId },
-            "RESPONSE"));
+                    new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
+                            (float)(screenW * 0.20), (float)(screenH * 0.40),
+                            40f, 40f, gameId },
+                    "RESPONSE"));
 
             addGameObjectAsync(
-                "Player2", GeraldUuid,
-                "Gerald",
-                (float)(screenW * 0.25), (float)(screenH * 0.40),
-                40f, 40f,
-                gameId
+                    "Player2", GeraldUuid,
+                    "Gerald",
+                    (float)(screenW * 0.25), (float)(screenH * 0.40),
+                    40f, 40f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
-                        (float)(screenW * 0.25), (float)(screenH * 0.40),
-                        40f, 40f, gameId },
-            "RESPONSE"));
+                    new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
+                            (float)(screenW * 0.25), (float)(screenH * 0.40),
+                            40f, 40f, gameId },
+                    "RESPONSE"));
 
             /* ---------- 4. Final platform --------------------------------- */
             String fl5Uuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Platform", fl5Uuid,
-                "Floor5",
-                (float)(screenW * 0.85), (float)(screenH * 0.65),
-                (float)(screenW * 0.10), 20f,
-                gameId
+                    "Platform", fl5Uuid,
+                    "Floor5",
+                    (float)(screenW * 0.85), (float)(screenH * 0.65),
+                    (float)(screenW * 0.10), 20f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{fl5Uuid, gameId, "Platform", "Floor5",
-                        (float)(screenW * 0.85), (float)(screenH * 0.65),
-                        (float)(screenW * 0.10), 20f, gameId },
-            "RESPONSE"));
+                    new Object[]{fl5Uuid, gameId, "Platform", "Floor5",
+                            (float)(screenW * 0.85), (float)(screenH * 0.65),
+                            (float)(screenW * 0.10), 20f, gameId },
+                    "RESPONSE"));
 
             /* ---------- 5. Door ------------------------------------------- */
             String DoorUuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Door", DoorUuid,
-                "Door1",
-                (float)(screenW * 0.12), (float)(screenH * 0.50),
-                50f, 120f,
-                gameId
+                    "Door", DoorUuid,
+                    "Door1",
+                    (float)(screenW * 0.12), (float)(screenH * 0.50),
+                    50f, 120f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{DoorUuid, gameId, "Door", "Door1",
-                        (float)(screenW * 0.12), (float)(screenH * 0.50),
-                        50f, 120f, gameId },
-            "RESPONSE"));
+                    new Object[]{DoorUuid, gameId, "Door", "Door1",
+                            (float)(screenW * 0.12), (float)(screenH * 0.50),
+                            50f, 120f, gameId },
+                    "RESPONSE"));
 
             System.out.println("Level initialized (factory, no network).");
         }
     }
 
     /* =======================================================================
-    *  Tutorial initialisation  (place next to initialiseDefaultObjects)
-    * ===================================================================== */
+     *  Tutorial initialisation  (place next to initialiseDefaultObjects)
+     * ===================================================================== */
     public void initializeTutorialObjects() {
         // No authority check – tutorial is completely local
         float screenW = 800f;
@@ -262,51 +262,60 @@ public class Game {
             float height = 20f;
 
             addTutorialObjectAsync(
-                "Platform",
-                UUID.randomUUID().toString(),
-                "TutorFloor" + (i + 1),
-                x, y, width, height,
-                gameId
+                    "Platform",
+                    UUID.randomUUID().toString(),
+                    "TutorFloor" + (i + 1),
+                    x, y, width, height,
+                    gameId
             );
         }
 
         /* ---------- 2. Single player ------------------------------------ */
         addTutorialObjectAsync(
-            "Player2",
-            UUID.randomUUID().toString(),
-            "Trainee",
-            (float) (screenW * 0.20), (float) (screenH * 0.40),
-            40f, 40f,
-            gameId
+                "Player2",
+                UUID.randomUUID().toString(),
+                "Trainee",
+                (float) (screenW * 0.20), (float) (screenH * 0.40),
+                40f, 40f,
+                gameId
         );
 
         /* ---------- 2. Key -------------------------------------------- */
         //String KeyUuid = UUID.randomUUID().toString();
         addTutorialObjectAsync(
-            "Key",
-            UUID.randomUUID().toString(),   // uuid
-            "Key1",                         // name
-            (float)(screenW * 0.15),        // x
-            (float)(screenH * 0.15),        // y
-            40f, 40f,                       // width, height
-            gameId                          // session id
+                "Key",
+                UUID.randomUUID().toString(),   // uuid
+                "Key1",                         // name
+                (float)(screenW * 0.15),        // x
+                (float)(screenH * 0.15),        // y
+                40f, 40f,                       // width, height
+                gameId                          // session id
         );
 
 
         /* ---------- 3. Final platform ----------------------------------- */
         addTutorialObjectAsync(
-            "Platform",
-            UUID.randomUUID().toString(),
-            "TutorFinal",
-            (float) (screenW * 0.85), (float) (screenH * 0.65),
-            (float) (screenW * 0.10), 20f,
-            gameId
+                "Platform",
+                UUID.randomUUID().toString(),
+                "TutorFinal",
+                (float) (screenW * 0.85), (float) (screenH * 0.65),
+                (float) (screenW * 0.10), 20f,
+                gameId
         );
 
         System.out.println("Tutorial level initialised (offline, no network).");
     }
 
-    
+    public GameObject findObjectById(String id) {
+        for (GameObject obj : getGameObjects()) {
+            if (obj.getId().equals(id)) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+
 
 
 
@@ -329,19 +338,19 @@ public class Game {
     private void routeMessageToGameObject(Message msg) {
         String[] concealed = msg.getConcealedParameters();
         if (concealed == null || concealed.length == 0) return;
-    
+
         String targetObjectUuid = concealed[0];
         AsyncManager.run(() ->
-          gameObjects.stream()
-            .filter(go -> go.getId().equals(targetObjectUuid))
-            .findFirst()
-            .ifPresent(go -> {
-              go.addIncomingMessage(msg);
-              System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
-            })
+                gameObjects.stream()
+                        .filter(go -> go.getId().equals(targetObjectUuid))
+                        .findFirst()
+                        .ifPresent(go -> {
+                            go.addIncomingMessage(msg);
+                            //System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
+                        })
         );
     }
-    
+
 
     // starting level and start timer
     public void startLevel() {
@@ -388,7 +397,7 @@ public class Game {
                     return go;
                 }
             }
-    
+
             // 2) not found, so create, assign id, add, wire up:
             GameObject newObject = GameObjectFactory.create(type, params);
             newObject.setId(uuid);
@@ -412,40 +421,40 @@ public class Game {
     }
 
     void composeAndSendUpdate() {
-    
+
         /* ---- 2) Original logic --------------------------------------- */
         if (!authoritative) return;
-    
+
         List<Object> encodedSnaps = new ArrayList<>();
         for (GameObject obj : gameObjects) {
             if (obj instanceof Player2) {
                 Player2 p       = (Player2) obj;
                 Message snap    = p.createSnapshot();
                 String encoded  = MessageCodec.encode(snap)
-                                        .replace(",", "%")
-                                        .replace("|", "~");
+                        .replace(",", "%")
+                        .replace("|", "~");
                 encodedSnaps.add(encoded);
             }
         }
-    
+
         Message comp = new Message("COMPOSITION",
-                                   encodedSnaps.toArray(new Object[0]),
-                                   "GAME");
+                encodedSnaps.toArray(new Object[0]),
+                "GAME");
         Server.getInstance().sendMessageBestEffort(comp);
     }
 
     public void startCompositionLoop() {
         final long[] lastTime = { System.nanoTime() };
-    
+
         AsyncManager.runLoop(() -> {
             long start = System.nanoTime();
             // (optionally) compute dt if you ever need it
             // float deltaSec = (start - lastTime[0]) / 1_000_000_000f;
             lastTime[0] = start;
-    
+
             // send one snapshot
             composeAndSendUpdate();
-    
+
             // throttle to targetCompositionFps
             long frameNanos = 1_000_000_000L / 30;
             long elapsed  = System.nanoTime() - start;
@@ -459,9 +468,9 @@ public class Game {
             }
         });
     }
-    
 
-    
+
+
 
     /**
      * The main loop that processes all objects at a fixed framerate (targetFps):
@@ -481,9 +490,9 @@ public class Game {
             lastFrameTime[0] = startFrameTime;
 
             /* -------------------------------------------------------------
-            * Choose the active collection: tutorial until the game starts,
-            * then switch to the normal list.
-            * ----------------------------------------------------------- */
+             * Choose the active collection: tutorial until the game starts,
+             * then switch to the normal list.
+             * ----------------------------------------------------------- */
             CopyOnWriteArrayList<GameObject> activeObjects =
                     startedFlag ? gameObjects : tutorialObjects;
             if(!startedFlag)
@@ -544,8 +553,8 @@ public class Game {
             if (sleepTimeNanos > 0) {
                 try {
                     Thread.sleep(
-                        sleepTimeNanos / 1_000_000,
-                        (int) (sleepTimeNanos % 1_000_000)
+                            sleepTimeNanos / 1_000_000,
+                            (int) (sleepTimeNanos % 1_000_000)
                     );
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
