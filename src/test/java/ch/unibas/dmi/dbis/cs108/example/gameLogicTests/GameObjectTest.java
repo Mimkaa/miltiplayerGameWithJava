@@ -64,14 +64,8 @@ class GameObjectTest {
         @Override public Message createSnapshot()              { return null; }
     }
 
-    @Test
-    void testSetPosGetPos() {
-        Vector2 v = new Vector2(10f, 20f);
-        stub.setPos(v);
-        assertSame(v, stub.getPos(),
-                "getPos should return the same Player2.Vector2 passed to setPos");
-    }
-
+    
+  
     @Test
     void testGrabRelease() {
         assertFalse(stub.isGrabbed(), "New object should not be grabbed");

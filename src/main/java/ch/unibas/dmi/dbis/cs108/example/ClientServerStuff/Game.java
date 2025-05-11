@@ -148,19 +148,38 @@ public class Game {
             }
 
             /* ---------- 2. Key -------------------------------------------- */
-            String KeyUuid = UUID.randomUUID().toString();
+            String keyUuid = UUID.randomUUID().toString();
+
             addGameObjectAsync(
-                "Key", KeyUuid,
-                "Key1",
-                (float)(screenW * 0.15), (float)(screenH * 0.15),
-                40f, 40f, 1f,                                 // 1f = (e.g.) weight
-                gameId
+                "Key",                 // type
+                keyUuid,               // uuid
+                "Key1",                // name
+                (float)(screenW * 0.15),   // x
+                (float)(screenH * 0.15),   // y
+                40f, 40f,                  // width, height
+                gameId                     // session id
             );
-            enqueueInit(new Message("CREATEGO",
-            new Object[]{ KeyUuid, gameId, "Key", "Key1",
-                        (float)(screenW * 0.15), (float)(screenH * 0.15),
-                        40f, 40f, 1f, gameId },
-            "RESPONSE"));
+
+
+            enqueueInit(
+            new Message(
+                "CREATEGO",
+                new Object[]{
+                    keyUuid,                 // 0  uuid
+                    gameId,                  // 1  destination game
+                    "Key",                   // 2  type
+                    "Key1",                  // 3  name
+                    (float)(screenW * 0.15), // 4  x
+                    (float)(screenH * 0.15), // 5  y
+                    40f,                     // 6  width
+                    40f,                     // 7  height
+                    gameId                   // 8  owner / session
+                },
+                "RESPONSE"
+            )
+        );
+
+
             
 
             /* ---------- 3. Players ---------------------------------------- */
@@ -260,6 +279,19 @@ public class Game {
             40f, 40f,
             gameId
         );
+
+        /* ---------- 2. Key -------------------------------------------- */
+        //String KeyUuid = UUID.randomUUID().toString();
+        addTutorialObjectAsync(
+            "Key",
+            UUID.randomUUID().toString(),   // uuid
+            "Key1",                         // name
+            (float)(screenW * 0.15),        // x
+            (float)(screenH * 0.15),        // y
+            40f, 40f,                       // width, height
+            gameId                          // session id
+        );
+
 
         /* ---------- 3. Final platform ----------------------------------- */
         addTutorialObjectAsync(
@@ -491,9 +523,9 @@ public class Game {
                         }
 
                         if (a instanceof Key && b instanceof Platform) {
-                            ((Key) a).setVelocityY(0.0f);
+                            ((Key) a).getVel().y = 0;
                         } else if (b instanceof Key && a instanceof Platform) {
-                            ((Key) b).setVelocityY(0.0f);
+                            ((Key) b).getVel().y = 0;
                         }
                     }
                 }
