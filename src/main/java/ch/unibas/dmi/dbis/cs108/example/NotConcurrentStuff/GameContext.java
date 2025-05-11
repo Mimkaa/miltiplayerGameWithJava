@@ -166,15 +166,16 @@ public class GameContext {
                     // Update the TextArea with the current game info.
                     Platform.runLater(() -> {
                         Node usersListNode = uiManager.getComponent("usersListCurrGS");
-                        if (usersListNode instanceof TextArea) {
-                            Game game = gameSessionManager.getGameSession(currentGameId.get());
-                            if (game != null) {
+                        Game game = gameSessionManager.getGameSession(gameID);
+                        if (usersListNode instanceof TextArea && game != null) {
+                            //Game game = gameSessionManager.getGameSession(currentGameId.get());
+                           // if (game != null) {
                                 StringBuilder sb = new StringBuilder();
                                 sb.append("Current Game Name: ").append(game.getGameName()).append("\n");
                                 sb.append("Users in this game:\n");
                                 for (String user : game.getUsers()) {
                                     sb.append(user).append("\n");
-                                }
+                               // }
                                 ((TextArea) usersListNode).setText(sb.toString());
                             }
                         }
@@ -615,6 +616,7 @@ public class GameContext {
             layeredRoot.getChildren().add(guiInterfaces);
 
             // ─── create the controls ─────────────────────────────────────────────
+
             TextField renameField = new TextField();
             renameField.setPromptText(Client.getInstance().getUsername().get());    // gray hint text
 
