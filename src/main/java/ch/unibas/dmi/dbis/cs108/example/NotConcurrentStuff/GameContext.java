@@ -130,10 +130,10 @@ public class GameContext {
                     String gameID = receivedMessage.getParameters()[0].toString();
                     String username = receivedMessage.getParameters()[1].toString();
                     String prevGameId =  receivedMessage.getParameters()[2].toString();
-                    currentGameId.set(gameID);
+                    
                     if (Client.getInstance().getUsername().get().equals(username))
                     {
-                        
+                        currentGameId.set(gameID);
                         System.out.println(receivedMessage);
                         System.out.println("Current game id set to: " + currentGameId.get());
                         Platform.runLater(() -> {
