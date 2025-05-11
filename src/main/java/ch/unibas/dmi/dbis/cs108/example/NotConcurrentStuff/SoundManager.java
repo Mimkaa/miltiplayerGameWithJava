@@ -14,6 +14,9 @@ public class SoundManager {
     public static final String GRABB_PATH = "/audio/grabb.mp3";
     public static final String THROW_PATH = "/audio/throw.mp3";
 
+    private static double effectsVolume = 1.0;
+
+
 
 
     private static MediaPlayer mediaPlayer;
@@ -60,11 +63,17 @@ public class SoundManager {
             Media media = new Media(uri);
             MediaPlayer sfxPlayer = new MediaPlayer(media);
             sfxPlayer.setOnEndOfMedia(sfxPlayer::dispose);
+            sfxPlayer.setVolume(effectsVolume);
             sfxPlayer.play();
         } catch (Exception ex) {
             System.err.println("Failed to play SFX: " + resourcePath);
             ex.printStackTrace();
         }
+    }
+
+
+    public static void setEffectsVolume(double volume) {
+        effectsVolume = volume;
     }
 
     /** Play the predefined jump sound effect. */
