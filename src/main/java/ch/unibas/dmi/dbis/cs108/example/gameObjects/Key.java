@@ -24,7 +24,7 @@ import org.dyn4j.geometry.Vector2;
  */
 @Getter
 @Setter
-public class Key extends GameObject  {
+public class Key extends GameObject implements IGrabbable {
 
     // Constant for throwing mode and its parameters
     private boolean isThrowing = false;
@@ -77,7 +77,8 @@ public class Key extends GameObject  {
     // Reference to the grabbed player, if any.
     private GameObject grabbedGuy = null;
     private static final float GRAB_RADIUS = 50.0f;
-    public boolean iAmGrabbed = false;
+    private boolean iAmGrabbed = false;
+    private String grabbedBy = null;
 
     // ---------------------------------
     // INTERPOLATION FIELDS for smoothing out server SNAPSHOT corrections
@@ -361,7 +362,44 @@ public class Key extends GameObject  {
         return snapshotMsg;
     }
 
+    @Override
+    public void onGrab(String playerId) {
+        this.iAmGrabbed = true;
+        this.grabbedBy  = playerId;
+    }
 
+    @Override
+    public void onRelease() {
+        this.iAmGrabbed = false;
+        this.grabbedBy  = null;
+    }
+
+    @Override
+    public boolean isGrabbed() {
+        return this.iAmGrabbed;         // ← no longer a stub
+    }
+
+    @Override
+    public String getGrabbedBy() {
+        return this.grabbedBy;          // ← so we know who holds it
+    }
+
+    @Override
+    public void setPos(float x, float y) {
+        // ← actually move the key!
+        this.pos.x = x;
+        this.pos.y = y;
+    }
+
+    @Override
+    public float getX() {
+        return pos.x;
+    }
+
+    @Override
+    public float getY() {
+        return pos.y;
+    }
 
     @Override
     public void setX(float x) {
@@ -398,48 +436,46 @@ public class Key extends GameObject  {
         return new Object[] { getName(), pos.x, pos.y, width, height, getGameId() };
     }
 
-    @Override
-    public void onGrab(String playerId) {
-        // When grabbed, mark the player as grabbed.
-        iAmGrabbed = true;
+
+
+    // ---------------------------------
+    // Simple Vector2 class.
+    // ---------------------------------
+    public static class Vector2 {
+        public float x;
+        public float y;
+
+        public Vector2(float x, float y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public Vector2() {
+            this(0, 0);
+        }
+
+        public void set(float x, float y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + x + ", " + y + ")";
+        }
     }
 
-    @Override
-    public void onRelease() {
-        iAmGrabbed = false;
-    }
-
-    @Override
-    public boolean isGrabbed() {
-        return false;
-    }
-
-    @Override
-    public float getX()
-    {
-        return (float)pos.x;
-    }
-
-    /**
-     * Returns the Y-coordinate of the top-left corner of the bounding box.
-     *
-     * @return the Y-coordinate
-     */
-    public float getY()
-    {
-        return (float)pos.y;
-    }
-
-    
-
+    // ---------------------------------
+    // Simple linear interpolation helper
+    // ---------------------------------
     private float lerp(float start, float end, float alpha) {
         return start + (end - start) * alpha;
     }
 
 
 
-    
 
-    
+
+
 
 }
