@@ -478,6 +478,10 @@ public abstract class GameObject {
         public void execute() { code.run(); }
     }
 
+    public void processKeyboardState() 
+    {
+    }
+
 
     /**
      * Sends a message to the client with additional concealed parameters.

@@ -28,6 +28,7 @@ public class Game {
     private final String gameId;
     private final String gameName;
     private final CopyOnWriteArrayList<GameObject> gameObjects = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<GameObject> tutorialObjects = new CopyOnWriteArrayList<>();
     private final MessageHogger gameMessageHogger;
 
     // timer for the level
@@ -51,6 +52,10 @@ public class Game {
 
     private static final ConcurrentLinkedQueue<Message> INIT_QUEUE =
             new ConcurrentLinkedQueue<>();
+    
+    // near other fields
+    private final TutorialManager tutorialManager = new TutorialManager();
+
 
 
     public Game(String gameId, String gameName) {
@@ -92,6 +97,7 @@ public class Game {
         // Start the main loop for processing all game objects at a fixed framerate.
         startPlayersCommandProcessingLoop();
         startCompositionLoop();
+        initializeTutorialObjects();
         //initializeDefaultObjects();
    
     }
@@ -221,6 +227,53 @@ public class Game {
         }
     }
 
+    /* =======================================================================
+    *  Tutorial initialisation  (place next to initialiseDefaultObjects)
+    * ===================================================================== */
+    public void initializeTutorialObjects() {
+        // No authority check – tutorial is completely local
+        float screenW = 800f;
+        float screenH = 600f;
+
+        /* ---------- 1. Floor platforms ---------------------------------- */
+        for (int i = 0; i < 4; i++) {
+            float x      = (float) (screenW * 0.05 + i * screenW * 0.20);
+            float y      = (float) (screenH * 0.75 - i * screenH * 0.05);
+            float width  = (float) (screenW * 0.20);
+            float height = 20f;
+
+            addTutorialObjectAsync(
+                "Platform",
+                UUID.randomUUID().toString(),
+                "TutorFloor" + (i + 1),
+                x, y, width, height,
+                gameId
+            );
+        }
+
+        /* ---------- 2. Single player ------------------------------------ */
+        addTutorialObjectAsync(
+            "Player2",
+            UUID.randomUUID().toString(),
+            "Trainee",
+            (float) (screenW * 0.20), (float) (screenH * 0.40),
+            40f, 40f,
+            gameId
+        );
+
+        /* ---------- 3. Final platform ----------------------------------- */
+        addTutorialObjectAsync(
+            "Platform",
+            UUID.randomUUID().toString(),
+            "TutorFinal",
+            (float) (screenW * 0.85), (float) (screenH * 0.65),
+            (float) (screenW * 0.10), 20f,
+            gameId
+        );
+
+        System.out.println("Tutorial level initialised (offline, no network).");
+    }
+
     
 
 
@@ -313,6 +366,19 @@ public class Game {
         });
     }
 
+    public Future<GameObject> addTutorialObjectAsync(String type, String uuid, Object... params) {
+        return AsyncManager.run(() -> {
+            for (GameObject go : tutorialObjects) {          // avoid duplicates
+                if (uuid.equals(go.getId())) return go;
+            }
+            GameObject newGo = GameObjectFactory.create(type, params);
+            newGo.setId(uuid);
+            newGo.setParentGame(this);
+            tutorialObjects.add(newGo);
+            return newGo;
+        });
+    }
+
     void composeAndSendUpdate() {
     
         /* ---- 2) Original logic --------------------------------------- */
@@ -382,58 +448,69 @@ public class Game {
             float deltaTime = (startFrameTime - lastFrameTime[0]) / 1_000_000_000f;
             lastFrameTime[0] = startFrameTime;
 
-            // 1) & 2) Process inbound messages & commands, then update each GameObject
-            for (GameObject go : gameObjects) {
+            /* -------------------------------------------------------------
+            * Choose the active collection: tutorial until the game starts,
+            * then switch to the normal list.
+            * ----------------------------------------------------------- */
+            CopyOnWriteArrayList<GameObject> activeObjects =
+                    startedFlag ? gameObjects : tutorialObjects;
+            if(!startedFlag)
+            {
+                for (GameObject go : activeObjects) {
+                    go.processKeyboardState();
+                    tutorialManager.update();     // << new line
+                }
+            }
+
+            /* 1) & 2) Apply snapshots and run each object's local update */
+            for (GameObject go : activeObjects) {
                 go.applyLatestSnapshot();
             }
-            for (GameObject go : gameObjects) {
+            for (GameObject go : activeObjects) {
                 go.myUpdateLocal(deltaTime);
             }
 
-            // 3) Check and resolve collisions among collidable objects
-            for (int i = 0; i < gameObjects.size(); i++) {
-                GameObject a = gameObjects.get(i);
+            /* 3) Collision detection / resolution inside the active list */
+            for (int i = 0; i < activeObjects.size(); i++) {
+                GameObject a = activeObjects.get(i);
                 if (!a.isCollidable()) continue;
-                for (int j = i + 1; j < gameObjects.size(); j++) {
-                    GameObject b = gameObjects.get(j);
+
+                for (int j = i + 1; j < activeObjects.size(); j++) {
+                    GameObject b = activeObjects.get(j);
                     if (!b.isCollidable()) continue;
 
                     if (a.intersects(b)) {
-                        
+
                         a.resolveCollision(b);
-                        // Example: zero out y velocity if Player2 collides with Platform
+
+                        // Example tweaks for special‑case pairs
                         if (a instanceof Player2 && b instanceof Platform) {
                             ((Player2) a).getVel().y = 0;
                         } else if (b instanceof Player2 && a instanceof Platform) {
                             ((Player2) b).getVel().y = 0;
                         }
-                        
+
                         if (a instanceof Key && b instanceof Platform) {
                             ((Key) a).setVelocityY(0.0f);
                         } else if (b instanceof Key && a instanceof Platform) {
                             ((Key) b).setVelocityY(0.0f);
                         }
-                        
                     }
                 }
             }
-            //composeAndSendUpdate();
 
-            // 4) Increment the global tickCount
-            //tickCount++;
-            if(startedFlag)
-            {
+            /* 4) Send any queued ‘init’ messages **after** the match starts */
+            if (startedFlag) {
                 flushInitQueue();
             }
 
-          
+            /* 5) Frame‑throttling to maintain targetFps */
             long targetFrameTimeNanos = 1_000_000_000L / targetFps;
-            long frameProcessingTime = System.nanoTime() - startFrameTime;
-            long sleepTimeNanos = targetFrameTimeNanos - frameProcessingTime;
+            long frameProcessingTime  = System.nanoTime() - startFrameTime;
+            long sleepTimeNanos       = targetFrameTimeNanos - frameProcessingTime;
 
             if (sleepTimeNanos > 0) {
                 try {
-                    // Sleep for the leftover time, in nanoseconds
                     Thread.sleep(
                         sleepTimeNanos / 1_000_000,
                         (int) (sleepTimeNanos % 1_000_000)
@@ -445,6 +522,7 @@ public class Game {
         });
     }
 
+
     public long getTickCount() {
         return tickCount;
     }
@@ -453,8 +531,18 @@ public class Game {
      * Draws all game objects onto the provided JavaFX GraphicsContext.
      */
     public void draw(GraphicsContext gc) {
-        for (GameObject go : gameObjects) {
-            go.draw(gc);
+        if (startedFlag)
+        {
+            for (GameObject go : gameObjects) {
+                go.draw(gc);
+            }
+        }
+        else
+        {
+            for (GameObject go : tutorialObjects) {
+                go.draw(gc);
+            }
+            tutorialManager.draw(gc);
         }
     }
 
