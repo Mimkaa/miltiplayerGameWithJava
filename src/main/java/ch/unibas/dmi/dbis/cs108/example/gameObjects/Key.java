@@ -436,6 +436,10 @@ public class Key extends GameObject implements IGrabbable {
         return new Object[] { getName(), pos.x, pos.y, width, height, getGameId() };
     }
 
+    public void setPos(Vector2 vec) {
+        this.pos = vec;
+    }
+
 
 
     // ---------------------------------

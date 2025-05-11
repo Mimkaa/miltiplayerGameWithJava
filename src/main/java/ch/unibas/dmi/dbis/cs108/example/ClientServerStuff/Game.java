@@ -306,7 +306,16 @@ public class Game {
         System.out.println("Tutorial level initialised (offline, no network).");
     }
 
-    
+    public GameObject findObjectById(String id) {
+        for (GameObject obj : getGameObjects()) {
+            if (obj.getId().equals(id)) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+
 
 
 

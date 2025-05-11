@@ -86,10 +86,11 @@ public abstract class GameObject {
     /**
      * Sets the position of the game object.
      *
-     * @param pos the new position of the object
+     * @param p the new position of the object
      */
-    public void setPos(Player2.Vector2 pos) {
-        this.pos = pos;
+    public void setPos(Player2.Vector2 p) {
+        setX(p.x);
+        setY(p.y);
     }
 
     /**

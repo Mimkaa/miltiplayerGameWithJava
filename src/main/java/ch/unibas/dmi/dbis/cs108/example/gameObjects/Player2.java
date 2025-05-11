@@ -76,6 +76,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     // Reference to the grabbed player, if any.
     private GameObject grabbedGuy = null;
+    private String grabbedGuyId = null;
     private static final float GRAB_RADIUS = 50.0f;
     public boolean iAmGrabbed = false;
 
@@ -127,6 +128,8 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void myUpdateLocal(float deltaTime) {
+
+        processKeyboardState();
         // If we're interpolating from a previous state to a new authoritative state, interpolate position, velocity, and acceleration.
         if (interpolating) {
             // Update elapsed time
@@ -181,10 +184,15 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
         // Update the position of the grabbed object so it stays attached.
         if (grabbedGuy != null) {
-            grabbedGuy.setPos(new Vector2(this.pos.x, this.pos.y - grabbedGuy.getHeight()));
+            float posY = (float) this.pos.y + grabbedGuy.getHeight();
+            grabbedGuy.setPos(new Vector2(this.pos.x, posY));
+            System.out.println("grabbed guy position: " + this.pos.x + "," + this.pos.y+grabbedGuy.getHeight());
+            System.out.println("grabbedGuy posY: " + posY);
+            System.out.println("player2 position: " + this.pos.x + "," + this.pos.y);
+            return;
         }
 
-        // 6) If in throwing mode, update the throw angle with a windshield-wiper oscillation.
+        // 6) If in throwing mode, update the throw angle with a windshiefld-wiper oscillation.
         if (isThrowing) {
             throwAngle += throwAngleDelta;
             if (throwAngle < MIN_THROW_ANGLE) {
@@ -422,13 +430,14 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void throwObject(float throwVx, float throwVy) {
+        GameObject grabbedGuy = getGrabbedGuy();
         if (grabbedGuy != null) {
             if (grabbedGuy instanceof IGrabbable) {
                 IGrabbable grabbableObject = (IGrabbable) grabbedGuy;
                 grabbableObject.setVelocity(throwVx, throwVy);  // Set the velocity of the thrown object.
                 System.out.println("Threw object with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
                 ((IGrabbable) grabbedGuy).onRelease();  // Release the object after throwing it.
-                grabbedGuy = null;
+                grabbedGuyId = null;
             }
         }
     }
@@ -680,7 +689,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     *  Helper: grab the closest IGrabbable within GRAB_RADIUS
     * ------------------------------------------------------------ */
     private void attemptGrabNearest() {
-        
+
         Game parent = getParentGame();
         if (parent == null) return;
 
@@ -703,16 +712,23 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         if (closest != null && minDist <= GRAB_RADIUS) {
-            
+
             grabbedGuy = (GameObject) closest;
             String id = grabbedGuy.getId();
             closest.onGrab(id);
+            grabbedGuy.setPos(new Vector2(this.pos.x, this.pos.y-grabbedGuy.getHeight()));
             System.out.println("HERE?");
             System.out.println("Grabbed object at distance " + minDist);
         } else {
             System.out.println("No object within grab radius.");
         }
     }
+
+    private GameObject getGrabbedGuy() {
+        if (grabbedGuyId == null || getParentGame() == null) return null;
+        return getParentGame().findObjectById(grabbedGuyId);
+    }
+
 
     /* --------------------------------------------------------------
     *  Helper: apply velocity to the grabbed object, then release it
