@@ -43,20 +43,17 @@ public class TutorialManager {
 
     /** Renders the current hint plus a pointer arrow. */
     public void draw(GraphicsContext gc) {
-        if (pointer >= steps.length) return;       // nothing left to show
+    if (pointer >= steps.length) return;
 
-        gc.setFill(Color.BLACK);
-        gc.setFont(Font.font("Arial", 18));
+    gc.save();                       // push
 
-        double baseX = 100;
-        double baseY = 100;
+    gc.setFill(Color.BLACK);
+    gc.setFont(Font.font("Arial", 18));
 
-        // Draw arrow
-        //gc.fillText("→", baseX, baseY);
+    double baseX = 100, baseY = 100;
+    gc.fillText(steps[pointer], baseX + 25, baseY);
 
-        // Draw current instruction
-        gc.fillText(steps[pointer], baseX + 25, baseY);
-
-        gc.restore(); 
+    gc.restore();                    // pop
     }
+
 }
