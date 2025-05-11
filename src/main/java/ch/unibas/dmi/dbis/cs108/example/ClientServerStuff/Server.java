@@ -576,6 +576,7 @@ public class Server {
                 "RESPONSE"
             );
             System.out.println("RRRAAAARRRR");
+            //broadcastMessageToAll(createGameMsg);
             enqueueMessage(createGameMsg, clientSocket.getAddress(), clientSocket.getPort());
         }
     }
@@ -598,10 +599,10 @@ public class Server {
             createGoParams[1] = gameId;
             createGoParams[2] = objectType;
             System.arraycopy(params, 0, createGoParams, 3, params.length);
-/*
+
             Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
             enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
-            */
+            
 
         }
     }

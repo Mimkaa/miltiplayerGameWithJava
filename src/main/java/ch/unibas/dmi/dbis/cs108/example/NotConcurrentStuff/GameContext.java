@@ -416,7 +416,7 @@ public class GameContext {
                         String gameId = receivedMessage.getParameters()[0].toString();
                         Game toggledGame = gameSessionManager.getGameSession(gameId);
                         if (toggledGame != null) {
-                            toggledGame.setStartedFlag(!toggledGame.getStartedFlag());
+                            toggledGame.setStartedFlag(true);
                             System.out.println("Game " + gameId + " started flag toggled. New value: " + toggledGame.getStartedFlag());
 
                             Platform.runLater(() -> {
