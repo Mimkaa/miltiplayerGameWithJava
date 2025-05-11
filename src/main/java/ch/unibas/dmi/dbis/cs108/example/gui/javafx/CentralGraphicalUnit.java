@@ -1,11 +1,17 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.SoundManager;
+import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
+import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Screen;
@@ -36,6 +42,11 @@ public class CentralGraphicalUnit {
     private final StackPane mainContainer; // Use StackPane for overlaying components.
     private final Canvas canvas;
     private final GraphicsContext graphicsContext;
+
+    private boolean jumpPlayed = false;
+    private boolean grabbPlayed = false;
+    private boolean throwPlayed = false;
+
 
     // Private constructor to prevent external instantiation.
     private CentralGraphicalUnit() {
@@ -145,8 +156,25 @@ public class CentralGraphicalUnit {
     
         // When a key is pressed, update KeyboardState and send a KEY_PRESS message.
         mainContainer.setOnKeyPressed((KeyEvent event) -> {
-            System.out.println("CentralGraphicalUnit - Key pressed: " + event.getCode());
+            KeyCode code = event.getCode();
+            System.out.println("CentralGraphicalUnit - Key pressed: " + code);
             KeyboardState.keyPressed(event.getCode());
+
+            // for Sound Effect:
+            if (code == KeyCode.UP && !jumpPlayed) {
+                    SoundManager.playJump();
+                    jumpPlayed = true;
+            }
+            if (code == KeyCode.E) {
+                SoundManager.playGrabb();
+                grabbPlayed = true;
+            }
+
+            if (code == KeyCode.R) {
+                SoundManager.playThrow();
+                throwPlayed = true;
+            }
+
             //if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
             //{
                 // Create and send a KEY_PRESS message that contains only the key type.
@@ -159,10 +187,10 @@ public class CentralGraphicalUnit {
                 // Fill the concealed parameters with the selected game object ID and current game ID
             //    concealed[0] = GameContext.getSelectedGameObjectId();
             //    concealed[1] = GameContext.getCurrentGameId();
-                
+
                 // Set the concealed parameters back to the message.
             //    keyPressMsg.setConcealedParameters(concealed);
-                
+
                 // Send the message to the server (or appropriate recipient)
             //    Client.sendMessageStatic(keyPressMsg);
             //}
@@ -170,8 +198,20 @@ public class CentralGraphicalUnit {
     
         // When a key is released, update KeyboardState and send a KEY_RELEASE message.
         mainContainer.setOnKeyReleased((KeyEvent event) -> {
-            System.out.println("CentralGraphicalUnit - Key released: " + event.getCode());
+            KeyCode code = event.getCode();
+            //For Sound Effect:
+            if (code == KeyCode.UP) {
+                jumpPlayed = false;
+            }
+            if (code == KeyCode.E) {
+                grabbPlayed = false;
+            }
+            if (code == KeyCode.R) {
+                throwPlayed = false;
+            }
+            System.out.println("CentralGraphicalUnit - Key released: " + code);
             KeyboardState.keyReleased(event.getCode());
+
             
             // Create and send a KEY_RELEASE message that contains only the key type.
             //if(GameContext.getCurrentGameId()!=null && GameContext.getSelectedGameObjectId()!=null)
@@ -195,4 +235,7 @@ public class CentralGraphicalUnit {
         });
 
     }
+
+
+
 }    

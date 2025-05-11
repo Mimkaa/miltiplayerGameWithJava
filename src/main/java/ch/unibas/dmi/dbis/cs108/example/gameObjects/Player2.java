@@ -69,6 +69,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     private float moveMsgTimer = 0;
 
     // Ground collision flag.
+    @Getter
     private boolean onGround = false;
 
     // Reference to the grabbed player, if any.
