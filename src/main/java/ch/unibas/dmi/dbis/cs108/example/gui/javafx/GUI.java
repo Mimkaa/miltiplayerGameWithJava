@@ -1,6 +1,7 @@
 package ch.unibas.dmi.dbis.cs108.example.gui.javafx;
 
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.GameContext;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.SoundManager;
 import ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -48,6 +49,14 @@ public class GUI extends Application {
         // Show window
         //stage.setMaximized(true);
         stage.show();
+
+        // Sound:
+        // initialize and start background music (infinite loop)
+        SoundManager.initBackgroundMusic();
+        SoundManager.playBackground();
+
+        // Sound effects based on Keys:
+
 
         // Ensure focus for keyboard events
         Platform.runLater(() -> cgu.getMainContainer().requestFocus());
