@@ -631,10 +631,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
             acc.x +=  PLAYER_ACC;
         }
         if (KeyboardState.isKeyPressed(KeyCode.UP)) {
-            if (!jumped && onGround) {
-                vel.y += (grabbedGuy != null ? JUMP_FORCE / 2 : JUMP_FORCE);
-                jumped = true;
-            }
+            vel.y = JUMP_FORCE;
         }
 
         /* ------------------------------------------------------------
