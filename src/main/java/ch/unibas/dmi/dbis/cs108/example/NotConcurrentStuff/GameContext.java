@@ -66,7 +66,7 @@ public class GameContext {
     private long lastFrameTime = 0;
 
     // Adjustable FPS fields.
-    private int targetFPS = 40;
+    private int targetFPS = 30;
     private long frameIntervalMs = 1000L / targetFPS; // (For 60 fps, roughly 16 ms per frame)
 
     private Set<KeyCode> prevPressedKeys = new HashSet<>();

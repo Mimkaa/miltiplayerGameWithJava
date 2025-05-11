@@ -279,7 +279,7 @@ public class Server {
                         //System.out.println(username);
                         //System.out.println(sender);
                         if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                            sendKeyEvent(msg);              // fire‑and‑forget
+                            //sendKeyEvent(msg);              // fire‑and‑forget
                         } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                             String username = findUserBySocket(sender);
                             System.out.println(username);
