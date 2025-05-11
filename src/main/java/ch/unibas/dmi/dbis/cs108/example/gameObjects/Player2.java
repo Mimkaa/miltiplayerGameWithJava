@@ -641,9 +641,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         *  end‑of‑press so we can use KeyboardState.getAndClearReleasedKeys().
         * ---------------------------------------------------------- */
         Set<KeyCode> released = KeyboardState.getAndClearReleasedKeys();
-        //System.out.println(released.contains(KeyCode.E));
+        //System.out.println(released);
         /* ----------  Grab / release  -------------------------------- */
-        if (released.contains(KeyCode.E)) {
+        if (KeyboardState.isKeyPressed(KeyCode.E)) {
             //System.out.println(grabbedGuy);
             if (grabbedGuy != null) {                  // already holding → drop
                 if (grabbedGuy instanceof IGrabbable) {
