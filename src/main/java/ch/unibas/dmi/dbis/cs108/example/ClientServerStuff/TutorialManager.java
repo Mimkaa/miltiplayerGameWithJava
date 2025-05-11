@@ -56,5 +56,7 @@ public class TutorialManager {
 
         // Draw current instruction
         gc.fillText(steps[pointer], baseX + 25, baseY);
+
+        gc.restore(); 
     }
 }
