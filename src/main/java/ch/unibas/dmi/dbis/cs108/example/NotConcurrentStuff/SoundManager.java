@@ -23,7 +23,7 @@ public class SoundManager {
         Media media = new Media(uri);
         mediaPlayer = new MediaPlayer(media);
         mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
-        mediaPlayer.setVolume(0.5);
+        mediaPlayer.setVolume(0.4);
     }
 
     public static void playBackground() {
@@ -38,6 +38,10 @@ public class SoundManager {
         if (mediaPlayer != null) mediaPlayer.stop();
     }
 
+    public static void setBackgroundVolume(double volume) {
+        if (mediaPlayer != null) mediaPlayer.setVolume(volume);
+    }
+
     /**
      * Play a one-shot sound effect given its resource path.
      * Logs any failures, so you'll see exactly what’s going on.
@@ -45,12 +49,12 @@ public class SoundManager {
     private static void playEffect(String resourcePath) {
         URL res = SoundManager.class.getResource(resourcePath);
         if (res == null) {
-            System.err.println("❌ Sound resource not found: " + resourcePath);
+            System.err.println("Sound resource not found: " + resourcePath);
             return;
         }
 
         String uri = res.toExternalForm();
-        System.out.println("▶︎ Playing SFX from: " + uri);
+        System.out.println("Playing SFX from: " + uri);
 
         try {
             Media media = new Media(uri);
@@ -58,7 +62,7 @@ public class SoundManager {
             sfxPlayer.setOnEndOfMedia(sfxPlayer::dispose);
             sfxPlayer.play();
         } catch (Exception ex) {
-            System.err.println("⚠️ Failed to play SFX: " + resourcePath);
+            System.err.println("Failed to play SFX: " + resourcePath);
             ex.printStackTrace();
         }
     }
