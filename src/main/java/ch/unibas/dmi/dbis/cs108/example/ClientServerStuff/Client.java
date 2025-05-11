@@ -212,7 +212,7 @@ public class Client {
                             StandardCharsets.UTF_8
                         );
                         
-                        System.out.println(response);
+                        //System.out.println(response);
                         Message receivedMessage = MessageCodec.decode(response);
                         
                         
@@ -349,7 +349,7 @@ public class Client {
             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
             instance.clientSocket.send(packet);
 
-            System.out.println("Best effort sent immediately: " + encoded);
+            //System.out.println("Best effort sent immediately: " + encoded);
         } catch (Exception e) {
             e.printStackTrace();
         }

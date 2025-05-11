@@ -337,7 +337,7 @@ public class Game {
             .findFirst()
             .ifPresent(go -> {
               go.addIncomingMessage(msg);
-              System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
+              //System.out.println("Routed message to GameObject with UUID: " + targetObjectUuid);
             })
         );
     }

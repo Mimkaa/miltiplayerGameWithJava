@@ -83,7 +83,7 @@ public class KeyboardState {
      */
     public static synchronized Set<KeyCode> getAndClearReleasedKeys() {
         Set<KeyCode> released = new HashSet<>(keysReleased);
-        keysReleased.clear();
+        //keysReleased.clear();
         return released;
     }
 }

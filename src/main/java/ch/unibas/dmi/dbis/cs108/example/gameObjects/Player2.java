@@ -355,7 +355,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                         if (grabbedGuy instanceof IGrabbable) {
                             IGrabbable grabbableObject = (IGrabbable) grabbedGuy;
                             grabbableObject.setVelocity(throwVx, throwVy);
-                            System.out.println("Thrown object with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
+                            //System.out.println("Thrown object with velocity: Vx=" + throwVx + ", Vy=" + throwVy);
                             // Release the grabbed object after throwing
                             grabbedGuy.onRelease();
                             grabbedGuy = null;
@@ -406,8 +406,8 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     // acc.x = newAccX;
                     // acc.y = newAccY;
 
-                    System.out.println("Processed SNAPSHOT for " + getId()
-                                       + ": pos=(" + newX + ", " + newY + ")");
+                    //System.out.println("Processed SNAPSHOT for " + getId()
+                    //                   + ": pos=(" + newX + ", " + newY + ")");
                 } catch (NumberFormatException ex) {
                     System.out.println("Error processing SNAPSHOT parameters: " + Arrays.toString(params));
                 }
@@ -641,9 +641,10 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         *  end‑of‑press so we can use KeyboardState.getAndClearReleasedKeys().
         * ---------------------------------------------------------- */
         Set<KeyCode> released = KeyboardState.getAndClearReleasedKeys();
-
+        //System.out.println(released.contains(KeyCode.E));
         /* ----------  Grab / release  -------------------------------- */
         if (released.contains(KeyCode.E)) {
+            //System.out.println(grabbedGuy);
             if (grabbedGuy != null) {                  // already holding → drop
                 if (grabbedGuy instanceof IGrabbable) {
                     ((IGrabbable) grabbedGuy).onRelease();
@@ -679,6 +680,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     *  Helper: grab the closest IGrabbable within GRAB_RADIUS
     * ------------------------------------------------------------ */
     private void attemptGrabNearest() {
+        
         Game parent = getParentGame();
         if (parent == null) return;
 
@@ -687,7 +689,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         float      cx      = getX() + getWidth()  / 2f;
         float      cy      = getY() + getHeight() / 2f;
 
-        for (GameObject obj : parent.getGameObjects()) {
+        for (GameObject obj : parent.getTutorialObjects()) {
             if (obj == this || !(obj instanceof IGrabbable)) continue;
             IGrabbable g = (IGrabbable) obj;
             if (g.isGrabbed()) continue;
@@ -701,8 +703,11 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         if (closest != null && minDist <= GRAB_RADIUS) {
+            
             grabbedGuy = (GameObject) closest;
-            closest.onGrab(getId());
+            String id = grabbedGuy.getId();
+            closest.onGrab(id);
+            System.out.println("HERE?");
             System.out.println("Grabbed object at distance " + minDist);
         } else {
             System.out.println("No object within grab radius.");

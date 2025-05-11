@@ -138,6 +138,8 @@ public abstract class GameObject {
         this.gameId = gameId;
     }
 
+    
+
     // Abstract bounding box methods for collision detection.
 
     /**
