@@ -615,7 +615,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     @Override
     public void onGrab(String playerId) {
         // When grabbed, mark the player as grabbed.
-        iAmGrabbed = true;
+
     }
 
     @Override
