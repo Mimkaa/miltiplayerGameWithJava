@@ -3,6 +3,23 @@ plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.13'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id 'java'
+    id 'jacoco'
+
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+    reportsDirectory = layout.buildDirectory.dir('customJacocoReportDir')
+}
+
+
+jacocoTestReport {
+    reports {
+        xml.required = false
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+    }
 }
 
 
@@ -72,6 +89,9 @@ dependencies {
 test {
     useJUnitPlatform()
     dependsOn tasks.named("shadowJar")
+    finalizedBy jacocoTestReport // report is always generated after tests run
+    ignoreFailures = true
+
 }
 
 // JAR-configuration(inkl. dependencies )
