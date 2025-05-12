@@ -90,12 +90,15 @@ public class Door extends GameObject {
         gc.drawImage(doorTex,getX(),getY());
 
         // draw hitbox:
+        /*
         gc.setGlobalAlpha(0.3);
         gc.setFill(Color.RED);
         gc.fillRect(getX(),getY(),getWidth(), getHeight());
         gc.setGlobalAlpha(1.0);
         gc.setStroke(Color.DARKRED);
         gc.strokeRect(getX(),getY(),getWidth(),getHeight());
+        */
+
         //Name
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());

@@ -3,6 +3,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameLogicTests;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.AckProcessor;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
+import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.ReliableUDPSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,16 +29,17 @@ public class ClientTest {
 
     private Client client;
 
+
     @BeforeEach
     void setup() throws Exception {
-        // Reset singleton instance
+        // reset the singleton
         Field instanceField = Client.class.getDeclaredField("instance");
         instanceField.setAccessible(true);
         instanceField.set(null, null);
 
-        // Reset SERVER_ADDRESS and SERVER_PORT defaults
+        // defaults
         Client.SERVER_ADDRESS = "localhost";
-        Client.SERVER_PORT = 9876;
+        Client.SERVER_PORT    = 9876;
 
         client = new Client();
     }
@@ -75,72 +77,77 @@ public class ClientTest {
         assertEquals("Alice", concealed[0], "Concealed username should be Alice");
     }
 
+
     /**
-     * Test sendMessageBestEffort sends a UDP packet with encoded message.
+     * Test that sendMessageBestEffort(...) actually sends a DatagramPacket
+     * when the ReliableUDPSender backlog is zero.
      */
     @Test
     void testSendMessageBestEffortSendsUdpPacket() throws Exception {
-        // Mock the DatagramSocket
+        // arrange: mock the socket and inject it
         DatagramSocket socketMock = mock(DatagramSocket.class);
-        // Inject mock socket into client instance
         Field socketField = Client.class.getDeclaredField("clientSocket");
         socketField.setAccessible(true);
         socketField.set(client, socketMock);
 
-        // Set instance to our client
+        // arrange: mock the ReliableUDPSender to report no backlog
+        ReliableUDPSender senderMock = mock(ReliableUDPSender.class);
+        when(senderMock.hasBacklog()).thenReturn(0);
+        Field senderField = Client.class.getDeclaredField("myReliableUDPSender");
+        senderField.setAccessible(true);
+        senderField.set(client, senderMock);
+
+        // make this instance the singleton
         Field instanceField = Client.class.getDeclaredField("instance");
         instanceField.setAccessible(true);
         instanceField.set(null, client);
 
-        // Prepare message
+        // prepare a test message
         Message msg = new Message("TEST", new Object[]{"param"}, "GAME");
         msg.setConcealedParameters(new String[]{"concealed"});
 
-        // Call best-effort send
+        // act
         Client.sendMessageBestEffort(msg);
 
-        // Capture sent packet
+        // assert: packet was sent exactly once
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<DatagramPacket> captor = ArgumentCaptor.forClass(DatagramPacket.class);
         verify(socketMock, times(1)).send(captor.capture());
+
         DatagramPacket packet = captor.getValue();
-
-        // Verify packet data contains encoded message
         String data = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
-        assertTrue(data.contains("TEST"), "Packet data should contain message type");
-        assertTrue(data.contains("param"), "Packet data should contain parameter");
+        assertTrue(data.contains("TEST"),  "Packet data should contain the message type");
+        assertTrue(data.contains("param"), "Packet data should contain the parameter");
     }
-
     /**
-     * Test acknowledge() delegates to ackProcessor.addAck with correct address and UUID.
+     * Since acknowledge() no longer calls AckProcessor.addAck(...),
+     * verify that invoking acknowledge() produces zero interactions
+     * on the injected AckProcessor mock.
      */
     @Test
-    void testAcknowledgeDelegatesToAckProcessor() throws Exception {
-        // Prepare mock AckProcessor
+    void testAcknowledgeDoesNotDelegateToAckProcessor() throws Exception {
+        // arrange: inject a mock AckProcessor
         AckProcessor ackMock = mock(AckProcessor.class);
-        // Inject into client
         Field ackField = Client.class.getDeclaredField("ackProcessor");
         ackField.setAccessible(true);
         ackField.set(client, ackMock);
 
-        // Set instance
+        // make this instance the singleton
         Field instanceField = Client.class.getDeclaredField("instance");
         instanceField.setAccessible(true);
         instanceField.set(null, client);
 
-        // Prepare a message with parameters = [uuid]
+        // prepare an ACK message
         String uuid = UUID.randomUUID().toString();
         Message msg = new Message("ACK", new Object[]{uuid}, null);
 
-        // Call acknowledge
+        // act
         Client.acknowledge(msg);
 
-        // Verify addAck called with correct address and uuid
-        ArgumentCaptor<InetSocketAddress> addrCaptor = ArgumentCaptor.forClass(InetSocketAddress.class);
-        //verify(ackMock, times(1)).addAck(addrCaptor.capture(), eq(uuid));
-        InetSocketAddress dest = addrCaptor.getValue();
-        assertEquals(Client.SERVER_PORT, dest.getPort(), "Port should match SERVER_PORT");
-        assertEquals(Client.SERVER_ADDRESS, dest.getAddress().getHostName(), "Host should match SERVER_ADDRESS");
+        // assert: ackProcessor.addAck(...) was never called
+        verifyNoInteractions(ackMock);
     }
+
 
     @Test
     void testUpdateLocalClientStateChangeUsername() throws Exception {

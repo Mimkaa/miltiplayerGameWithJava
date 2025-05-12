@@ -6,10 +6,13 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import javafx.scene.canvas.GraphicsContext;
 import org.junit.jupiter.api.*;
+import org.mockito.MockedStatic;
 
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Unit tests for the {@link Game} class.
@@ -129,21 +132,40 @@ class GameTest {
         assertEquals(9f,  b.getX(), 0.0001);
     }
 
+    /**
+     * Verifies that routing a GAME-option message to a GameObject
+     * causes its myUpdateGlobal(...) to be invoked.
+     */
     @Test
     void testRouteMessageToGameObjectViaReflection() throws Exception {
+        // arrange
         StubGameObject obj = new StubGameObject("O", game.getGameId());
         game.getGameObjects().add(obj);
 
         Message msg = new Message("M", new Object[0], "GAME");
-        msg.setConcealedParameters(new String[]{obj.getId(), game.getGameId()});
+        msg.setConcealedParameters(new String[]{ obj.getId(), game.getGameId() });
 
         Method route = Game.class.getDeclaredMethod("routeMessageToGameObject", Message.class);
         route.setAccessible(true);
-        route.invoke(game, msg);
 
-        // now drain the stub's incoming queue so myUpdateGlobal(...) runs
-        //obj.processIncomingMessages();
+        // stub AsyncManager.run(...) to execute immediately
+        try (MockedStatic<AsyncManager> am = mockStatic(AsyncManager.class)) {
+            am.when(() -> AsyncManager.run(any(Runnable.class)))
+                    .thenAnswer(inv -> {
+                        ((Runnable)inv.getArgument(0)).run();
+                        return null;
+                    });
 
-        assertTrue(obj.globalUpdated, "After routing + processing, stub should have been updated");
+            // act: route message synchronously
+            route.invoke(game, msg);
+        }
+
+        // force the GameObject to process its latest snapshot
+        obj.applyLatestSnapshot();
+
+        // assert
+        assertTrue(obj.globalUpdated,
+                "After routing + processing, stub should have been updated");
     }
+
 }

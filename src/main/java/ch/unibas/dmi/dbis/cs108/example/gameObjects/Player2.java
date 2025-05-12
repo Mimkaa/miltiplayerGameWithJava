@@ -264,7 +264,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         Game currentGame = getParentGame();
         if (currentGame == null) return;
 
-        final float tolerance = 10.0f;
+        final float tolerance = 20.0f;
         float bottom = getY() + getHeight();
         onGround = false;
         for (GameObject other : currentGame.getGameObjects()) {
@@ -510,13 +510,14 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
         gc.restore();
         // draw hitbox
+        /*
         gc.setGlobalAlpha(0.2);
         gc.setFill(Color.BLUE);
         gc.fillRect(pos.x, pos.y, width, height);
         gc.setGlobalAlpha(1.0);
         gc.setStroke(Color.DARKBLUE);
         gc.strokeRect(pos.x, pos.y, width, height);
-
+*/
 
         // Draw the player's name above the rectangle.
         gc.setFill(Color.BLACK);

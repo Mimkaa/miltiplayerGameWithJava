@@ -93,14 +93,21 @@ class GameObjectTest {
         assertFalse(stub.isMovable(), "Movable should reflect setter");
     }
 
+    /**
+     * After adding incoming messages (beyond any limit),
+     * applyLatestSnapshot should invoke myUpdateGlobal at least once.
+     */
     @Test
     void testAddIncomingMessageQueueLimit() {
+        // enqueue several messages (the implementation only keeps the latest snapshot)
         for (int i = 0; i < 7; i++) {
             stub.addIncomingMessage(new Message("M" + i, new Object[0], "OPT"));
         }
-        //stub.processIncomingMessages();
+        // now process the latest snapshot
+        stub.applyLatestSnapshot();
+
         assertTrue(stub.globalUpdated,
-                "processIncomingMessages should invoke myUpdateGlobal at least once");
+                "applyLatestSnapshot should invoke myUpdateGlobal at least once");
     }
 
     @Test

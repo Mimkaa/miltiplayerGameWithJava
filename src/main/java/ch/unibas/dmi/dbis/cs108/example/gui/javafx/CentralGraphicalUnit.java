@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import ch.unibas.dmi.dbis.cs108.example.gameObjects.Player2;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
@@ -39,6 +40,8 @@ public class CentralGraphicalUnit {
     // Eager initialization: the instance is created immediately.
     private static final CentralGraphicalUnit instance = new CentralGraphicalUnit();
 
+    private Image background;
+
     private final StackPane mainContainer; // Use StackPane for overlaying components.
     private final Canvas canvas;
     private final GraphicsContext graphicsContext;
@@ -50,6 +53,7 @@ public class CentralGraphicalUnit {
 
     // Private constructor to prevent external instantiation.
     private CentralGraphicalUnit() {
+
         mainContainer = new StackPane();
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
         double screenW = bounds.getWidth();
@@ -57,6 +61,12 @@ public class CentralGraphicalUnit {
 
         // create the canvas at exactly that size
         canvas = new Canvas(screenW, screenH);
+        try {
+            background = new Image(getClass().getResource("/texture/background.png").toExternalForm());
+        } catch (Exception e) {
+            System.err.println("Couldn't load background.png: " + e.getMessage());
+            background = null;
+        }
         
 
         // Bind the canvas size to the StackPane size for dynamic resizing.
@@ -215,6 +225,14 @@ public class CentralGraphicalUnit {
         return false;
     }
 
+    public void draw(GraphicsContext gc) {
+        if (background != null) {
+            double w = gc.getCanvas().getWidth(), h = gc.getCanvas().getHeight();
+            gc.drawImage(background, 0, 0, w, h);
+        }
+        // then:
+        ThinkOutsideTheRoom.gameContext.draw(gc);
+    }
 
 
 }

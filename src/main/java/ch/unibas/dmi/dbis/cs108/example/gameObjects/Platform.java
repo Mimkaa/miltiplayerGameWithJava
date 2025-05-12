@@ -68,13 +68,14 @@ public class Platform extends GameObject {
         gc.drawImage(TEXTURE, x, y, drawW, drawH);
 
         //draw hitbox:
+        /*
         gc.setGlobalAlpha(0.3);
         gc.setFill(Color.GRAY);
         gc.fillRect(x, y, width, height);
         gc.setGlobalAlpha(1.0);
         gc.setStroke(Color.DARKGRAY);
         gc.strokeRect(x, y, width, height);
-
+*/
         // Draw platform name.
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());

@@ -777,7 +777,7 @@ public class GameContext {
     /**
      * Draws the current game state on the provided GraphicsContext.
      */
-    private void draw(GraphicsContext gc) {
+    public void draw(GraphicsContext gc) {
         String gameId = currentGameId.get();
         if (gameId == null || gameId.isEmpty()) {
             return;                          // No game chosen
