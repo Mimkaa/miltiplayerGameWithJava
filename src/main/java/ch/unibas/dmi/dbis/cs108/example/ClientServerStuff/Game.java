@@ -234,13 +234,13 @@ public class Game {
             String DoorUuid = UUID.randomUUID().toString();
             addGameObjectAsync(
                     "Door", DoorUuid,
-                    "Door1",
+                    "Door",
                     (float)(screenW * 0.12), (float)(screenH * 0.50),
                     50f, 120f,
                     gameId
             );
             enqueueInit(new Message("CREATEGO",
-                    new Object[]{DoorUuid, gameId, "Door", "Door1",
+                    new Object[]{DoorUuid, gameId, "Door", "Door",
                             (float)(screenW * 0.12), (float)(screenH * 0.50),
                             50f, 120f, gameId },
                     "RESPONSE"));
