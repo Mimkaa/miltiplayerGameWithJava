@@ -83,6 +83,10 @@ public class GameUIComponents {
             }, "REQUEST");
             Client.sendMessageStatic(joinMsg);
 
+            SoundManager.initBackgroundMusic();
+            SoundManager.playBackground();
+
+
             Platform.runLater(() -> {
                 Node startPaneNode = uiManager.getComponent("startGamePane");
                 Node mainPaneNode = uiManager.getComponent("mainUIPane");
