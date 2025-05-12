@@ -199,7 +199,7 @@ public class Game {
                     new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
                             (float)(screenW * 0.20),
                             (float)(screenH * 0.40),
-                            6f, 60f, gameId },
+                            60f, 60f, gameId },
                     "RESPONSE"));
 
             addGameObjectAsync(
@@ -279,7 +279,7 @@ public class Game {
                 UUID.randomUUID().toString(),
                 "Trainee",
                 (float) (screenW * 0.20), (float) (screenH * 0.40),
-                40f, 40f,
+                60f, 60f,
                 gameId
         );
 

@@ -127,18 +127,19 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         setCollidable(true);
         setMovable(true);
 
+        String base = name.toLowerCase();// "alfred" or "gerald"
         try {
             stand = new Image(getClass()
-                    .getResource("/texture/geraldStand.png")
+                    .getResource("/texture/" + base + "Stand.png")
                     .toExternalForm());
             walk  = new Image(getClass()
-                    .getResource("/texture/geraldWalk.gif")
+                    .getResource("/texture/" + base + "Walk.gif")
                     .toExternalForm());
         } catch (Exception ex) {
-            System.err.println("Failed to load player sprites: " + ex);
+            System.err.println("Could not load sprites for "+name+": "+ex);
             stand = walk = null;
         }
-        // start standing facing right
+        facingRight = true;
     }
 
 

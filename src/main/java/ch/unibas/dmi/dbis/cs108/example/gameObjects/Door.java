@@ -9,6 +9,7 @@ import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
@@ -20,6 +21,14 @@ public class Door extends GameObject {
 
     private float x, y, width, height;
     private boolean hasWon = false;
+
+    private static final Image doorTexture;
+    static {
+        doorTexture = new Image(
+                Door.class.getResource("/texture/door.png")
+                        .toExternalForm()
+        );
+    }
 
     public Door(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
@@ -75,8 +84,8 @@ public class Door extends GameObject {
 
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.DARKGRAY);
-        gc.fillRect(getX(), getY(), getWidth(), getHeight());
+        gc.drawImage(doorTexture,getX(),getY());
+
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         text.setFont(gc.getFont());
