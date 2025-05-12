@@ -118,7 +118,7 @@ public class ThinkOutsideTheRoom {
                 String gameName   = args[4];
                 String clientIp   = args.length == 6 ? args[5] : null;
 
-                prepareClientAndContext(host, port, username, clientIp);
+               // prepareClientAndContext(host, port, username, clientIp);
 
                 // 1) Create game
                 Client.sendMessageStatic(new Message(
