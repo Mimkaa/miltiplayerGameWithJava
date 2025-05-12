@@ -25,22 +25,26 @@ repositories {
     mavenCentral()
 }
 
-// JavaFX-configuration
+// JavaFX configuration
 javafx {
     version = "19.0.2.1"
     modules = [
             'javafx.controls',
             'javafx.fxml',
             'javafx.base',
-            'javafx.graphics'
+            'javafx.graphics',
+            'javafx.media'
     ]
 }
+
+
 
 // dependencies
 dependencies {
     // JavaFX
     implementation 'org.openjfx:javafx-controls:19.0.2.1'
     implementation 'org.openjfx:javafx-fxml:19.0.2.1'
+    implementation 'org.openjfx:javafx-media:19.0.2.1'
 
     // Physik-Engine
     implementation 'org.dyn4j:dyn4j:5.0.2'
@@ -79,7 +83,7 @@ jar {
     duplicatesStrategy(DuplicatesStrategy.INCLUDE)
     manifest {
         attributes(
-                'Main-Class': mainClassName
+                'Main-Class': 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
         )
     }
     from {
@@ -124,6 +128,6 @@ shadowJar {
     archiveClassifier.set('all')
     mergeServiceFiles()
     manifest {
-        attributes 'Main-Class': mainClassName
+        attributes 'Main-Class': 'ch.unibas.dmi.dbis.cs108.example.ThinkOutsideTheRoom'
     }
 }

@@ -7,8 +7,11 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import static ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.SoundManager.*;
+
 
 /**
  * Launches the JavaFX GUI and sizes the window to the current screen bounds
@@ -49,6 +52,12 @@ public class GUI extends Application {
                 stage.setFullScreen(!stage.isFullScreen());
             }
         });
+
+        // Sound:
+        // initialize and start background music (infinite loop)
+        initBackgroundMusic();
+        playBackground();
+
 
         // Ensure focus for keyboard events
         Platform.runLater(() -> cgu.getMainContainer().requestFocus());

@@ -52,7 +52,7 @@ public class Game {
 
     private static final ConcurrentLinkedQueue<Message> INIT_QUEUE =
             new ConcurrentLinkedQueue<>();
-    
+
     // near other fields
     private final TutorialManager tutorialManager = new TutorialManager();
 
@@ -62,7 +62,7 @@ public class Game {
         this.gameId = gameId;
         this.gameName = gameName;
 
-       
+
 
         this.gameMessageHogger = new MessageHogger() {
         @Override
@@ -187,60 +187,63 @@ public class Game {
             String AlfredUuid = UUID.randomUUID().toString();
 
             addGameObjectAsync(
-                "Player2", AlfredUuid,
-                "Alfred",
-                (float)(screenW * 0.20), (float)(screenH * 0.40),
-                40f, 40f,
-                gameId
+                    "Player2", AlfredUuid,
+                    "Alfred",
+                    (float)(screenW * 0.20), // pos x
+                    (float)(screenH * 0.40), // pox y
+                    45f, //width?
+                    75f, //height?
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
-                        (float)(screenW * 0.20), (float)(screenH * 0.40),
-                        40f, 40f, gameId },
-            "RESPONSE"));
+                    new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
+                            (float)(screenW * 0.20),
+                            (float)(screenH * 0.40),
+                            45f, 75f, gameId },
+                    "RESPONSE"));
 
             addGameObjectAsync(
-                "Player2", GeraldUuid,
-                "Gerald",
-                (float)(screenW * 0.25), (float)(screenH * 0.40),
-                40f, 40f,
-                gameId
+                    "Player2", GeraldUuid,
+                    "Gerald",
+                    (float)(screenW * 0.25), (float)(screenH * 0.40),
+                    45f, 75f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
-                        (float)(screenW * 0.25), (float)(screenH * 0.40),
-                        40f, 40f, gameId },
-            "RESPONSE"));
+                    new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
+                            (float)(screenW * 0.25), (float)(screenH * 0.40),
+                            45f, 75f, gameId },
+                    "RESPONSE"));
 
             /* ---------- 4. Final platform --------------------------------- */
             String fl5Uuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Platform", fl5Uuid,
-                "Floor5",
-                (float)(screenW * 0.85), (float)(screenH * 0.65),
-                (float)(screenW * 0.10), 20f,
-                gameId
+                    "Platform", fl5Uuid,
+                    "Floor5",
+                    (float)(screenW * 0.85), (float)(screenH * 0.65),
+                    (float)(screenW * 0.10), 20f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{fl5Uuid, gameId, "Platform", "Floor5",
-                        (float)(screenW * 0.85), (float)(screenH * 0.65),
-                        (float)(screenW * 0.10), 20f, gameId },
-            "RESPONSE"));
+                    new Object[]{fl5Uuid, gameId, "Platform", "Floor5",
+                            (float)(screenW * 0.85), (float)(screenH * 0.65),
+                            (float)(screenW * 0.10), 20f, gameId },
+                    "RESPONSE"));
 
             /* ---------- 5. Door ------------------------------------------- */
             String DoorUuid = UUID.randomUUID().toString();
             addGameObjectAsync(
-                "Door", DoorUuid,
-                "Door1",
-                (float)(screenW * 0.12), (float)(screenH * 0.50),
-                50f, 120f,
-                gameId
+                    "Door", DoorUuid,
+                    "Door",
+                    (float)(screenW * 0.12), (float)(screenH * 0.50),
+                    100f, 120f,
+                    gameId
             );
             enqueueInit(new Message("CREATEGO",
-            new Object[]{DoorUuid, gameId, "Door", "Door1",
-                        (float)(screenW * 0.12), (float)(screenH * 0.50),
-                        50f, 120f, gameId },
-            "RESPONSE"));
+                    new Object[]{DoorUuid, gameId, "Door", "Door",
+                            (float)(screenW * 0.12), (float)(screenH * 0.50),
+                            100f, 120f, gameId },
+                    "RESPONSE"));
 
             System.out.println("Level initialized (factory, no network).");
         }
@@ -272,12 +275,12 @@ public class Game {
 
         /* ---------- 2. Single player ------------------------------------ */
         addTutorialObjectAsync(
-            "Player2",
-            UUID.randomUUID().toString(),
-            "Trainee",
-            (float) (screenW * 0.20), (float) (screenH * 0.40),
-            40f, 40f,
-            gameId
+                "Player2",
+                UUID.randomUUID().toString(),
+                "Trainee",
+                (float) (screenW * 0.20), (float) (screenH * 0.40),
+                45f, 75f,
+                gameId
         );
 
         /* ---------- 2. Key -------------------------------------------- */

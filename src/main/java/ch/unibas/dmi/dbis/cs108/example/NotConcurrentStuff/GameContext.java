@@ -607,6 +607,8 @@ public class GameContext {
             Pane lobbyChatPane = GameUIComponents.createLobbyChatPane(uiManager, gameSessionManager);
             uiManager.registerComponent("lobbyChatUIPane", lobbyChatPane);
 
+            Pane optionsPane = GameUIComponents.createOptionsPane(uiManager);
+
             StackPane layeredRoot = new StackPane();
             layeredRoot.getChildren().addAll(
                     mainUIPane,
@@ -614,7 +616,8 @@ public class GameContext {
                     chatPane,
                     adminPane,
                     whisperChatPane,
-                    lobbyChatPane
+                    lobbyChatPane,
+                    optionsPane
             );
 
 
@@ -624,6 +627,7 @@ public class GameContext {
             adminPane.setVisible(false);
             whisperChatPane.setVisible(false);
             lobbyChatPane.setVisible(false);
+            optionsPane.setVisible(false);
 
             ComboBox<String> guiInterfaces  = GameUIComponents.createGuiInterfaces(uiManager);
             StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);

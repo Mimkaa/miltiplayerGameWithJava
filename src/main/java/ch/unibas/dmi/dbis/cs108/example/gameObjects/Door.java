@@ -9,6 +9,7 @@ import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
@@ -20,6 +21,8 @@ public class Door extends GameObject {
 
     private float x, y, width, height;
     private boolean hasWon = false;
+    private Image doorTex;
+
 
     public Door(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
@@ -29,6 +32,14 @@ public class Door extends GameObject {
         this.height = height;
         // Make the door static: not movable.
         setMovable(false);
+
+        this.doorTex = new Image(
+                getClass().getResource("/texture/door.png").toExternalForm(),
+                width,        // desired draw-width
+                0,            // height=0 tells JavaFX to preserve aspect ratio
+                true,         // preserveRatio
+                true          // smooth
+        );
     }
 
     @Override
@@ -76,8 +87,16 @@ public class Door extends GameObject {
 
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.DARKGRAY);
-        gc.fillRect(getX(), getY(), getWidth(), getHeight());
+        gc.drawImage(doorTex,getX(),getY());
+
+        // draw hitbox:
+        gc.setGlobalAlpha(0.3);
+        gc.setFill(Color.RED);
+        gc.fillRect(getX(),getY(),getWidth(), getHeight());
+        gc.setGlobalAlpha(1.0);
+        gc.setStroke(Color.DARKRED);
+        gc.strokeRect(getX(),getY(),getWidth(),getHeight());
+        //Name
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         text.setFont(gc.getFont());
