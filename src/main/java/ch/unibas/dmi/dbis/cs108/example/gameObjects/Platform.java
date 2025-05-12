@@ -2,6 +2,7 @@ package ch.unibas.dmi.dbis.cs108.example.gameObjects;
 
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 
@@ -12,6 +13,8 @@ public class Platform extends GameObject {
     private float y;
     private float width;
     private float height;
+
+    private static final Image TEXTURE = new Image(Platform.class.getResource("/texture/floor.png").toExternalForm());
 
     /**
      * Constructs a static Platform object.
@@ -59,8 +62,18 @@ public class Platform extends GameObject {
      */
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.DARKGRAY);
+        // draw the floor texture at our width, preserve aspect:
+        double drawW = width;
+        double drawH = TEXTURE.getHeight() * (width / TEXTURE.getWidth());
+        gc.drawImage(TEXTURE, x, y, drawW, drawH);
+
+        //draw hitbox:
+        gc.setGlobalAlpha(0.3);
+        gc.setFill(Color.GRAY);
         gc.fillRect(x, y, width, height);
+        gc.setGlobalAlpha(1.0);
+        gc.setStroke(Color.DARKGRAY);
+        gc.strokeRect(x, y, width, height);
 
         // Draw platform name.
         gc.setFill(Color.BLACK);
