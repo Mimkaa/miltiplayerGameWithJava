@@ -9,6 +9,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.Level;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -26,6 +27,9 @@ import org.dyn4j.geometry.Vector2;
 @Getter
 @Setter
 public class Player2 extends GameObject implements IThrowable, IGrabbable {
+    //Textures:
+    private Image stand, walk;
+    private boolean facingRight = true;
 
     // Constant for throwing mode and its parameters
     private boolean isThrowing = false;
@@ -124,6 +128,20 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         this.height = h;
         setCollidable(true);
         setMovable(true);
+
+        String base = name.toLowerCase();// "alfred" or "gerald"
+        try {
+            stand = new Image(getClass()
+                    .getResource("/texture/" + base + "Stand.png")
+                    .toExternalForm());
+            walk  = new Image(getClass()
+                    .getResource("/texture/" + base + "Walk.gif")
+                    .toExternalForm());
+        } catch (Exception ex) {
+            System.err.println("Could not load sprites for "+name+": "+ex);
+            stand = walk = null;
+        }
+        facingRight = true;
     }
 
 
@@ -287,8 +305,12 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                 // Basic movement logic.
                 if (KeyCode.LEFT.toString().equals(keyString)) {
                     acc.x += -PLAYER_ACC;
+                    //for texture
+                    facingRight = false;
                 } else if (KeyCode.RIGHT.toString().equals(keyString)) {
                     acc.x += PLAYER_ACC;
+                    //for texture
+                    facingRight = true;
                 } else if (KeyCode.UP.toString().equals(keyString)) {
                     if (!jumped && onGround) {
                         if (grabbedGuy != null) {
@@ -404,19 +426,22 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     interpStartPos.y = pos.y;
                     interpEndPos.x   = newX;
                     interpEndPos.y   = newY;
-                    
+
                     // --- New: store current and target velocity for interpolation ---
                     interpStartVel.x = vel.x;
                     interpStartVel.y = vel.y;
                     interpEndVel.x   = newVelX;
                     interpEndVel.y   = newVelY;
-                    
+
                     // --- New: store current and target acceleration for interpolation ---
                     interpStartAcc.x = acc.x;
                     interpStartAcc.y = acc.y;
                     interpEndAcc.x   = newAccX;
                     interpEndAcc.y   = newAccY;
-                    
+
+                    //texture:
+                    facingRight = newVelX >= 0;
+
                     interpolating = true;
                     interpElapsed = 0f;
 
@@ -466,9 +491,32 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
     @Override
     public void draw(GraphicsContext gc) {
-        // Draw the player rectangle.
-        gc.setFill(Color.MEDIUMPURPLE);
+        // 1. pick the right animation frame:
+        Image standSprite = stand;
+        Image walkSprite = walk;
+        Image sprite = (vel.x != 0) ? walk : stand;
+
+        // 2. flip if needed
+        gc.save();
+        if (facingRight) {
+            //normal draw
+            gc.drawImage(sprite, pos.x, pos.y, width, height);
+        } else {
+            gc.drawImage(sprite,
+                    pos.x + width, // shift to the right edge
+                    pos.y,
+                    - width, //flip image
+                    height);
+        }
+        gc.restore();
+        // draw hitbox
+        gc.setGlobalAlpha(0.2);
+        gc.setFill(Color.BLUE);
         gc.fillRect(pos.x, pos.y, width, height);
+        gc.setGlobalAlpha(1.0);
+        gc.setStroke(Color.DARKBLUE);
+        gc.strokeRect(pos.x, pos.y, width, height);
+
 
         // Draw the player's name above the rectangle.
         gc.setFill(Color.BLACK);
@@ -500,9 +548,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
         // Pack position, velocity, acceleration in the main parameter array.
         Object[] params = new Object[] {
-            pos.x, pos.y,   // Position
-            vel.x, vel.y,   // Velocity
-            acc.x, acc.y    // Acceleration
+                pos.x, pos.y,   // Position
+                vel.x, vel.y,   // Velocity
+                acc.x, acc.y    // Acceleration
         };
 
         // Create the snapshot message.
@@ -510,9 +558,9 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
         // Build the concealed array.
         snapshotMsg.setConcealedParameters(new String[] {
-            getId(),
-            getGameId(),
-            String.valueOf(currentTick)
+                getId(),
+                getGameId(),
+                String.valueOf(currentTick)
         });
 
         return snapshotMsg;
@@ -642,8 +690,8 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         /* ------------------------------------------------------------
-        *  Continuous actions  (while the key is held down)
-        * ---------------------------------------------------------- */
+         *  Continuous actions  (while the key is held down)
+         * ---------------------------------------------------------- */
         if (KeyboardState.isKeyPressed(KeyCode.LEFT)) {
             acc.x += -PLAYER_ACC;
         }
@@ -655,11 +703,11 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         /* ------------------------------------------------------------
-        *  Edge‑triggered actions  (once per key *press*)
-        *
-        *  We consider the moment the key is *released* as the
-        *  end‑of‑press so we can use KeyboardState.getAndClearReleasedKeys().
-        * ---------------------------------------------------------- */
+         *  Edge‑triggered actions  (once per key *press*)
+         *
+         *  We consider the moment the key is *released* as the
+         *  end‑of‑press so we can use KeyboardState.getAndClearReleasedKeys().
+         * ---------------------------------------------------------- */
         Set<KeyCode> released = KeyboardState.getAndClearReleasedKeys();
         //System.out.println(released);
         /* ----------  Grab / release  -------------------------------- */

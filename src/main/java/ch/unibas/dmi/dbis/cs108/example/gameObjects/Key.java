@@ -8,6 +8,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server;
 import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.KeyboardState;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -100,6 +101,8 @@ public class Key extends GameObject implements IGrabbable {
 
     private int syncCounter = 0;
     private static final int SYNC_THRESHOLD = 0;     // only send snapshot every 50 KEY_PRESS messages
+
+    private static final Image TEXTURE = new Image(Key.class.getResource("/texture/key.png").toExternalForm());
 
 
     /**
@@ -324,8 +327,22 @@ public class Key extends GameObject implements IGrabbable {
 
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.GOLD);
-        gc.fillRect(pos.x, pos.y, width, height);
+        // 1) draw the key sprite at 'width', preserve aspect ratio
+        Image img = TEXTURE;
+        double drawW = width;
+        double drawH = img.getHeight() * (width / img.getWidth());
+        gc.drawImage(img, getX(), getY(), drawW, drawH);
+
+        //hitbox
+        // 2) overlay the hit-box in translucent yellow/red
+        gc.setGlobalAlpha(0.3);
+        gc.setFill(Color.YELLOW);
+        gc.fillRect(getX(), getY(), width, height);
+        gc.setGlobalAlpha(1.0);
+        gc.setStroke(Color.ORANGE);
+        gc.strokeRect(getX(), getY(), width, height);
+
+        //label
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());
         double textWidth = text.getLayoutBounds().getWidth();
