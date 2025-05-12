@@ -21,14 +21,8 @@ public class Door extends GameObject {
 
     private float x, y, width, height;
     private boolean hasWon = false;
+    private Image doorTex;
 
-    private static final Image doorTexture;
-    static {
-        doorTexture = new Image(
-                Door.class.getResource("/texture/door.png")
-                        .toExternalForm()
-        );
-    }
 
     public Door(String name, float x, float y, float width, float height, String gameId) {
         super(name, gameId);
@@ -38,6 +32,14 @@ public class Door extends GameObject {
         this.height = height;
         // Make the door static: not movable.
         setMovable(false);
+
+        this.doorTex = new Image(
+                getClass().getResource("/texture/door.png").toExternalForm(),
+                width,        // desired draw-width
+                0,            // height=0 tells JavaFX to preserve aspect ratio
+                true,         // preserveRatio
+                true          // smooth
+        );
     }
 
     @Override
@@ -84,7 +86,7 @@ public class Door extends GameObject {
 
     @Override
     public void draw(GraphicsContext gc) {
-        gc.drawImage(doorTexture,getX(),getY());
+        gc.drawImage(doorTex,getX(),getY());
 
         gc.setFill(Color.BLACK);
         Text text = new Text(getName());

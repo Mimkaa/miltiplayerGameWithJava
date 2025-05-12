@@ -191,28 +191,28 @@ public class Game {
                     "Alfred",
                     (float)(screenW * 0.20), // pos x
                     (float)(screenH * 0.40), // pox y
-                    60f, //width?
-                    60f, //height?
+                    50f, //width?
+                    50f, //height?
                     gameId
             );
             enqueueInit(new Message("CREATEGO",
                     new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
                             (float)(screenW * 0.20),
                             (float)(screenH * 0.40),
-                            60f, 60f, gameId },
+                            50f, 50f, gameId },
                     "RESPONSE"));
 
             addGameObjectAsync(
                     "Player2", GeraldUuid,
                     "Gerald",
                     (float)(screenW * 0.25), (float)(screenH * 0.40),
-                    60f, 60f,
+                    50f, 50f,
                     gameId
             );
             enqueueInit(new Message("CREATEGO",
                     new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
                             (float)(screenW * 0.25), (float)(screenH * 0.40),
-                            60f, 60f, gameId },
+                            50f, 50f, gameId },
                     "RESPONSE"));
 
             /* ---------- 4. Final platform --------------------------------- */
