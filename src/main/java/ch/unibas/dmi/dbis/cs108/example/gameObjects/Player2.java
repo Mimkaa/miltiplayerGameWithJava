@@ -499,6 +499,13 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                     height);
         }
         gc.restore();
+        // draw hitbox
+        gc.setGlobalAlpha(0.2);
+        gc.setFill(Color.BLUE);
+        gc.fillRect(pos.x, pos.y, width, height);
+        gc.setGlobalAlpha(1.0);
+        gc.setStroke(Color.DARKBLUE);
+        gc.strokeRect(pos.x, pos.y, width, height);
 
 
         // Draw the player's name above the rectangle.

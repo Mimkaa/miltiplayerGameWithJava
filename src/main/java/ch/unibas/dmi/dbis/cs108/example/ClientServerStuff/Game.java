@@ -191,28 +191,28 @@ public class Game {
                     "Alfred",
                     (float)(screenW * 0.20), // pos x
                     (float)(screenH * 0.40), // pox y
-                    50f, //width?
-                    50f, //height?
+                    45f, //width?
+                    75f, //height?
                     gameId
             );
             enqueueInit(new Message("CREATEGO",
                     new Object[]{AlfredUuid, gameId, "Player2", "Alfred",
                             (float)(screenW * 0.20),
                             (float)(screenH * 0.40),
-                            50f, 50f, gameId },
+                            45f, 75f, gameId },
                     "RESPONSE"));
 
             addGameObjectAsync(
                     "Player2", GeraldUuid,
                     "Gerald",
                     (float)(screenW * 0.25), (float)(screenH * 0.40),
-                    50f, 50f,
+                    45f, 75f,
                     gameId
             );
             enqueueInit(new Message("CREATEGO",
                     new Object[]{GeraldUuid, gameId, "Player2", "Gerald",
                             (float)(screenW * 0.25), (float)(screenH * 0.40),
-                            50f, 50f, gameId },
+                            45f, 75f, gameId },
                     "RESPONSE"));
 
             /* ---------- 4. Final platform --------------------------------- */
@@ -236,13 +236,13 @@ public class Game {
                     "Door", DoorUuid,
                     "Door",
                     (float)(screenW * 0.12), (float)(screenH * 0.50),
-                    50f, 120f,
+                    100f, 120f,
                     gameId
             );
             enqueueInit(new Message("CREATEGO",
                     new Object[]{DoorUuid, gameId, "Door", "Door",
                             (float)(screenW * 0.12), (float)(screenH * 0.50),
-                            50f, 120f, gameId },
+                            100f, 120f, gameId },
                     "RESPONSE"));
 
             System.out.println("Level initialized (factory, no network).");
@@ -279,7 +279,7 @@ public class Game {
                 UUID.randomUUID().toString(),
                 "Trainee",
                 (float) (screenW * 0.20), (float) (screenH * 0.40),
-                60f, 60f,
+                45f, 75f,
                 gameId
         );
 
