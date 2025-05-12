@@ -47,16 +47,18 @@ public class GUI extends Application {
         stage.setY(bounds.getMinY());
         stage.show();
 
+        // Sound:
+        // initialize and start background music (infinite loop)
+        initBackgroundMusic();
+        playBackground();
+
         gameScene.setOnKeyPressed(event -> {
             if (event.getCode() == javafx.scene.input.KeyCode.F11) {
                 stage.setFullScreen(!stage.isFullScreen());
             }
         });
 
-        // Sound:
-        // initialize and start background music (infinite loop)
-        initBackgroundMusic();
-        playBackground();
+
 
 
         // Ensure focus for keyboard events

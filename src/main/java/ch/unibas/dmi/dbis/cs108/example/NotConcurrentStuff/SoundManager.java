@@ -21,16 +21,44 @@ public class SoundManager {
 
     private static MediaPlayer mediaPlayer;
 
+    /**
+     * Prepares the background track. Logs lookup, ready and error events.
+     */
     public static void initBackgroundMusic() {
-        String uri = SoundManager.class.getResource(BACKGROUND_MUSIC_PATH).toExternalForm();
+        // 1) verify the resource really exists
+        URL url = SoundManager.class.getResource(BACKGROUND_MUSIC_PATH);
+        System.out.println("BG music URL → " + url);
+        if (url == null) {
+            throw new IllegalStateException("Couldn’t find " + BACKGROUND_MUSIC_PATH);
+        }
+
+        // 2) build the Media / MediaPlayer
+        String uri = url.toExternalForm();
         Media media = new Media(uri);
         mediaPlayer = new MediaPlayer(media);
+
+        // 3) hook up ready / error listeners
+        mediaPlayer.setOnError(() -> {
+            System.err.println("MediaPlayer error: " + mediaPlayer.getError().getMessage());
+            mediaPlayer.getError().printStackTrace();
+        });
+        mediaPlayer.setOnReady(() -> {
+            System.out.println("Background track ready; duration = " +
+                    mediaPlayer.getMedia().getDuration().toSeconds() + "s");
+        });
+
         mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
         mediaPlayer.setVolume(0.4);
     }
 
+    /** Starts playback of the background track (looping). */
     public static void playBackground() {
-        if (mediaPlayer != null) mediaPlayer.play();
+        if (mediaPlayer != null) {
+            System.out.println("Starting background music playback...");
+            mediaPlayer.play();
+        } else {
+            System.err.println("Cannot play background music: MediaPlayer is null");
+        }
     }
 
     public static void pauseBackground() {
