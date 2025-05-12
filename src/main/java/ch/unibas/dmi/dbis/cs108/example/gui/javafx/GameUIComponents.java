@@ -11,6 +11,7 @@ import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Client;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Game;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Message;
 import ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.MessageCodec;
+import ch.unibas.dmi.dbis.cs108.example.NotConcurrentStuff.SoundManager;
 import ch.unibas.dmi.dbis.cs108.example.highscore.LevelTimer;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -81,6 +82,10 @@ public class GameUIComponents {
                     GameContext.getCurrentGameId() == null ? "default" : GameContext.getCurrentGameId()
             }, "REQUEST");
             Client.sendMessageStatic(joinMsg);
+
+            SoundManager.initBackgroundMusic();
+            SoundManager.playBackground();
+
 
             Platform.runLater(() -> {
                 Node startPaneNode = uiManager.getComponent("startGamePane");
@@ -616,6 +621,81 @@ public class GameUIComponents {
     }
 
 
+    /**
+     * Creates an “Options” pane containing:
+     * <ul>
+     *   <li>A volume slider for the background music</li>
+     *   <li>A volume slider for the sound effects</li>
+     * </ul>
+     * <p>
+     * This pane is initially invisible and will be shown when the user selects
+     * “Options” from the main GUI dropdown.  Each slider ranges from 0.0 (mute)
+     * to 1.0 (full volume) and updates the {@link SoundManager} in real time.
+     * </p>
+     *
+     * @param uiManager  the UIManager used to register the created pane under the key "optionsPane"
+     * @return           a {@link Pane} containing two labeled {@link Slider}s for volume control;
+     *                   callers should add this pane to their scene graph and ensure it
+     *                   remains hidden until activated by the GUI dropdown
+     */
+    public static Pane createOptionsPane(UIManager uiManager) {
+        // container with 10px spacing
+        VBox opts = new VBox(10);
+
+        // padding and border styling
+        opts.setPadding(new Insets(20));
+        opts.setStyle(
+                "-fx-border-color: black;" +
+                        "-fx-border-width: 2;" +
+                        "-fx-background-color: white;"
+        );
+
+        // position offset (adjust as needed)
+        opts.setTranslateX(10);
+        opts.setTranslateY(50);
+
+        // --- Music volume controls ---
+        Label musicLabel = new Label("Background Music Volume");
+        Slider musicSlider = new Slider(0, 1, 0.5);
+        musicSlider.setShowTickLabels(true);
+        musicSlider.setShowTickMarks(true);
+        musicSlider.setMajorTickUnit(0.25);
+        musicSlider.setBlockIncrement(0.1);
+        // hook into SoundManager
+        musicSlider.valueProperty().addListener((obs, oldV, newV) -> {
+            SoundManager.setBackgroundVolume(newV.doubleValue());
+        });
+
+        // --- Sound-effects volume controls ---
+        Label sfxLabel = new Label("Sound Effects Volume");
+        Slider sfxSlider = new Slider(0, 1, 0.5);
+        sfxSlider.setShowTickLabels(true);
+        sfxSlider.setShowTickMarks(true);
+        sfxSlider.setMajorTickUnit(0.25);
+        sfxSlider.setBlockIncrement(0.1);
+        // this requires you to add a new setter in SoundManager:
+        //   public static void setEffectsVolume(double v) { effectsVolume = v; }
+        // and then in playEffect(...) call sfxPlayer.setVolume(effectsVolume);
+        sfxSlider.valueProperty().addListener((obs, oldV, newV) -> {
+            SoundManager.setEffectsVolume(newV.doubleValue());
+        });
+
+        // assemble and register
+        opts.getChildren().addAll(
+                musicLabel, musicSlider,
+                sfxLabel,   sfxSlider
+        );
+
+        // register the pane itself
+        uiManager.registerComponent("optionsPane", opts);
+
+        // start hidden; visibility is toggled by the GUI dropdown
+        opts.setVisible(false);
+        return opts;
+    }
+
+
+
 
 
 
@@ -647,7 +727,7 @@ public class GameUIComponents {
         StackPane.setAlignment(guiInterfaces, Pos.TOP_LEFT);
         guiInterfaces.setTranslateX(0);
         guiInterfaces.setTranslateY(0);
-        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Whisper Chat", "Administration", "None");
+        guiInterfaces.getItems().addAll("Lobby", "Glob Chat", "Lobby Chat", "Wisper Chat", "Administration", "Options", "None");
         guiInterfaces.setPromptText("Select GUI Interface");
 
         guiInterfaces.getSelectionModel().select("None");
@@ -689,6 +769,12 @@ public class GameUIComponents {
             if (lobbyChatPaneNode instanceof Pane) {
                 Pane lobbyChatPane = (Pane) lobbyChatPaneNode;
                 lobbyChatPane.setVisible("Lobby Chat".equals(selected));
+            }
+
+            // add options block for options pane
+            Node optionsPaneNode = uiManager.getComponent("optionsPane");
+            if (optionsPaneNode instanceof Pane) {
+                optionsPaneNode.setVisible("Options".equals(selected));
             }
         });
 
