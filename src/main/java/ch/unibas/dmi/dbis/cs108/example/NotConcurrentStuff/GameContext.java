@@ -420,6 +420,21 @@ public class GameContext {
                             System.out.println("Game " + gameId + " started flag toggled. New value: " + toggledGame.getStartedFlag());
 
                             Platform.runLater(() -> {
+
+                        
+                                Node startLevelButton = uiManager.getComponent("startLevelButton");
+                                if (startLevelButton instanceof Button)
+                                {
+                                    startLevelButton.setVisible(false);
+                                    Node selectGeraldButton = uiManager.getComponent("selectGeraldButton");
+                                    Node selectAlfredButton = uiManager.getComponent("selectAlfredButton");
+                                    if(selectGeraldButton instanceof Button && selectAlfredButton instanceof Button)
+                                    {
+                                        selectAlfredButton.setVisible(true);
+                                        selectGeraldButton.setVisible(true);
+                                    }
+                                }
+
                                 Node gameStateNode = uiManager.getComponent("gameStateShow");
                                 if (gameStateNode instanceof TextArea) {
                                     TextArea gameStateShow = (TextArea) gameStateNode;
