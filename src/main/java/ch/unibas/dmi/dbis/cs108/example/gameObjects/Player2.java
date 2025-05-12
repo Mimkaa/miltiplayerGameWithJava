@@ -39,7 +39,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
     // ---------------------------------
     private static final float PLAYER_ACC = 3.5f;       // Acceleration magnitude when pressing left/right
     private static final float PLAYER_FRICTION = -0.12f; // Negative for friction (slowing down)
-    private static final float JUMP_FORCE = -40;         // The lower, the higher player can jump
+    private static final float JUMP_FORCE = -3;         // The lower, the higher player can jump
     private static final float SCREEN_WIDTH = 800;
     private static final float SCREEN_HEIGHT = 600;      // Height is stored even though vertical wrap isn't used
 
@@ -167,13 +167,13 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         acc.x += vel.x * PLAYER_FRICTION;
 
         // 2) Update velocity.
-        vel.x += acc.x;
-        vel.y += acc.y;
+        vel.x += acc.x * deltaTime;
+        vel.y += acc.y * deltaTime;
 
         // 3) Update position.
         // 3) Update position.  <<<<<<<<<<<<<<< ONLY change is the * deltaTime
-        pos.x += vel.x  + 0.5f * acc.x * deltaTime ;
-        pos.y += vel.y  + 0.5f * acc.y * deltaTime ;
+        pos.x += vel.x  + acc.x * deltaTime ;
+        pos.y += vel.y  + acc.y * deltaTime ;
 
 
         // 4) Reset horizontal acceleration.
@@ -184,12 +184,11 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
 
         // Update the position of the grabbed object so it stays attached.
         if (grabbedGuy != null) {
-            float posY = (float) this.pos.y + grabbedGuy.getHeight();
+            float posY = (float) this.pos.y-grabbedGuy.getHeight();
             grabbedGuy.setPos(new Vector2(this.pos.x, posY));
             System.out.println("grabbed guy position: " + this.pos.x + "," + this.pos.y+grabbedGuy.getHeight());
             System.out.println("grabbedGuy posY: " + posY);
             System.out.println("player2 position: " + this.pos.x + "," + this.pos.y);
-            return;
         }
 
         // 6) If in throwing mode, update the throw angle with a windshiefld-wiper oscillation.
@@ -297,7 +296,6 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
                             System.out.println("Released grabbed object: " + grabbedGuy.getName());
                         }
                         grabbedGuy = null;
-                        return;
                     }
 
                     // Otherwise, find the nearest grabbable object
@@ -665,7 +663,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         /* ----------  Toggle throwing mode  -------------------------- */
-        if (KeyboardState.isKeyPressed(KeyCode.F)) {
+        if (released.contains(KeyCode.F)) {
             isThrowing = !isThrowing;
             if (isThrowing) {
                 throwAngle      = 90f;                 // reset arc UI
@@ -677,7 +675,7 @@ public class Player2 extends GameObject implements IThrowable, IGrabbable {
         }
 
         /* ----------  Perform the throw  ----------------------------- */
-        if (KeyboardState.isKeyPressed(KeyCode.R)) {
+        if (released.contains(KeyCode.R)) {
             if (isThrowing && grabbedGuy != null) {
                 performThrow();                        // helper below
                 isThrowing = false;
