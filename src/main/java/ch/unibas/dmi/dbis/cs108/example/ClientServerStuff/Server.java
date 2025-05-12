@@ -131,6 +131,8 @@ public class Server {
     /** Handles command-based messages (e.g., "CREATE", "PING") for "REQUEST" operations. */
     private final CommandRegistry commandRegistry = new CommandRegistry();
 
+    private BestEffortBroadcastManager bem;
+
     @Getter private InetSocketAddress lastSender;
     public void setLastSender(InetSocketAddress s) { this.lastSender = s; }
 
@@ -138,31 +140,7 @@ public class Server {
     // Outgoing Message Inner Class
     // ================================
 
-    /**
-     * Represents a message to be sent to a particular network address.
-     * Used internally by the {@code outgoingQueue}.
-     */
-    private static class OutgoingMessage {
-        /** The message to be sent */
-        Message msg;
-        /** Destination IP address */
-        InetAddress address;
-        /** Destination UDP port */
-        int port;
 
-        /**
-         * Constructs a new {@code OutgoingMessage}.
-         *
-         * @param msg     the message object to be sent
-         * @param address the destination IP address
-         * @param port    the destination UDP port
-         */
-        public OutgoingMessage(Message msg, InetAddress address, int port) {
-            this.msg = msg;
-            this.address = address;
-            this.port = port;
-        }
-    }
 
     /**
      * Creates a new {@link Message} based on an original message, converting it
@@ -241,8 +219,9 @@ public class Server {
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
 
             commandRegistry.initCommandHandlers();
+            bem = new BestEffortBroadcastManager(serverSocket);
 
-            reliableSender = new ReliableUDPSender(serverSocket, 100, 200);
+            reliableSender = new ReliableUDPSender(serverSocket, 100, 1000, outgoingQueue);
             ackProcessor = new AckProcessor();
             ackProcessor.init(serverSocket);
 
@@ -256,7 +235,7 @@ public class Server {
                         OutgoingMessage om = outgoingQueue.take();
             
                         // No null-check needed: take() never returns null
-                        reliableSender.sendMessage(om.msg, om.address, om.port);
+                        reliableSender.send(om);
                         System.out.println("Sent message to " + om.address + ":" + om.port);
             
                     } catch (InterruptedException ie) {
@@ -285,7 +264,7 @@ public class Server {
                         InetSocketAddress sender =
                                 new InetSocketAddress(pkt.getAddress(), pkt.getPort());
                         getInstance().setLastSender(sender);
-            
+
                         String raw   = new String(pkt.getData(), pkt.getOffset(),
                                                    pkt.getLength(), StandardCharsets.UTF_8);
                         //InetSocketAddress sender =
@@ -307,7 +286,7 @@ public class Server {
                         //System.out.println(username);
                         //System.out.println(sender);
                         if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                            sendKeyEvent(msg);              // fire‑and‑forget
+                            //sendKeyEvent(msg);              // fire‑and‑forget
                         } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                             String username = findUserBySocket(sender);
                             System.out.println(username);
@@ -499,34 +478,17 @@ public class Server {
      * @param msg          the message to broadcast
      */
     public void sendMessageBestEffort(Message msg) {
-        AsyncManager.run(() -> {
-            try {
-                byte[] data = MessageCodec.encode(msg)
-                                          .getBytes(StandardCharsets.UTF_8);
-    
-                // send to all clients in parallel
-                clientsMap.values()
-                          .parallelStream()
-                          .forEach(destAddr -> {
-                              try {
-                                  DatagramPacket packet = new DatagramPacket(
-                                      data, data.length,
-                                      destAddr.getAddress(),
-                                      destAddr.getPort()
-                                  );
-                                  serverSocket.send(packet);
-                              } catch (IOException ioe) {
-                                  ioe.printStackTrace();
-                              }
-                          });
-    
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
+        if (reliableSender.hasBacklog() > 0) {
+            return;                       // postpone this update
+        }
+        bem.broadcast(msg);
     }
     
-    
+    public BestEffortBroadcastManager getBestEffortBroadcastManager()
+    {
+        return bem;
+    }
+
 
     /**
      * Broadcasts a given message to <strong>all</strong> connected clients using the reliable queue.
@@ -535,47 +497,38 @@ public class Server {
      */
     public void broadcastMessageToAll(Message original) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-          String clientUsername  = entry.getKey();
-          InetSocketAddress dest = entry.getValue();
-      
-          // clone the original so constructor gives us a new UUID
-          Message perClient = new Message(
-            original.getMessageType(),
-            original.getParameters(),
-            original.getOption(),
-            original.getConcealedParameters()
-          );
-      
-          try {
-            enqueueMessage(original, dest.getAddress(), dest.getPort());
-            
-          } catch (Exception e) {
-            //System.err.println("Error enqueuing to " 
-            //  + clientUsername 
-            //  + " at " + dest + ": " + e.getMessage());
-          }
+            InetSocketAddress dest = entry.getValue();
+
+            // make a per-client clone (with its own UUID + seq#)
+            original.setUUID(UUID.randomUUID().toString());
+            // optionally bump sequence number here:
+            // perClient.setSequenceNumber(nextSeqFor(dest));
+
+            try {
+                // send the clone, not the original
+                enqueueMessage(original, dest.getAddress(), dest.getPort());
+            } catch (Exception e) {
+                // handle or log
+            }
         }
-      }
-      
-      public void broadcastMessageToOthers(Message original, String excludedUsername) {
+    }
+
+    public void broadcastMessageToOthers(Message original, String excludedUsername) {
         for (Map.Entry<String, InetSocketAddress> entry : clientsMap.entrySet()) {
-          String clientUsername  = entry.getKey();
-          if (clientUsername.equals(excludedUsername)) continue;
-          InetSocketAddress dest = entry.getValue();
-      
-          // again, new instance with its own UUID
-          
-      
-          try {
-            enqueueMessage(original, dest.getAddress(), dest.getPort());
-            
-          } catch (Exception e) {
-            //System.err.println("Error enqueuing to " 
-            //  + clientUsername 
-            //  + " at " + dest + ": " + e.getMessage());
-          }
+            String clientUsername = entry.getKey();
+            if (clientUsername.equals(excludedUsername)) continue;
+
+            InetSocketAddress dest = entry.getValue();
+            original.setUUID(UUID.randomUUID().toString());
+
+            try {
+                enqueueMessage(original, dest.getAddress(), dest.getPort());
+            } catch (Exception e) {
+                // handle or log
+            }
         }
-      }
+    }
+
       
 
     // ================================
@@ -630,6 +583,7 @@ public class Server {
                 "RESPONSE"
             );
             System.out.println("RRRAAAARRRR");
+            //broadcastMessageToAll(createGameMsg);
             enqueueMessage(createGameMsg, clientSocket.getAddress(), clientSocket.getPort());
         }
     }
@@ -655,6 +609,8 @@ public class Server {
 
             Message createGoMsg = new Message("CREATEGO", createGoParams, "RESPONSE");
             enqueueMessage(createGoMsg, clientSocket.getAddress(), clientSocket.getPort());
+
+
         }
     }
 

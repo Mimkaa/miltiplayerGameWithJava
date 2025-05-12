@@ -86,10 +86,11 @@ public abstract class GameObject {
     /**
      * Sets the position of the game object.
      *
-     * @param pos the new position of the object
+     * @param p the new position of the object
      */
-    public void setPos(Player2.Vector2 pos) {
-        this.pos = pos;
+    public void setPos(Player2.Vector2 p) {
+        setX(p.x);
+        setY(p.y);
     }
 
     /**
@@ -97,9 +98,7 @@ public abstract class GameObject {
      *
      * @return the position of the object
      */
-    public Player2.Vector2 getPos() {
-        return pos;
-    }
+    
 
     /**
      * Handles the grabbing of the game object by a player.
@@ -139,6 +138,8 @@ public abstract class GameObject {
         this.name = name;
         this.gameId = gameId;
     }
+
+    
 
     // Abstract bounding box methods for collision detection.
 
@@ -476,6 +477,10 @@ public abstract class GameObject {
         private final Runnable code;
         public CodeCommand(Runnable code) { this.code = code; }
         public void execute() { code.run(); }
+    }
+
+    public void processKeyboardState() 
+    {
     }
 
 

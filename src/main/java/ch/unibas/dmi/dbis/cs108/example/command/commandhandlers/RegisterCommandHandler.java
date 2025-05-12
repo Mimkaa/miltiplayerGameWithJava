@@ -31,6 +31,10 @@ public class RegisterCommandHandler implements CommandHandler {
         System.out.printf("Register added %s @ %s%n", assigned, sender);
 
 
+        /* ------------- register with BestEffortBroadcastManager ------------- */
+        BestEffortBroadcastManager bem = server.getBestEffortBroadcastManager();
+        bem.registerClient(assigned, sender);
+
         /* ----------------- optional broadcast ------------- */
         //msg.setOption("RESPONSE");
         //server.broadcastMessageToAll(msg);
@@ -42,6 +46,7 @@ public class RegisterCommandHandler implements CommandHandler {
         String three = responseMsg.getConcealedParameters()[2].toString();
           System.out.println("one: " + one + " two: " + two + " three: " + three);
         responseMsg.setConcealedParameters(new String[]{assigned});
+
 
         server.enqueueMessage(
                 responseMsg,

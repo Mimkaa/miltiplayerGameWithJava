@@ -106,34 +106,43 @@ public class ThinkOutsideTheRoom {
 
 
             case "client-headless": {
-                if (args.length != 5) {
-                    System.err.println("Usage: client-headless <host> <port> <username> <gameName>");
+                // allow: client-headless <host> <port> <username> <gameName>
+                //        client-headless <host> <port> <username> <gameName> [clientIP]
+                if (args.length < 5 || args.length > 6) {
+                    System.err.println("Usage: client-headless <host> <port> <username> <gameName> [clientIP]");
                     return;
                 }
-                String host     = args[1];
-                int    port     = Integer.parseInt(args[2]);
-                String username = args[3];
-                String gameName = args[4];
+                String host       = args[1];
+                int    port       = Integer.parseInt(args[2]);
+                String username   = args[3];
+                String gameName   = args[4];
+                String clientIp   = args.length == 6 ? args[5] : null;
 
-                prepareClientAndContext(host, port, username);
+                prepareClientAndContext(host, port, username, clientIp);
 
-                // 1) Game anlegen
-                Client.sendMessageStatic(new Message("CREATEGAME",
-                        new Object[]{ gameName }, "REQUEST"));
+                // 1) Create game
+                Client.sendMessageStatic(new Message(
+                    "CREATEGAME",
+                    new Object[]{ gameName },
+                    "REQUEST"
+                ));
 
-                // Warte kurz auf SessionId
+                // wait for sessionId
                 try { Thread.sleep(500); }
                 catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 
-                // 2) Joinen
+                // 2) Join game
                 String sessionId = GameContext.getCurrentGameId();
-                Client.sendMessageStatic(new Message("JOINGAME",
-                        new Object[]{ sessionId, username, sessionId }, "REQUEST"));
+                Client.sendMessageStatic(new Message(
+                    "JOINGAME",
+                    new Object[]{ sessionId, username, sessionId },
+                    "REQUEST"
+                ));
 
-                // 3) Bestätigung
+                // 3) Confirmation
                 System.out.println("Joined game: " + gameName);
 
-                // kurz leben bleiben, damit der Test die Zeile lesen kann
+                // keep alive briefly so tests can read output
                 try { Thread.sleep(500); }
                 catch (InterruptedException e) { Thread.currentThread().interrupt(); }
 

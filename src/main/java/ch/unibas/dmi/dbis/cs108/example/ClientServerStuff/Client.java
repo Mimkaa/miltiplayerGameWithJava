@@ -76,7 +76,10 @@ public class Client {
      * A thread-safe queue for outgoing messages to be sent to the server or other clients.
      * This queue is processed in a background loop.
      */
-    private static final LinkedBlockingQueue<Message> outgoingQueue = new LinkedBlockingQueue<>();
+    // before:
+    // private static final LinkedBlockingQueue<Message> outgoingQueue = new LinkedBlockingQueue<>();
+    private static final LinkedBlockingQueue<OutgoingMessage> outgoingQueue = new LinkedBlockingQueue<>();
+
 
     /**
      * A thread-safe queue for incoming messages received from the server or other clients.
@@ -189,7 +192,7 @@ public class Client {
             CLIENT_PORT = chosenPort;
 
             // Initialize the reliable sender without a fixed destination.
-            myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000);
+            myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000, outgoingQueue);
 
             ackProcessor = new AckProcessor();
             ackProcessor.init(clientSocket);
@@ -209,7 +212,7 @@ public class Client {
                             StandardCharsets.UTF_8
                         );
                         
-                        System.out.println(response);
+                        //System.out.println(response);
                         Message receivedMessage = MessageCodec.decode(response);
                         
                         
@@ -248,69 +251,16 @@ public class Client {
             });
 
 
-            // Process incoming messages.
-            AsyncManager.runLoop(() -> {
-                try {
-                    Message msg = incomingQueue.take();
-                    if (msg != null) {
-                        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
-                            // Process the ACK message.
-                            if (msg.getParameters() != null && msg.getParameters().length > 0) {
-                                String ackUuid = msg.getParameters()[0].toString();
-                                myReliableUDPSender.acknowledge(ackUuid);
-                            } else {
-                                System.out.println("Received ACK with no parameters.");
-                            }
-                        } else {
-                            // For non-ACK messages, if the message has a UUID and option != "GAME",
-                            // add it to the ACK processor.
-                            if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
-                                InetSocketAddress dest = new InetSocketAddress(
-                                        InetAddress.getByName(SERVER_ADDRESS), SERVER_PORT
-                                );
-                                //ackProcessor.addAck(dest, msg.getUUID());
-                            }
-                            // Dispatch the message via the MessageHub.
-                            //messageHub.dispatch(msg);
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+            
 
             // Sender Task: Continuously poll outgoingQueue and send messages.
             AsyncManager.runLoop(() -> {
-
                 try {
-                    Message msg = outgoingQueue.take();                 // blocks
-            
-                    InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
-            
-                    switch (msg.getOption().toUpperCase()) {
-                        case "GAME": {                                  // best-effort
-                            String enc = MessageCodec.encode(msg);
-                            byte[] data = enc.getBytes(StandardCharsets.UTF_8);
-                            clientSocket.send(new DatagramPacket(data, data.length, dest, SERVER_PORT));
-                            break;
-                        }
-                        case "CLIENT": {                                // local only
-                            AsyncManager.run(() -> updateLocalClientState(msg));
-                            break;
-                        }
-                        default: {                                      // reliable
-                            myReliableUDPSender.sendMessage(msg, dest, SERVER_PORT);
-                        }
-                    }
-            
-                } catch (InterruptedException ie) {         // graceful shutdown
-                    Thread.currentThread().interrupt();     // restore the flag
-                    return;                                 // leave this run() call
-            
-                } catch (IOException ioe) {
-                    System.err.println("I/O error while sending message");
-                    ioe.printStackTrace();
-                    // keep the sender thread alive – no return here
+                    OutgoingMessage om = outgoingQueue.take();      // now holds OutgoingMessage
+                    myReliableUDPSender.send(om);                  // instead of sendMessage(msg,...)
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
                 }
             });
             
@@ -336,7 +286,8 @@ public class Client {
      *
      * @param msg The {@link Message} to be sent.
      */
-    public static void sendMessageStatic(Message msg) {
+    public static void sendMessageStatic(Message msg) 
+    {
         // Access the singleton instance's username.
         String currentUsername = instance.username.get();
         String[] concealed = msg.getConcealedParameters();
@@ -351,7 +302,15 @@ public class Client {
         msg.setConcealedParameters(concealed);
 
         // Enqueue the message for sending.
-        AsyncManager.run(() -> outgoingQueue.offer(msg));
+        AsyncManager.run(() -> {
+            try {
+                InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
+                System.out.println(dest);
+                outgoingQueue.offer(new OutgoingMessage(msg, dest, SERVER_PORT));
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     /**
@@ -362,6 +321,9 @@ public class Client {
      */
     public static void sendMessageBestEffort(Message msg) {
         try {
+            if (Client.getInstance().myReliableUDPSender.hasBacklog() > 0) {
+                return;                       // postpone this update
+            }
             // Update the concealed parameters with the current username,
             // similar to sendMessageStatic.
             String currentUsername = instance.username.get();
@@ -387,7 +349,7 @@ public class Client {
             DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
             instance.clientSocket.send(packet);
 
-            System.out.println("Best effort sent immediately: " + encoded);
+            //System.out.println("Best effort sent immediately: " + encoded);
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -69,7 +69,7 @@ public class GameContext {
     private long lastFrameTime = 0;
 
     // Adjustable FPS fields.
-    private int targetFPS = 20;
+    private int targetFPS = 30;
     private long frameIntervalMs = 1000L / targetFPS; // (For 60 fps, roughly 16 ms per frame)
 
     private Set<KeyCode> prevPressedKeys = new HashSet<>();
@@ -144,6 +144,7 @@ public class GameContext {
                     String gameID = receivedMessage.getParameters()[0].toString();
                     String username = receivedMessage.getParameters()[1].toString();
                     String prevGameId =  receivedMessage.getParameters()[2].toString();
+                    
                     if (Client.getInstance().getUsername().get().equals(username))
                     {
                         currentGameId.set(gameID);
@@ -430,10 +431,25 @@ public class GameContext {
                         String gameId = receivedMessage.getParameters()[0].toString();
                         Game toggledGame = gameSessionManager.getGameSession(gameId);
                         if (toggledGame != null) {
-                            toggledGame.setStartedFlag(!toggledGame.getStartedFlag());
+                            toggledGame.setStartedFlag(true);
                             System.out.println("Game " + gameId + " started flag toggled. New value: " + toggledGame.getStartedFlag());
 
                             Platform.runLater(() -> {
+
+                        
+                                Node startLevelButton = uiManager.getComponent("startLevelButton");
+                                if (startLevelButton instanceof Button)
+                                {
+                                    startLevelButton.setVisible(false);
+                                    Node selectGeraldButton = uiManager.getComponent("selectGeraldButton");
+                                    Node selectAlfredButton = uiManager.getComponent("selectAlfredButton");
+                                    if(selectGeraldButton instanceof Button && selectAlfredButton instanceof Button)
+                                    {
+                                        selectAlfredButton.setVisible(true);
+                                        selectGeraldButton.setVisible(true);
+                                    }
+                                }
+
                                 Node gameStateNode = uiManager.getComponent("gameStateShow");
                                 if (gameStateNode instanceof TextArea) {
                                     TextArea gameStateShow = (TextArea) gameStateNode;
@@ -721,6 +737,7 @@ public class GameContext {
      * Throttles updates to the configured FPS (60 FPS by default).
      */
     public void update() {
+        
         long now = System.currentTimeMillis();
         // Use the adjustable frame interval (target FPS).
         if (now - lastFrameTime < frameIntervalMs) {

@@ -44,6 +44,13 @@ public class GUI extends Application {
         stage.setY(bounds.getMinY());
         stage.show();
 
+        gameScene.setOnKeyPressed(event -> {
+            if (event.getCode() == javafx.scene.input.KeyCode.F11) {
+                stage.setFullScreen(!stage.isFullScreen());
+            }
+        });
+
+        // Ensure focus for keyboard events
         Platform.runLater(() -> cgu.getMainContainer().requestFocus());
     }
 
