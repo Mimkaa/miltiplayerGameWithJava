@@ -8,6 +8,9 @@ import ch.unibas.dmi.dbis.cs108.example.gameObjects.GameObject;
 import lombok.Getter;
 
 import javax.swing.SwingUtilities;
+
+import static ch.unibas.dmi.dbis.cs108.example.ClientServerStuff.Server.SERVER_BE_PORT;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -391,7 +394,7 @@ public class Client {
             // This will block only if the deque is full; you can switch to offerLast(…)
             // if you prefer to handle a full-queue case yourself.
             outgoingQueue.putLast(
-                new OutgoingMessage(msg.clone(), dest, SERVER_PORT)
+                new OutgoingMessage(msg.clone(), dest, SERVER_BE_PORT)
             );
 
         } catch (UnknownHostException e) {
