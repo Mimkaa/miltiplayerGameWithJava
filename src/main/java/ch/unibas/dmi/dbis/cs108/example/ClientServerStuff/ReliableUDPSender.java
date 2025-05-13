@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -20,7 +21,7 @@ public class ReliableUDPSender {
     private final DatagramSocket socket;
     private final int windowSize;
     private final long timeoutMillis;
-    private final LinkedBlockingQueue<OutgoingMessage> requeueOnTimeout;
+    private final BlockingDeque<OutgoingMessage> requeueOnTimeout;
     private final AtomicInteger nextSeqNum = new AtomicInteger(1);
 
     // UUID → pending info
@@ -50,7 +51,7 @@ public class ReliableUDPSender {
     public ReliableUDPSender(DatagramSocket socket,
                              int windowSize,
                              long timeoutMillis,
-                             LinkedBlockingQueue<OutgoingMessage> requeueOnTimeout) {
+                             BlockingDeque<OutgoingMessage> requeueOnTimeout) {
         this.socket           = socket;
         this.windowSize       = windowSize;
         this.timeoutMillis    = timeoutMillis;

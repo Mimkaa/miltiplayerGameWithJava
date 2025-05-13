@@ -18,11 +18,14 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import java.util.UUID;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.net.UnknownHostException;
+import java.util.concurrent.BlockingDeque;
 
 /**
  * The {@code Client} class represents a networked game client that communicates
@@ -66,6 +69,7 @@ public class Client {
      */
     public static int SERVER_PORT = 9876;
     public int CLIENT_PORT = 9876;
+    public int CLIENT_BESTEFFORT_PORT = 2222;
 
     /**
      * Manages all chat functionality on the client side.
@@ -78,7 +82,7 @@ public class Client {
      */
     // before:
     // private static final LinkedBlockingQueue<Message> outgoingQueue = new LinkedBlockingQueue<>();
-    private static final LinkedBlockingQueue<OutgoingMessage> outgoingQueue = new LinkedBlockingQueue<>();
+    private static final BlockingDeque<OutgoingMessage> outgoingQueue = new LinkedBlockingDeque<>();
 
 
     /**
@@ -121,6 +125,8 @@ public class Client {
      * The underlying UDP socket used by this client for sending and receiving data.
      */
     private DatagramSocket clientSocket;
+
+    private DatagramSocket clientSocketBestEffort;
 
     /**
      * Tracks ping (round-trip time) data if started. Inactive by default.
@@ -191,78 +197,118 @@ public class Client {
             int chosenPort = clientSocket.getLocalPort();
             CLIENT_PORT = chosenPort;
 
+            clientSocketBestEffort = new DatagramSocket();
+            int chosenPortBestEffort = clientSocketBestEffort.getLocalPort();
+            CLIENT_PORT = chosenPortBestEffort;
+
             // Initialize the reliable sender without a fixed destination.
             myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000, outgoingQueue);
 
             ackProcessor = new AckProcessor();
-            ackProcessor.init(clientSocket);
+            ackProcessor.init(outgoingQueue);
          
 
             // Receiver Task: Continuously listen for UDP packets and enqueue decoded messages.
         
-            AsyncManager.runLoop(() -> {
-                
+            // 1) Reliable-channel receiver thread
+            new Thread(() -> {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+
+                while (true) {
                     try {
-                        byte[] receiveData = new byte[1024];
-                        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-                        clientSocket.receive(receivePacket);
+                        clientSocket.receive(pkt);
+                        String raw = new String(pkt.getData(), pkt.getOffset(), pkt.getLength(),
+                                                StandardCharsets.UTF_8);
+                        Message msg = MessageCodec.decode(raw);
+                        InetSocketAddress sender =
+                            new InetSocketAddress(pkt.getAddress(), pkt.getPort());
 
-                        String response = new String(
-                            receivePacket.getData(), 0, receivePacket.getLength(),
-                            StandardCharsets.UTF_8
-                        );
-                        
-                        //System.out.println(response);
-                        Message receivedMessage = MessageCodec.decode(response);
-                        
-                        
-                        AsyncManager.run(() -> {
-                            // 1) Immediate ACKs
-                            if ("ACK".equalsIgnoreCase(receivedMessage.getMessageType())) {
-                              Object[] params = receivedMessage.getParameters();
-                              if (params != null && params.length > 0) {
-                                String ackUuid = params[0].toString();
-                                myReliableUDPSender.acknowledge(ackUuid);
-                                System.out.println("Client: acknowledged UUID " + ackUuid);
-                              }
-                              return;  // done with this packet
+                        // ACKs for reliable path
+                        if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
+                            Object[] params = msg.getParameters();
+                            if (params != null && params.length > 0) {
+                                myReliableUDPSender.acknowledge(params[0].toString());
+                                System.out.println("Client: ACKed UUID " + params[0]);
                             }
+                            continue;
+                        }
 
-                            //System.out.println("Received (UDP): " + receivedMessage);
-                            if (receivedMessage.getUUID() != null
-                                && !receivedMessage.getUUID().isEmpty()
-                                && !"GAME".equalsIgnoreCase(receivedMessage.getOption())) {
-                                InetSocketAddress dest =
-                                new InetSocketAddress(receivePacket.getAddress(),
-                                                        receivePacket.getPort());
+                        // Enqueue ACKs back for any non-GAME messages
+                        if (msg.getUUID() != null
+                            && !msg.getUUID().isEmpty()
+                            && !"GAME".equalsIgnoreCase(msg.getOption())) {
+                            AckProcessor.enqueue(sender, msg.getUUID());
+                        }
 
-                                AckProcessor.enqueue(dest, receivedMessage.getUUID());
-                            }
-                            
-                    
-                            // 2) All other messages
-                            messageHub.dispatch(receivedMessage);
-                          });
+                        // All other reliable messages
+                        messageHub.dispatch(msg);
 
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                
-            });
+                }
+            }, "reliable-receiver").start();
+
+
+            // 2) Best-effort CHANNEL receiver thread
+            new Thread(() -> {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+
+                while (true) {
+                    try {
+                        clientSocketBestEffort.receive(pkt);
+                        String raw = new String(pkt.getData(), pkt.getOffset(), pkt.getLength(),
+                                                StandardCharsets.UTF_8);
+                        Message msg = MessageCodec.decode(raw);
+
+                        // Only GAME messages belong here
+                        if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                            messageHub.dispatch(msg);
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, "besteffort-receiver").start();
+
 
 
             
 
-            // Sender Task: Continuously poll outgoingQueue and send messages.
             AsyncManager.runLoop(() -> {
-                try {
-                    OutgoingMessage om = outgoingQueue.take();      // now holds OutgoingMessage
-                    myReliableUDPSender.send(om);                  // instead of sendMessage(msg,...)
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    return;
+            try {
+                OutgoingMessage om = outgoingQueue.take();  // blocks until there’s one
+
+                if ("GAME".equals(om.msg.getOption())) {
+                    // Best-effort: fire-and-forget via raw UDP
+                    byte[] raw = MessageCodec.encode(om.msg)
+                                            .getBytes(StandardCharsets.UTF_8);
+                    DatagramPacket packet = new DatagramPacket(
+                        raw,
+                        raw.length,
+                        om.address,
+                        om.port
+                    );
+                    // use whatever DatagramSocket you share for best-effort
+                    instance.clientSocket.send(packet);
+
+                } else {
+                    // Reliable path
+                    myReliableUDPSender.send(om);
                 }
-            });
+
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return;  // stop the loop if interrupted
+            } catch (IOException ioe) {
+                // best-effort: drop on I/O error
+                ioe.printStackTrace();
+            }
+        });
+
             
 
 
@@ -273,10 +319,6 @@ public class Client {
         }
     }
 
-    public int getClientPort() {
-        return (clientSocket == null) ? CLIENT_PORT
-                                      : clientSocket.getLocalPort();
-    }
 
 
 
@@ -305,10 +347,14 @@ public class Client {
         AsyncManager.run(() -> {
             try {
                 InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
-                System.out.println(dest);
-                outgoingQueue.offer(new OutgoingMessage(msg, dest, SERVER_PORT));
+                // this can throw InterruptedException:
+                outgoingQueue.putFirst(new OutgoingMessage(msg, dest, SERVER_PORT));
             } catch (UnknownHostException e) {
                 e.printStackTrace();
+            } catch (InterruptedException e) {
+                // restore interrupted flag so higher-level code knows:
+                Thread.currentThread().interrupt();
+                // optionally log or silently drop
             }
         });
     }
@@ -322,10 +368,10 @@ public class Client {
     public static void sendMessageBestEffort(Message msg) {
         try {
             if (Client.getInstance().myReliableUDPSender.hasBacklog() > 0) {
-                return;                       // postpone this update
+                return;  // postpone this update
             }
-            // Update the concealed parameters with the current username,
-            // similar to sendMessageStatic.
+
+            // Update the concealed parameters with the current username
             String currentUsername = instance.username.get();
             String[] concealed = msg.getConcealedParameters();
             if (concealed == null) {
@@ -338,22 +384,27 @@ public class Client {
             }
             msg.setConcealedParameters(concealed);
 
-            // Prepare the destination using the static SERVER_ADDRESS and SERVER_PORT.
+            // Prepare destination
             InetAddress dest = InetAddress.getByName(SERVER_ADDRESS);
 
-            // Encode the message and convert to bytes.
-            String encoded = MessageCodec.encode(msg);
-            byte[] data = encoded.getBytes();
+            // Enqueue for best-effort sending: push to the tail of the deque.
+            // This will block only if the deque is full; you can switch to offerLast(…)
+            // if you prefer to handle a full-queue case yourself.
+            outgoingQueue.putLast(
+                new OutgoingMessage(msg.clone(), dest, SERVER_PORT)
+            );
 
-            // Create and send the UDP packet immediately.
-            DatagramPacket packet = new DatagramPacket(data, data.length, dest, SERVER_PORT);
-            instance.clientSocket.send(packet);
-
-            //System.out.println("Best effort sent immediately: " + encoded);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            // restore interrupted status and drop the message
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
+            // other unexpected exceptions
             e.printStackTrace();
         }
     }
+
 
     /**
      * Sends an ACK back to the server for the given received ACK message.
@@ -651,6 +702,26 @@ public class Client {
             }
         });
     }
+
+        /**
+     * Returns the port bound to the reliable‐UDP socket.
+     */
+    public int getClientPort() {
+        // If the socket isn’t initialized yet, fall back to the field
+        return (clientSocket != null)
+            ? clientSocket.getLocalPort()
+            : CLIENT_PORT;
+    }
+
+    /**
+     * Returns the port bound to the best‐effort UDP socket.
+     */
+    public int getClientBestEffortPort() {
+        return (clientSocketBestEffort != null)
+            ? clientSocketBestEffort.getLocalPort()
+            : CLIENT_BESTEFFORT_PORT;
+    }
+
 
     /**
      * Performs a minimal "login" sequence by sending a CREATE message to spawn a Player,

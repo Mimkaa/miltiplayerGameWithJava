@@ -16,44 +16,57 @@ public class RegisterCommandHandler implements CommandHandler {
 
     @Override
     public void handle(Server server, Message msg, String ignoredUsername) {
-
         /* ----------------- extract params ----------------- */
         Object[] p = msg.getParameters();
-        if (p == null || p.length < 1) {
-            System.err.println("REGISTER missing username");
+        if (p == null || p.length < 3) {
+            System.err.println("REGISTER missing parameters (username, reliablePort, bestEffortPort)");
             return;
         }
-        String requested = p[0].toString();
-        InetSocketAddress sender = server.getLastSender();
+        String requested      = p[0].toString();
+        int    reliablePort   = Integer.parseInt(p[1].toString());
+        int    bestEffortPort = Integer.parseInt(p[2].toString());
+
+        InetSocketAddress sender = server.getLastSender();        // has the IP
         String assigned = server.findUniqueName(requested);
+
         System.out.printf("Register requested %s @ %s%n", requested, sender);
 
-        server.getClientsMap().putIfAbsent(assigned, sender);
-        System.out.printf("Register added %s @ %s%n", assigned, sender);
+        // 1) store in the reliable‐map (uses sender.getPort() or reliablePort?)
+        //    If you want to use the port they told you, do:
+        InetSocketAddress reliableAddr =
+            new InetSocketAddress(sender.getAddress(), reliablePort);
+        server.getClientsMap()
+            .putIfAbsent(assigned, reliableAddr);
+        System.out.printf("Reliable client map added %s @ %s%n",
+                        assigned, reliableAddr);
 
+        // 2) store in the best‐effort map
+        InetSocketAddress beAddr =
+            new InetSocketAddress(sender.getAddress(), bestEffortPort);
+        server.getClientsMapBestEffort()
+            .putIfAbsent(assigned, beAddr);
+        System.out.printf("Best-effort client map added %s @ %s%n",
+                        assigned, beAddr);
 
         /* ------------- register with BestEffortBroadcastManager ------------- */
         BestEffortBroadcastManager bem = server.getBestEffortBroadcastManager();
-        bem.registerClient(assigned, sender);
+        // for broadcast you’ll want to use the BE port:
+        bem.registerClient(assigned, beAddr);
 
-        /* ----------------- optional broadcast ------------- */
-        //msg.setOption("RESPONSE");
-        //server.broadcastMessageToAll(msg);
-        //InetSocketAddress dest = server.getClientsMap().get(username);
+        /* ----------------- send back a RESPONSE ----------------- */
         Message responseMsg = Server.makeResponse(msg, new Object[]{assigned});
         responseMsg.setOption("RESPONSE");
-        String one = responseMsg.getConcealedParameters()[0].toString();
-        String two = responseMsg.getConcealedParameters()[1].toString();
-        String three = responseMsg.getConcealedParameters()[2].toString();
-          System.out.println("one: " + one + " two: " + two + " three: " + three);
-        responseMsg.setConcealedParameters(new String[]{assigned});
-
+        // only conceal the assigned username in the response
+        responseMsg.setConcealedParameters(new String[]{ assigned });
 
         server.enqueueMessage(
-                responseMsg,
-                sender.getAddress(),
-                sender.getPort()
+            responseMsg,
+            reliableAddr.getAddress(),
+            reliableAddr.getPort()
         );
-        AsyncManager.run(() -> server.syncGames(sender));
+
+        // sync any game‐state over on the BE channel if needed
+        AsyncManager.run(() -> server.syncGames(beAddr));
     }
+
 }

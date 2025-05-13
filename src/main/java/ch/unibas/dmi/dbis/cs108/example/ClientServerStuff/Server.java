@@ -20,12 +20,16 @@ import java.util.Map;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingDeque;
+
 import ch.unibas.dmi.dbis.cs108.example.command.CommandRegistry;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.BlockingDeque;
 
 
 import lombok.Setter;
@@ -90,6 +94,8 @@ public class Server {
     /** The default UDP port on which this server listens for incoming messages. */
     public static int SERVER_PORT = 9876;
 
+    public static final int SERVER_BE_PORT = 9877;
+
     /** Provides the server-side chat manager used for handling chat messages. */
     @Setter
     private ChatManager.ServerChatManager serverChatManager;
@@ -100,9 +106,11 @@ public class Server {
      */
     @Getter
     private final ConcurrentHashMap<String, InetSocketAddress> clientsMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, InetSocketAddress> clientsMapBestEffort = new ConcurrentHashMap<>();
 
     /** The underlying DatagramSocket used to receive and send UDP packets. */
     private DatagramSocket serverSocket;
+    private DatagramSocket serverSocketBestEffort;
 
     /** Responsible for sending messages over a "reliable" UDP mechanism. */
     private ReliableUDPSender reliableSender;
@@ -123,7 +131,7 @@ public class Server {
      * A queue for outgoing messages that should be sent asynchronously to clients.
      * Processed by a background loop in {@link #start()}.
      */
-    private final LinkedBlockingQueue<OutgoingMessage> outgoingQueue = new LinkedBlockingQueue<>();
+    private final BlockingDeque<OutgoingMessage> outgoingQueue =  new LinkedBlockingDeque<>();
 
     /** Holds multiple active games by ID (UUID, etc.). */
     private final ConcurrentHashMap<String, Game> gameSessions = new ConcurrentHashMap<>();
@@ -215,96 +223,148 @@ public class Server {
         try {
             InetAddress ipAddress = InetAddress.getByName(address);
             InetSocketAddress socketAddress = new InetSocketAddress(ipAddress, SERVER_PORT);
+
+            InetSocketAddress socketBestEffortAddress = new InetSocketAddress(ipAddress, SERVER_BE_PORT);
+
             serverSocket = new DatagramSocket(socketAddress);
             System.out.println("UDP Server is running on " + ipAddress.getHostAddress() + ":" + SERVER_PORT);
 
+            serverSocketBestEffort = new DatagramSocket(socketBestEffortAddress);
+
             commandRegistry.initCommandHandlers();
-            bem = new BestEffortBroadcastManager(serverSocket);
+            bem = new BestEffortBroadcastManager(outgoingQueue);
 
             reliableSender = new ReliableUDPSender(serverSocket, 100, 1000, outgoingQueue);
             ackProcessor = new AckProcessor();
-            ackProcessor.init(serverSocket);
+            ackProcessor.init(outgoingQueue);
 
             //ackProcessor.start();
 
             // Process outgoing messages.
             AsyncManager.runLoop(() -> {
-                
-                    try {
-                        // This can throw InterruptedException if the thread is interrupted
-                        OutgoingMessage om = outgoingQueue.take();
-            
-                        // No null-check needed: take() never returns null
+                try {
+                    // Blocks until there’s a message
+                    OutgoingMessage om = outgoingQueue.take();
+
+                    if ("GAME".equals(om.msg.getOption())) {
+                        // Best‐effort path: fire–and–forget via UDP
+                        String encoded = MessageCodec.encode(om.msg);
+                        byte[] raw = encoded.getBytes(StandardCharsets.UTF_8);
+                        DatagramPacket packet = new DatagramPacket(
+                            raw, raw.length,
+                            om.address, om.port
+                        );
+                        // assuming you have a shared DatagramSocket called udpSocket
+                        serverSocket.send(packet);
+                        System.out.println("Best-effort GAME sent to " 
+                            + om.address + ":" + om.port);
+
+                    } else {
+                        // Reliable path
                         reliableSender.send(om);
-                        System.out.println("Sent message to " + om.address + ":" + om.port);
-            
-                    } catch (InterruptedException ie) {
-                        // Restore the interrupt flag and exit the loop
-                        Thread.currentThread().interrupt();
-                        return;
-            
-                    } catch (Exception e) {
-                        // Catch any other failures from sendMessage()
-                        System.err.println("Error sending message");
-                        e.printStackTrace();
+                        System.out.println("Reliable send to " 
+                            + om.address + ":" + om.port);
                     }
-                
+
+                } catch (InterruptedException ie) {
+                    // Restore interrupt status and exit the loop
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (IOException ioe) {
+                    // UDP I/O errors for GAME messages
+                    System.err.println("I/O error sending GAME packet");
+                    ioe.printStackTrace();
+                } catch (Exception e) {
+                    // Catch-all for reliableSender failures
+                    System.err.println("Error sending message");
+                    e.printStackTrace();
+                }
             });
+
             
 
             // Listen for incoming packets.
+            // After creating:
+            //   serverSocket = new DatagramSocket(new InetSocketAddress(ip, SERVER_PORT));
+            //   beSocket     = new DatagramSocket(new InetSocketAddress(ip, SERVER_BE_PORT));
+
+            // 1) Reliable receiver (ACKs, REQUEST, CHAT, etc.)
             new Thread(() -> {
                 byte[] buf = new byte[1024];
                 DatagramPacket pkt = new DatagramPacket(buf, buf.length);
-            
+
                 while (true) {
                     try {
                         serverSocket.receive(pkt);
+                        InetSocketAddress sender = new InetSocketAddress(pkt.getAddress(), pkt.getPort());
+                        setLastSender(sender);
 
-                        InetSocketAddress sender =
-                                new InetSocketAddress(pkt.getAddress(), pkt.getPort());
-                        getInstance().setLastSender(sender);
+                        String raw = new String(
+                            pkt.getData(), pkt.getOffset(), pkt.getLength(),
+                            StandardCharsets.UTF_8
+                        );
+                        Message msg = MessageCodec.decode(raw);
 
-                        String raw   = new String(pkt.getData(), pkt.getOffset(),
-                                                   pkt.getLength(), StandardCharsets.UTF_8);
-                        //InetSocketAddress sender =
-                          //  new InetSocketAddress(pkt.getAddress(), pkt.getPort());
-                        Message msg   = MessageCodec.decode(raw);
-            
-                        /* a) ACKs for *our* reliable sends --------------------- */
+                        // a) ACKs for reliable
                         if ("ACK".equalsIgnoreCase(msg.getMessageType())) {
                             reliableSender.acknowledge(msg.getParameters()[0].toString());
-                            continue;                       // done with this packet
+                            continue;
                         }
-            
-                        /* b) queue best‑effort ACK back to the client ---------- */
-                        if (msg.getUUID()!=null && !"GAME".equalsIgnoreCase(msg.getOption())) {
+
+                        // b) best-effort ACKs for reliable messages
+                        if (msg.getUUID() != null && !"GAME".equalsIgnoreCase(msg.getOption())) {
                             AckProcessor.enqueue(sender, msg.getUUID());
                         }
-            
-                        /* c) application‑level handling ------------------------ */
-                        //System.out.println(username);
-                        //System.out.println(sender);
-                        if ("GAME".equalsIgnoreCase(msg.getOption())) {
-                            //sendKeyEvent(msg);              // fire‑and‑forget
-                        } else if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
+
+                        // c) application logic for non-GAME options
+                        if ("REQUEST".equalsIgnoreCase(msg.getOption())) {
                             String username = findUserBySocket(sender);
-                            System.out.println(username);
-                            System.out.println(sender);
                             handleRequest(msg, username);
                         } else {
                             String username = findUserBySocket(sender);
                             broadcastMessageToOthers(msg, username);
                         }
-            
-                        /* d) notify higher‑level subsystems -------------------- */
+
+                        // d) dispatch to higher-level subsystems
                         messageHub.dispatch(msg);
-            
+
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 }
-            }, "udp-receiver").start();
+            }, "reliable-receiver").start();
+
+
+            // 2) Best-effort receiver (only GAME-option packets)
+            new Thread(() -> {
+                byte[] buf = new byte[1024];
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+
+                while (true) {
+                    try {
+                        serverSocketBestEffort.receive(pkt);
+                        InetSocketAddress sender = new InetSocketAddress(pkt.getAddress(), pkt.getPort());
+
+                        String raw = new String(
+                            pkt.getData(), pkt.getOffset(), pkt.getLength(),
+                            StandardCharsets.UTF_8
+                        );
+                        Message msg = MessageCodec.decode(raw);
+
+                        // Only handle GAME updates here
+                        if ("GAME".equalsIgnoreCase(msg.getOption())) {
+                            // e.g. update game state or forward to clients
+                            messageHub.dispatch(msg);
+                        }
+                        // if you want to ACK GAME messages:
+                        // AckProcessor.enqueue(sender, msg.getUUID());
+
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }, "besteffort-receiver").start();
+
 
 
         } catch (IOException e) {
