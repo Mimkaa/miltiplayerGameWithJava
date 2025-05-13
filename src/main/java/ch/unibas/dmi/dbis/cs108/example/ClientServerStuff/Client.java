@@ -293,7 +293,7 @@ public class Client {
                         om.port
                     );
                     // use whatever DatagramSocket you share for best-effort
-                    instance.clientSocket.send(packet);
+                    instance.clientSocketBestEffort.send(packet);
 
                 } else {
                     // Reliable path

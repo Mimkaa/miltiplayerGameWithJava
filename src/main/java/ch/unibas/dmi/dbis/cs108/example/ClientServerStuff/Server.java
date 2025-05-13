@@ -255,7 +255,7 @@ public class Server {
                             om.address, om.port
                         );
                         // assuming you have a shared DatagramSocket called udpSocket
-                        serverSocket.send(packet);
+                        serverSocketBestEffort.send(packet);
                         System.out.println("Best-effort GAME sent to " 
                             + om.address + ":" + om.port);
 
