@@ -94,7 +94,7 @@ public class Server {
     /** The default UDP port on which this server listens for incoming messages. */
     public static int SERVER_PORT = 9876;
 
-    public static final int SERVER_BE_PORT = 9877;
+    public static final int SERVER_BE_PORT = 2222;
 
     /** Provides the server-side chat manager used for handling chat messages. */
     @Setter

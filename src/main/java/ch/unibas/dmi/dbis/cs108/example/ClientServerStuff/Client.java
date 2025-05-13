@@ -202,7 +202,7 @@ public class Client {
 
             clientSocketBestEffort = new DatagramSocket();
             int chosenPortBestEffort = clientSocketBestEffort.getLocalPort();
-            CLIENT_PORT = chosenPortBestEffort;
+            CLIENT_BESTEFFORT_PORT = chosenPortBestEffort;
 
             // Initialize the reliable sender without a fixed destination.
             myReliableUDPSender = new ReliableUDPSender(clientSocket, 50, 1000, outgoingQueue);
